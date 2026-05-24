@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections import deque
 from typing import Optional
 
 import structlog
@@ -153,6 +154,9 @@ class Orchestrator:
 
         # In-memory pending-approval map
         self.pending: dict[str, Proposal] = {}
+        # TraderAgent-originated close requests awaiting human approval.
+        # close_id -> {trade_id, symbol, requested_ms, expires_at_ms, rationale}
+        self.pending_closes: dict[str, dict] = {}
 
         # Sentiment cache from NewsSentimentAgent
         self.sentiments: dict[str, SentimentScore] = {}
@@ -169,6 +173,13 @@ class Orchestrator:
         self.wake_triggers: WakeTriggers = WakeTriggers(self.s)
         # Coalesce trader-agent invocations — only one cycle runs at a time.
         self._trader_cycle_lock: asyncio.Lock = asyncio.Lock()
+        # Bounded ring buffer of recent anomaly events for the trader-agent's
+        # get_recent_anomalies tool. Kept tight — most anomalies have a short
+        # half-life for trading-decision purposes.
+        self._recent_anomalies: deque[dict] = deque(maxlen=50)
+        # Per-symbol bounded buffers of recent futures liquidations
+        # (!forceOrder@arr stream). Trader-agent reads via get_recent_liquidations.
+        self._recent_liquidations: dict[str, deque[dict]] = {}
 
         # Telegram bot — handlers set during start()
         self.telegram: Optional[TelegramBot] = None
@@ -305,9 +316,12 @@ class Orchestrator:
         log.info("anomaly.fired", kind=anomaly.kind, symbol=anomaly.symbol,
                  severity=anomaly.severity, detail=anomaly.detail)
         self.bus.publish(TOPIC_ANOMALY, anomaly)
+        # Persist into the ring buffer for the trader-agent's lookback tool.
+        anom_dump = anomaly.model_dump()
+        self._recent_anomalies.append(anom_dump)
         # TraderAgent wake on warn/critical anomalies.
         if self.trader_agent is not None:
-            wake = self.wake_triggers.on_anomaly(anomaly.model_dump())
+            wake = self.wake_triggers.on_anomaly(anom_dump)
             if wake is not None:
                 asyncio.create_task(self._trader_wake(wake))
         if self.telegram:
@@ -410,10 +424,10 @@ class Orchestrator:
         on the same symbol, the agent should call this multiple times.
 
         Paper/backtest: closes immediately via PositionManager.force_close.
-        Live: TODO — should route through Telegram approval. For now, in
-        live mode, returns a "not yet wired in live" notice so the agent
-        knows the close didn't happen."""
+        Live: sends a Telegram proposal with Close/Keep buttons; the
+        actual close happens in _tg_close_approve."""
         symbol = args.get("symbol")
+        rationale = (args.get("rationale") or "")[:300]
         if not symbol or not self.position_manager:
             return {"accepted": False, "reason": "no position manager / no symbol"}
         match = None
@@ -423,20 +437,89 @@ class Orchestrator:
                 break
         if match is None:
             return {"accepted": False, "reason": f"no open trade on {symbol}"}
-        if not self.paper:
-            # Live close-via-Telegram flow not yet implemented. Don't
-            # silently fall back to direct execution.
-            return {
-                "accepted": False,
-                "reason": "live close via telegram-approval not yet wired; "
-                          "use /flatten or close manually",
-            }
-        px = self.last_price.get(symbol, match.entry_price)
+
+        if self.paper:
+            px = self.last_price.get(symbol, match.entry_price)
+            try:
+                await self.position_manager.force_close(match.id, px, "trader_agent")
+            except Exception as e:
+                return {"accepted": False, "reason": f"force_close: {e}"}
+            return {"accepted": True, "trade_id": match.id, "exit_price": px,
+                    "status": "EXECUTED"}
+
+        # --- Live: route through Telegram approval ---
+        if self.telegram is None:
+            return {"accepted": False,
+                    "reason": "live close requires Telegram; bot not running"}
+        import uuid as _uuid
+        close_id = _uuid.uuid4().hex[:12]
+        expires_in = self.s.approval_timeout_sec
+        self.pending_closes[close_id] = {
+            "trade_id": match.id, "symbol": symbol,
+            "requested_ms": now_ms(),
+            "expires_at_ms": now_ms() + expires_in * 1000,
+            "rationale": rationale,
+        }
+        await self.storage.audit("trader_close_proposed",
+                                  {"close_id": close_id, "symbol": symbol,
+                                   "trade_id": match.id})
+        current_px = self.last_price.get(symbol, match.entry_price)
+        await self.telegram.send_close_proposal(
+            close_id=close_id, symbol=symbol, side=match.side,
+            qty=match.qty, entry=match.entry_price, current_px=current_px,
+            rationale=rationale, expires_in_sec=expires_in,
+        )
+        return {"accepted": True, "trade_id": match.id, "close_id": close_id,
+                "status": "AWAITING_USER",
+                "note": "Telegram approval sent; close executes on user click."}
+
+    async def _tg_close_approve(self, close_id: str) -> None:
+        """Telegram callback: the human approved a TraderAgent-proposed
+        close. Look up the request, validate not expired, force-close
+        the matching trade at the current mark."""
+        req = self.pending_closes.pop(close_id, None)
+        if req is None:
+            log.info("close.approve.unknown", close_id=close_id)
+            return
+        if now_ms() > req["expires_at_ms"]:
+            log.info("close.approve.expired", close_id=close_id)
+            if self.telegram:
+                await self.telegram.send_info(
+                    f"Close `{close_id[:8]}` expired before approval — ignored."
+                )
+            return
+        if not self.position_manager:
+            return
+        trade = self.position_manager.open.get(req["trade_id"])
+        if trade is None:
+            if self.telegram:
+                await self.telegram.send_info(
+                    f"Close `{close_id[:8]}`: trade already closed by another path."
+                )
+            return
+        px = self.last_price.get(req["symbol"], trade.entry_price)
         try:
-            await self.position_manager.force_close(match.id, px, "trader_agent")
+            await self.position_manager.force_close(
+                trade.id, px, "trader_agent_approved",
+            )
         except Exception as e:
-            return {"accepted": False, "reason": f"force_close: {e}"}
-        return {"accepted": True, "trade_id": match.id, "exit_price": px}
+            log.exception("close.approve.force_close_failed", close_id=close_id)
+            if self.telegram:
+                await self.telegram.send_critical(
+                    f"Close `{close_id[:8]}` execution FAILED: {e}"
+                )
+            return
+        await self.storage.audit("trader_close_approved",
+                                  {"close_id": close_id, "trade_id": trade.id})
+
+    async def _tg_close_reject(self, close_id: str) -> None:
+        """Telegram callback: the human declined to close."""
+        req = self.pending_closes.pop(close_id, None)
+        if req is None:
+            return
+        await self.storage.audit("trader_close_rejected",
+                                  {"close_id": close_id,
+                                   "trade_id": req.get("trade_id")})
 
     async def _trader_news_subagent(self, symbols: list[str]) -> dict:
         """Bridge: serve cached sentiment first (the _news_loop already runs
@@ -754,6 +837,19 @@ class Orchestrator:
                 self.pending.pop(p.id, None)
                 if self.telegram:
                     await self.telegram.send_info(f"EXPIRED `{p.id[:8]}` {p.signal.symbol}")
+            # TraderAgent-originated close requests expire too — don't want a
+            # stale "Close" button executing at a price the agent never saw.
+            expired_closes = [cid for cid, req in self.pending_closes.items()
+                              if now > req["expires_at_ms"]]
+            for cid in expired_closes:
+                req = self.pending_closes.pop(cid)
+                await self.storage.audit("trader_close_expired",
+                                          {"close_id": cid,
+                                           "trade_id": req.get("trade_id")})
+                if self.telegram:
+                    await self.telegram.send_info(
+                        f"EXPIRED close `{cid[:8]}` on {req.get('symbol')}"
+                    )
 
     async def _news_loop(self) -> None:
         if not self.news_agent:
@@ -789,6 +885,46 @@ class Orchestrator:
             except Exception:
                 log.exception("news_loop.error")
             await asyncio.sleep(self.s.news_agent_interval_sec)
+
+    async def _liquidation_stream_loop(self) -> None:
+        """Consume the public !forceOrder@arr futures stream and append
+        per-symbol into self._recent_liquidations. Only relevant symbols
+        (configured symbol_list) are retained — the all-market firehose
+        carries thousands of alts we don't care about."""
+        watched = set(self.s.symbol_list)
+        try:
+            async for ev in self.binance.stream_liquidations():
+                if ev.get("e") == "stream.reconnect":
+                    continue
+                o = ev.get("o") or {}
+                sym = o.get("s")
+                if sym not in watched:
+                    continue
+                rec = {
+                    "symbol": sym,
+                    "side": o.get("S"),   # SELL = long was liquidated
+                    "qty": float(o.get("z") or o.get("q") or 0.0),
+                    "price": float(o.get("ap") or o.get("p") or 0.0),
+                    "status": o.get("X"),
+                    "ts_ms": int(o.get("T") or 0),
+                }
+                buf = self._recent_liquidations.get(sym)
+                if buf is None:
+                    buf = deque(maxlen=200)
+                    self._recent_liquidations[sym] = buf
+                buf.append(rec)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception("liquidation_stream.error")
+
+    def _get_recent_liquidations(self, symbol: str, n: int = 20) -> list[dict]:
+        """Read-side helper for the trader-agent tool. Returns up to N most
+        recent liquidations on `symbol` from the in-memory buffer."""
+        buf = self._recent_liquidations.get(symbol)
+        if not buf:
+            return []
+        return list(buf)[-n:]
 
     async def _trader_heartbeat_loop(self) -> None:
         """Polls the WakeTriggers for heartbeat + position-pressure events.
@@ -1272,8 +1408,9 @@ class Orchestrator:
                         "halted": now_ms() < self.halted_until_ms,
                         "open_position_count": len(self.open_positions),
                     },
-                    get_recent_anomalies=lambda n: [],  # placeholder: no ring buffer yet
+                    get_recent_anomalies=lambda n: list(self._recent_anomalies)[-n:],
                     get_last_prices=lambda: dict(self.last_price),
+                    get_recent_liquidations=self._get_recent_liquidations,
                     news_sentiment_subagent=self._trader_news_subagent,
                     propose_trade_callback=self._trader_propose_trade,
                     propose_close_callback=self._trader_propose_close,
@@ -1291,6 +1428,8 @@ class Orchestrator:
                 on_resume=self._tg_resume,
                 on_flatten=self._tg_flatten,
                 on_promote_strategy=self._tg_promote_strategy,
+                on_close_approve=self._tg_close_approve,
+                on_close_reject=self._tg_close_reject,
             )
             self.telegram = TelegramBot(handlers)
             await self.telegram.start()
@@ -1369,6 +1508,7 @@ class Orchestrator:
         self._tasks.append(asyncio.create_task(self._housekeeping()))
         if self.trader_agent is not None:
             self._tasks.append(asyncio.create_task(self._trader_heartbeat_loop()))
+            self._tasks.append(asyncio.create_task(self._liquidation_stream_loop()))
 
     async def run(self) -> None:
         await self.start()

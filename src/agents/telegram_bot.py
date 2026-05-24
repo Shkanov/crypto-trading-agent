@@ -43,6 +43,10 @@ class TelegramHandlers:
     on_resume: Callable[[], Awaitable[str]]
     on_flatten: Callable[[], Awaitable[str]]
     on_promote_strategy: Callable[[str], Awaitable[str]]
+    # TraderAgent-originated close proposals (separate callback prefix so
+    # the existing on_approve/on_reject keep their open-proposal semantics).
+    on_close_approve: Optional[Callable[[str], Awaitable[None]]] = None
+    on_close_reject: Optional[Callable[[str], Awaitable[None]]] = None
 
 
 def _format_proposal(p: Proposal) -> str:
@@ -96,6 +100,19 @@ class TelegramBot:
                 pass
         elif action == "mod":
             await q.message.reply_text("Modify not yet implemented — reject and let the agent re-propose.")
+        elif action == "close_ok" and self.handlers.on_close_approve:
+            await self.handlers.on_close_approve(pid)
+            try:
+                await q.edit_message_text(q.message.text_markdown_v2 + "\n*CLOSE APPROVED*",
+                                          parse_mode=ParseMode.MARKDOWN)
+            except Exception:
+                await q.edit_message_reply_markup(reply_markup=None)
+        elif action == "close_no" and self.handlers.on_close_reject:
+            await self.handlers.on_close_reject(pid)
+            try:
+                await q.edit_message_reply_markup(reply_markup=None)
+            except Exception:
+                pass
 
     async def _on_command_status(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         if not self._allowed(update):
@@ -208,6 +225,28 @@ class TelegramBot:
                 InlineKeyboardButton("Reject", callback_data=f"no:{p.id}"),
                 InlineKeyboardButton("Modify", callback_data=f"mod:{p.id}"),
             ]])
+        await self._send_to_all(text, reply_markup=kb)
+
+    async def send_close_proposal(self, close_id: str, symbol: str, side: str,
+                                    qty: float, entry: float, current_px: float,
+                                    rationale: str, expires_in_sec: int) -> None:
+        """TraderAgent-originated proposal to close an OPEN position. Same
+        approval pattern as send_proposal but uses the close_ok/close_no
+        callback prefix so the existing on_approve/on_reject handlers
+        (which assume an open-side proposal_id) aren't called."""
+        pnl_pct = ((current_px - entry) / entry * 100.0) if side == "long" \
+            else ((entry - current_px) / entry * 100.0)
+        text = (
+            f"*CLOSE {side.upper()} {symbol}* `{close_id[:8]}`\n"
+            f"Qty: `{qty:.6f}`  Entry: `{entry:.4f}`  Now: `{current_px:.4f}`  "
+            f"Unrealized: `{pnl_pct:+.2f}%`\n"
+            f"_{rationale}_\n"
+            f"_expires in {expires_in_sec}s_"
+        )
+        kb = InlineKeyboardMarkup([[
+            InlineKeyboardButton("Close", callback_data=f"close_ok:{close_id}"),
+            InlineKeyboardButton("Keep", callback_data=f"close_no:{close_id}"),
+        ]])
         await self._send_to_all(text, reply_markup=kb)
 
     async def send_info(self, text: str) -> None:

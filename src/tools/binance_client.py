@@ -181,6 +181,35 @@ class BinanceClient:
                 if msg.get("data", {}).get("e") == "aggTrade":
                     yield msg["data"]
 
+    async def stream_liquidations(self) -> AsyncIterator[dict]:
+        """All-market futures liquidation feed (`!forceOrder@arr`). Yields
+        raw forceOrder payloads with the `o` sub-dict carrying symbol,
+        side, qty, price, status. Auto-reconnects forever with backoff —
+        cancel the task to stop. Sentinel on reconnect:
+            {"e": "stream.reconnect", "stream": "forceOrder"}
+        """
+        assert self.client is not None
+        backoff_s = 1.0
+        while True:
+            try:
+                bm = BinanceSocketManager(self.client)
+                socket = bm.futures_multiplex_socket(["!forceOrder@arr"])
+                async with socket as stream:
+                    backoff_s = 1.0
+                    while True:
+                        msg = await stream.recv()
+                        data = (msg or {}).get("data") or {}
+                        if data.get("e") == "forceOrder":
+                            yield data
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                log.warning("ws.forceOrder.disconnect", err=str(e),
+                            backoff_s=backoff_s)
+                yield {"e": "stream.reconnect", "stream": "forceOrder"}
+                await asyncio.sleep(backoff_s)
+                backoff_s = min(backoff_s * 2, 30.0)
+
     async def stream_futures_user(self) -> AsyncIterator[dict]:
         assert self.client is not None
         bm = BinanceSocketManager(self.client)

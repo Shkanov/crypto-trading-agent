@@ -129,6 +129,10 @@ class TraderToolContext:
     get_account_state: Callable[[], dict[str, Any]] = lambda: {}
     get_recent_anomalies: Callable[[int], list[dict[str, Any]]] = lambda n: []
     get_last_prices: Callable[[], dict[str, float]] = lambda: {}
+    # (symbol, n) -> list of recent liquidation events on that symbol
+    get_recent_liquidations: Callable[[str, int], list[dict[str, Any]]] = (
+        lambda sym, n: []
+    )
     # Subagent: takes a list of symbols, returns sentiment dict
     news_sentiment_subagent: Optional[Callable[[list[str]], Awaitable[dict[str, Any]]]] = None
     # Write tools — orchestrator wires these in
@@ -271,14 +275,32 @@ def _make_handlers(ctx: TraderToolContext):
             "outperformance_pct": ctx.hodl.outperformance_pct(cur_equity, btc_now),
         }
 
-    async def get_recent_liquidations(symbol: str) -> dict[str, Any]:
-        # TODO: subscribe to !forceOrder@arr ws stream and keep a rolling
-        # buffer per symbol. Until that lands, this returns a clear notice
-        # so the agent knows liquidation data is unavailable.
+    async def get_recent_liquidations(symbol: str, n: int = 20) -> dict[str, Any]:
+        events = ctx.get_recent_liquidations(symbol, min(max(int(n), 1), 200))
+        if not events:
+            return {
+                "symbol": symbol, "events": [],
+                "notice": "no recent liquidations on this symbol in the buffer "
+                          "(may be quiet, or stream not yet warmed up)",
+            }
+        # Aggregate: total notional liquidated, long-vs-short split. SELL side
+        # in the forceOrder payload means a LONG position was force-closed.
+        total_notional = 0.0
+        long_notional = 0.0
+        short_notional = 0.0
+        for e in events:
+            n_usd = (e.get("qty") or 0.0) * (e.get("price") or 0.0)
+            total_notional += n_usd
+            if e.get("side") == "SELL":
+                long_notional += n_usd
+            elif e.get("side") == "BUY":
+                short_notional += n_usd
         return {
-            "symbol": symbol,
-            "notice": "liquidation feed not yet wired (requires !forceOrder@arr ws subscription); "
-                      "do not rely on liquidation flow for this decision",
+            "symbol": symbol, "count": len(events),
+            "total_notional_usd": total_notional,
+            "long_liq_notional_usd": long_notional,
+            "short_liq_notional_usd": short_notional,
+            "events": events[-10:],  # most recent 10 raw
         }
 
     async def get_open_interest_change(symbol: str, period: str = "5m") -> dict[str, Any]:
@@ -449,9 +471,14 @@ def build_trader_tools(ctx: TraderToolContext) -> list[ToolSpec]:
         ),
         ToolSpec(
             name="get_recent_liquidations",
-            description="Recent liquidations on a symbol. NOTE: stubbed in v1; returns a notice so you know not to rely on it.",
+            description=(
+                "Recent futures liquidations on a symbol from the !forceOrder@arr "
+                "stream. Returns long-side vs short-side notional totals + the "
+                "most recent 10 events. Empty buffer right after startup."
+            ),
             input_schema={"type": "object", "required": ["symbol"], "properties": {
                 "symbol": {"type": "string"},
+                "n": {"type": "integer", "minimum": 1, "maximum": 200, "default": 20},
             }},
             handler=h["get_recent_liquidations"],
         ),
