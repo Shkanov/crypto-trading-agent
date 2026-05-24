@@ -203,14 +203,17 @@ async def backtest_indicator(
     equity = s.account_equity_usd
     fee_bps = s.spot_taker_fee_bps + s.slippage_bps  # one-way
 
+    stop_slip = s.paper_stop_slippage_bps / 10_000
+    tp_slip = s.paper_tp_slippage_bps / 10_000
+
     for k in ks[warmup_n:]:
         # Resolve any open trade against THIS bar first (price might have hit stop/TP).
         if open_trade is not None:
             hit_stop = (k.low <= open_trade.stop) if open_trade.side == "long" else (k.high >= open_trade.stop)
             hit_tp = (k.high >= open_trade.tp) if open_trade.side == "long" else (k.low <= open_trade.tp)
             if hit_stop:
-                # Adverse slippage on stop (25 bps)
-                exit_px = open_trade.stop * (1 - 25 / 10_000) if open_trade.side == "long" else open_trade.stop * (1 + 25 / 10_000)
+                # Adverse slippage on stop, from settings (paper_stop_slippage_bps).
+                exit_px = open_trade.stop * (1 - stop_slip) if open_trade.side == "long" else open_trade.stop * (1 + stop_slip)
                 open_trade.exit_price = exit_px
                 open_trade.exit_reason = "stop"
                 open_trade.exit_ts_ms = k.close_time
@@ -223,7 +226,7 @@ async def backtest_indicator(
                 trades.append(open_trade)
                 open_trade = None
             elif hit_tp:
-                exit_px = open_trade.tp * (1 - 5 / 10_000) if open_trade.side == "long" else open_trade.tp * (1 + 5 / 10_000)
+                exit_px = open_trade.tp * (1 - tp_slip) if open_trade.side == "long" else open_trade.tp * (1 + tp_slip)
                 open_trade.exit_price = exit_px
                 open_trade.exit_reason = "tp"
                 open_trade.exit_ts_ms = k.close_time
@@ -325,15 +328,18 @@ async def backtest_mean_reversion(
 
     trades: list[SimTrade] = []
     open_trade: Optional[SimTrade] = None
+    bars_held = 0
     equity = s.account_equity_usd
     fee_bps = s.spot_taker_fee_bps + s.slippage_bps  # one-way
+    stop_slip = s.paper_stop_slippage_bps / 10_000
+    tp_slip = s.paper_tp_slippage_bps / 10_000
 
     for k in ks[warmup_n:]:
         if open_trade is not None:
             hit_stop = (k.low <= open_trade.stop) if open_trade.side == "long" else (k.high >= open_trade.stop)
             hit_tp = (k.high >= open_trade.tp) if open_trade.side == "long" else (k.low <= open_trade.tp)
             if hit_stop:
-                exit_px = open_trade.stop * (1 - 25 / 10_000) if open_trade.side == "long" else open_trade.stop * (1 + 25 / 10_000)
+                exit_px = open_trade.stop * (1 - stop_slip) if open_trade.side == "long" else open_trade.stop * (1 + stop_slip)
                 open_trade.exit_price = exit_px
                 open_trade.exit_reason = "stop"
                 open_trade.exit_ts_ms = k.close_time
@@ -344,8 +350,9 @@ async def backtest_mean_reversion(
                 open_trade.pnl_usd = gross - exit_fee
                 trades.append(open_trade)
                 open_trade = None
+                bars_held = 0
             elif hit_tp:
-                exit_px = open_trade.tp * (1 - 5 / 10_000) if open_trade.side == "long" else open_trade.tp * (1 + 5 / 10_000)
+                exit_px = open_trade.tp * (1 - tp_slip) if open_trade.side == "long" else open_trade.tp * (1 + tp_slip)
                 open_trade.exit_price = exit_px
                 open_trade.exit_reason = "tp"
                 open_trade.exit_ts_ms = k.close_time
@@ -356,6 +363,26 @@ async def backtest_mean_reversion(
                 open_trade.pnl_usd = gross - exit_fee
                 trades.append(open_trade)
                 open_trade = None
+                bars_held = 0
+            elif bars_held >= cfg.time_stop_bars:
+                # Time-stop: failed revert thesis. Exit at this bar's close.
+                # Apply same adverse-slippage assumption as stops, since we're
+                # crossing the spread to exit at market, but the move was
+                # smaller (no gap), so use tp_slip instead of stop_slip.
+                exit_px = k.close * (1 - tp_slip) if open_trade.side == "long" else k.close * (1 + tp_slip)
+                open_trade.exit_price = exit_px
+                open_trade.exit_reason = "time_stop"
+                open_trade.exit_ts_ms = k.close_time
+                gross = (exit_px - open_trade.entry_price) * open_trade.qty
+                if open_trade.side == "short":
+                    gross = -gross
+                exit_fee = open_trade.qty * exit_px * (fee_bps / 10_000)
+                open_trade.pnl_usd = gross - exit_fee
+                trades.append(open_trade)
+                open_trade = None
+                bars_held = 0
+            else:
+                bars_held += 1
 
         snap = ind.get(symbol, tf).on_closed_kline(k)
         if open_trade is not None:
@@ -379,6 +406,7 @@ async def backtest_mean_reversion(
             entry_price=entry_px, stop=sig.stop, tp=sig.take_profit,
             entry_ts_ms=k.close_time,
         )
+        bars_held = 0
 
     if open_trade is not None and ks:
         last = ks[-1].close

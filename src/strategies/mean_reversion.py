@@ -50,6 +50,13 @@ class MeanReversionConfig:
     # If mean (bb_middle) is closer than min_target_atr * ATR, skip — too
     # little room to make the trade worth costs.
     min_target_atr: float = 0.5
+    # Mean-rev positions that don't revert within `time_stop_bars` trigger-TF
+    # bars are closed at market. Critical for honest backtest accounting: a
+    # mean-rev trade that's still open after this many bars is a failed
+    # revert thesis, not a winner-in-progress. 24 bars ≈ 2h on 5m, 6h on 15m,
+    # 1 day on 1h — long enough for the BB midline to come to the price,
+    # short enough that we cut losing fades before the market trends through.
+    time_stop_bars: int = 24
     htf_timeframe: str = "1h"
     trigger_timeframe_pref: tuple[str, ...] = ("5m", "15m", "3m", "1m")
 
