@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import asyncio
 import math
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Optional
@@ -297,13 +298,38 @@ async def backtest_funding(
     p = params or FundingBacktestParams()
     assert binance.client is not None
 
-    # Historical funding rates (one per 8h)
-    funding_rows = await binance.client.futures_funding_rate(
-        symbol=symbol, limit=min(1000, days * 3),
-    )
+    # Historical funding rates (one per 8h).
+    # Binance's futures_funding_rate endpoint silently caps at 200 rows when no
+    # startTime is supplied. Pass startTime/endTime and page until we've covered
+    # the requested window (Binance caps each page at 1000 rows ≈ 333 days).
+    end_ms = int(time.time() * 1000)
+    start_ms = end_ms - days * 86_400 * 1000
+    funding_rows: list[dict] = []
+    cursor = start_ms
+    while cursor < end_ms:
+        page = await binance.client.futures_funding_rate(
+            symbol=symbol, startTime=cursor, endTime=end_ms, limit=1000,
+        )
+        if not page:
+            break
+        funding_rows.extend(page)
+        last_t = int(page[-1]["fundingTime"])
+        if len(page) < 1000 or last_t <= cursor:
+            break
+        cursor = last_t + 1
     if not funding_rows:
         return BacktestStats(strategy="funding_harvest"), []
     funding_rows.sort(key=lambda r: int(r["fundingTime"]))
+    # Dedupe defensively across page boundaries.
+    seen: set[int] = set()
+    deduped: list[dict] = []
+    for row in funding_rows:
+        t = int(row["fundingTime"])
+        if t in seen:
+            continue
+        seen.add(t)
+        deduped.append(row)
+    funding_rows = deduped
 
     # 8h klines for spot price reference at each funding time
     spot_raw = await binance.fetch_klines(symbol, "8h", limit=min(1000, days * 3),
