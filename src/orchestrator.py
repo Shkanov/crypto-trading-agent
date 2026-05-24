@@ -29,9 +29,16 @@ from src.agents.llm_client import LLMAgent
 from src.agents.news_agent import build_news_agent, run_news_cycle
 from src.agents.strategy_agent import build_strategy_agent, run_strategy_cycle
 from src.agents.telegram_bot import TelegramBot, TelegramHandlers
+from src.agents.trader_agent import (
+    attach_tools as attach_trader_tools,
+    build_trader_agent,
+    run_trader_cycle,
+)
+from src.agents.trader_tools import TraderToolContext
 from src.config.settings import Settings, get_settings
 from src.models.types import (
     Anomaly,
+    FeatureVector,
     Kline,
     Position,
     Proposal,
@@ -44,6 +51,7 @@ from src.models.types import (
     now_ms,
     stable_proposal_id,
 )
+from src.services.trader_triggers import WakeTriggers
 from src.services.event_bus import (
     TOPIC_ANOMALY,
     TOPIC_APPROVED,
@@ -154,6 +162,13 @@ class Orchestrator:
         self.news_agent: Optional[LLMAgent] = None
         self.strategy_agent: Optional[LLMAgent] = None
         self.anomaly_agent: Optional[LLMAgent] = None
+        self.trader_agent: Optional[LLMAgent] = None
+
+        # TraderAgent event-driven wake triggers (atr move, news, anomaly,
+        # drawdown, heartbeat). Always present; the agent it wakes may not be.
+        self.wake_triggers: WakeTriggers = WakeTriggers(self.s)
+        # Coalesce trader-agent invocations — only one cycle runs at a time.
+        self._trader_cycle_lock: asyncio.Lock = asyncio.Lock()
 
         # Telegram bot — handlers set during start()
         self.telegram: Optional[TelegramBot] = None
@@ -163,13 +178,27 @@ class Orchestrator:
 
     # ---------- approval state machine ----------
     async def propose(self, signal: Signal, market: str = "spot", leverage: int = 1,
-                       strategy_name: str = "indicator") -> None:
+                       strategy_name: str = "indicator",
+                       force_user_approval: bool = False) -> None:
         """Public hook for strategies. Routes signal through risk gate +
-        approval flow + execution; emits a Trade tagged with `strategy_name`."""
-        await self._propose(signal, market=market, leverage=leverage, strategy_name=strategy_name)
+        approval flow + execution; emits a Trade tagged with `strategy_name`.
+
+        `force_user_approval=True` bypasses the auto_approve_max_notional_usd
+        branch and always sends to Telegram — used by the TraderAgent in live
+        mode so every LLM-originated trade is human-confirmed."""
+        await self._propose(signal, market=market, leverage=leverage,
+                             strategy_name=strategy_name,
+                             force_user_approval=force_user_approval)
 
     async def _propose(self, signal: Signal, market: str = "spot", leverage: int = 1,
-                        strategy_name: str = "indicator") -> None:
+                        strategy_name: str = "indicator",
+                        force_user_approval: bool = False
+                        ) -> tuple[Optional[Proposal], Optional[str]]:
+        """Returns (proposal, reject_reason). On acceptance, proposal is the
+        constructed Proposal (already saved + routed for execution/approval)
+        and reject_reason is None. On rejection or dedupe, proposal is None
+        and reject_reason is a short string. Existing strategy callers
+        discard the return value — only the TraderAgent reads it."""
         betas = None
         if self.correlation:
             betas = {s: self.correlation.beta_to_btc(s) for s in self.s.symbol_list}
@@ -187,11 +216,11 @@ class Orchestrator:
                                     max_notional_override=ramp_cap)
         if not decision.ok:
             log.info("risk.rejected", symbol=signal.symbol, side=signal.side, reason=decision.reason)
-            return
+            return None, f"risk gate: {decision.reason}"
 
         pid = stable_proposal_id(signal.symbol, signal.side, signal.id)
         if pid in self.pending:
-            return  # dedupe
+            return None, "dedupe: a proposal for this (symbol, side, signal) is already pending"
 
         p = Proposal(
             id=pid, signal=signal, market=market,
@@ -203,8 +232,9 @@ class Orchestrator:
         # can tag the resulting Trade for per-strategy attribution.
         p.reason = f"strategy={strategy_name}"
 
-        # Hybrid approval: small auto, large needs user.
-        if p.notional_usd <= self.s.auto_approve_max_notional_usd:
+        # Hybrid approval: small auto, large needs user. The TraderAgent
+        # forces user approval regardless of size (force_user_approval=True).
+        if not force_user_approval and p.notional_usd <= self.s.auto_approve_max_notional_usd:
             p.status = ProposalStatus.AUTO_APPROVED
             self.pending[pid] = p
             await self.storage.save_proposal(p)
@@ -214,7 +244,7 @@ class Orchestrator:
                     f"AUTO `{pid[:8]}` {signal.side.upper()} {signal.symbol} "
                     f"@ {signal.entry:.4f} qty {p.qty:.6f} (${p.notional_usd:.2f})"
                 )
-            return
+            return p, None
 
         p.status = ProposalStatus.AWAITING_USER
         self.pending[pid] = p
@@ -223,6 +253,7 @@ class Orchestrator:
         if self.telegram:
             requires_2fa = p.notional_usd >= self.s.twofa_threshold_notional_usd
             await self.telegram.send_proposal(p, requires_2fa=requires_2fa)
+        return p, None
 
     async def _submit(self, p: Proposal) -> None:
         if not self.executor or not self.position_manager:
@@ -274,6 +305,11 @@ class Orchestrator:
         log.info("anomaly.fired", kind=anomaly.kind, symbol=anomaly.symbol,
                  severity=anomaly.severity, detail=anomaly.detail)
         self.bus.publish(TOPIC_ANOMALY, anomaly)
+        # TraderAgent wake on warn/critical anomalies.
+        if self.trader_agent is not None:
+            wake = self.wake_triggers.on_anomaly(anomaly.model_dump())
+            if wake is not None:
+                asyncio.create_task(self._trader_wake(wake))
         if self.telegram:
             sev = "CRITICAL" if anomaly.severity == "critical" else "ANOMALY"
             await self.telegram.send_info(
@@ -308,6 +344,138 @@ class Orchestrator:
             self.halted_until_ms = max(self.halted_until_ms, now_ms() + 2 * 3600_000)
         elif action == "flatten":
             await self._tg_flatten()
+
+    # ---------- TraderAgent: wake helper + write-tool callbacks -------------
+
+    async def _trader_wake(self, payload: dict) -> None:
+        """Run one TraderAgent cycle. No-op if the agent isn't configured.
+        Guarded by a lock so overlapping triggers don't cause concurrent
+        runs (each cycle can fire 10+ tool calls — overlap = $)."""
+        if self.trader_agent is None:
+            return
+        if self._trader_cycle_lock.locked():
+            log.info("trader.wake_dropped_busy", kind=payload.get("kind"))
+            return
+        async with self._trader_cycle_lock:
+            try:
+                await run_trader_cycle(self.trader_agent, payload)
+            except Exception:
+                log.exception("trader.cycle.error", kind=payload.get("kind"))
+
+    async def _trader_propose_trade(self, args: dict) -> dict:
+        """Write-tool callback: convert agent args into a Signal, route
+        through _propose. In live mode, force user approval regardless of
+        size. In paper/backtest, auto-approve applies as usual."""
+        try:
+            symbol = args["symbol"]
+            side = args["side"]
+            entry = float(args["entry"])
+            stop = float(args["stop"])
+            tp = float(args["take_profit"])
+            market = args.get("market", "spot")
+            leverage = int(args.get("leverage", 1))
+            rationale = args.get("rationale", "")
+        except (KeyError, ValueError, TypeError) as e:
+            return {"accepted": False, "reason": f"bad args: {e}"}
+        # Compute edge_bps deterministically from geometry minus round-trip
+        # costs. The agent doesn't get to inflate its own edge claim.
+        fee = self.s.perps_taker_fee_bps if market == "perps" else self.s.spot_taker_fee_bps
+        round_trip_bps = 2 * (fee + self.s.slippage_bps)
+        tp_move_bps = abs(tp - entry) / entry * 10_000 if entry else 0.0
+        edge_bps = tp_move_bps - round_trip_bps
+        signal = Signal(
+            symbol=symbol, side=side, confidence=0.5, score=0.0,
+            entry=entry, stop=stop, take_profit=tp,
+            edge_bps=edge_bps, features=FeatureVector(),
+            rationale=rationale[:500],
+        )
+        force = not self.paper  # live: human approval; paper/backtest: auto
+        p, reject = await self._propose(
+            signal, market=market, leverage=leverage,
+            strategy_name="trader_agent", force_user_approval=force,
+        )
+        if p is None:
+            return {"accepted": False, "reason": reject or "unknown"}
+        return {
+            "accepted": True, "proposal_id": p.id,
+            "status": p.status.value, "qty": p.qty,
+            "notional_usd": p.notional_usd, "edge_bps": edge_bps,
+            "rr": signal.rr,
+            "awaiting_user": p.status == ProposalStatus.AWAITING_USER,
+        }
+
+    async def _trader_propose_close(self, args: dict) -> dict:
+        """Write-tool callback: close an open trade by symbol. v1 closes
+        only the FIRST matching trade — if multiple open positions exist
+        on the same symbol, the agent should call this multiple times.
+
+        Paper/backtest: closes immediately via PositionManager.force_close.
+        Live: TODO — should route through Telegram approval. For now, in
+        live mode, returns a "not yet wired in live" notice so the agent
+        knows the close didn't happen."""
+        symbol = args.get("symbol")
+        if not symbol or not self.position_manager:
+            return {"accepted": False, "reason": "no position manager / no symbol"}
+        match = None
+        for t in self.position_manager.open.values():
+            if t.symbol == symbol:
+                match = t
+                break
+        if match is None:
+            return {"accepted": False, "reason": f"no open trade on {symbol}"}
+        if not self.paper:
+            # Live close-via-Telegram flow not yet implemented. Don't
+            # silently fall back to direct execution.
+            return {
+                "accepted": False,
+                "reason": "live close via telegram-approval not yet wired; "
+                          "use /flatten or close manually",
+            }
+        px = self.last_price.get(symbol, match.entry_price)
+        try:
+            await self.position_manager.force_close(match.id, px, "trader_agent")
+        except Exception as e:
+            return {"accepted": False, "reason": f"force_close: {e}"}
+        return {"accepted": True, "trade_id": match.id, "exit_price": px}
+
+    async def _trader_news_subagent(self, symbols: list[str]) -> dict:
+        """Bridge: serve cached sentiment first (the _news_loop already runs
+        the NewsAgent every news_agent_interval_sec and caches scores in
+        self.sentiments). Only invoke a fresh cycle if the cache has nothing
+        for any requested symbol — saves the news-agent budget."""
+        cached = {s: self.sentiments[s].model_dump()
+                  for s in symbols if s in self.sentiments}
+        if cached:
+            return {
+                "sentiments": cached,
+                "summary": self.market_summary,
+                "cache_hit": True,
+            }
+        if self.news_agent is None:
+            return {"error": "no cached sentiment and news agent not configured"}
+        # Recompute recent returns; mirrors the _news_loop helper.
+        rrs: dict[str, float] = {}
+        for sym in symbols:
+            snap = self.indicators.latest(sym, "5m")
+            st = self.indicators.states.get((sym, "5m"))
+            if st and snap and len(st.closes) >= 12:
+                snap0 = list(st.closes)[-12]
+                if snap0:
+                    rrs[sym] = (snap.close - snap0) / snap0 * 100.0
+        try:
+            scores, summary = await run_news_cycle(
+                self.news_agent, self.news, symbols, rrs,
+            )
+        except Exception as e:
+            return {"error": f"news cycle: {e}"}
+        for sc in scores:
+            self.sentiments[sc.symbol] = sc
+        if summary:
+            self.market_summary = summary
+        return {
+            "sentiments": {s.symbol: s.model_dump() for s in scores},
+            "summary": summary, "cache_hit": False,
+        }
 
     async def _on_trade_close(self, trade: Trade) -> None:
         """Called by PositionManager when a paper trade resolves (stop/TP/manual).
@@ -534,6 +702,12 @@ class Orchestrator:
                 price_anom = self.detectors.price_jump(k, snap)
                 if price_anom:
                     asyncio.create_task(self._handle_anomaly(price_anom))
+                # TraderAgent wake on notable ATR moves. Fire-and-forget so
+                # the kline stream doesn't block on agent latency.
+                if self.trader_agent is not None:
+                    wake = self.wake_triggers.on_closed_bar(k, snap)
+                    if wake is not None:
+                        asyncio.create_task(self._trader_wake(wake))
                 # Fan out to all registered strategies.
                 for strat in self.strategies:
                     try:
@@ -602,11 +776,44 @@ class Orchestrator:
                 for sc in scores:
                     self.sentiments[sc.symbol] = sc
                     self.bus.publish(TOPIC_SENTIMENT, sc)
+                    # TraderAgent wake on high-magnitude sentiment moves.
+                    if self.trader_agent is not None:
+                        wake = self.wake_triggers.on_news({
+                            "symbol": sc.symbol, "score": sc.score,
+                            "summary": summary,
+                        })
+                        if wake is not None:
+                            asyncio.create_task(self._trader_wake(wake))
                 if summary:
                     self.market_summary = summary
             except Exception:
                 log.exception("news_loop.error")
             await asyncio.sleep(self.s.news_agent_interval_sec)
+
+    async def _trader_heartbeat_loop(self) -> None:
+        """Polls the WakeTriggers for heartbeat + position-pressure events.
+        Runs every 60s — the triggers themselves rate-limit by `heartbeat_sec`
+        and `min_wake_gap_sec`."""
+        if self.trader_agent is None:
+            return
+        while not self._stop.is_set():
+            try:
+                await asyncio.sleep(60)
+                # Position-pressure: check on every tick of the heartbeat loop.
+                pos_wake = self.wake_triggers.on_position_pressure(
+                    list(self.open_positions), dict(self.last_price),
+                )
+                if pos_wake is not None:
+                    asyncio.create_task(self._trader_wake(pos_wake))
+                    continue  # don't fire heartbeat in the same cycle
+                # Heartbeat: routine check-in regardless of activity.
+                hb = self.wake_triggers.check_heartbeat()
+                if hb is not None:
+                    asyncio.create_task(self._trader_wake(hb))
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                log.exception("trader_heartbeat.error")
 
     async def _strategy_loop(self) -> None:
         if not self.strategy_agent:
@@ -1045,6 +1252,34 @@ class Orchestrator:
             self.news_agent = build_news_agent(self.news)
             self.strategy_agent = build_strategy_agent()
             self.anomaly_agent = build_anomaly_agent()
+            # TraderAgent: discretionary-style operator. Opt-in via setting.
+            if self.s.trader_agent_enabled:
+                self.trader_agent = build_trader_agent()
+                ctx = TraderToolContext(
+                    settings=self.s,
+                    binance=self.binance,
+                    indicator_engine=self.indicators,
+                    storage=self.storage,
+                    funding_monitor=self.funding_monitor,
+                    basis_monitor=self.basis_monitor,
+                    correlation=self.correlation,
+                    hodl=self.hodl,
+                    get_open_positions=lambda: list(self.open_positions),
+                    get_account_state=lambda: {
+                        "equity_usd": self.equity,
+                        "pnl_today_usd": self.pnl_today,
+                        "consecutive_losses": self.consecutive_losses,
+                        "halted": now_ms() < self.halted_until_ms,
+                        "open_position_count": len(self.open_positions),
+                    },
+                    get_recent_anomalies=lambda n: [],  # placeholder: no ring buffer yet
+                    get_last_prices=lambda: dict(self.last_price),
+                    news_sentiment_subagent=self._trader_news_subagent,
+                    propose_trade_callback=self._trader_propose_trade,
+                    propose_close_callback=self._trader_propose_close,
+                )
+                attach_trader_tools(self.trader_agent, ctx)
+                log.info("trader_agent.attached", tools=len(self.trader_agent.tools))
 
         # Telegram (skip if no token)
         if self.s.telegram_bot_token and self.s.allowed_user_ids:
@@ -1132,6 +1367,8 @@ class Orchestrator:
         self._tasks.append(asyncio.create_task(self._news_loop()))
         self._tasks.append(asyncio.create_task(self._strategy_loop()))
         self._tasks.append(asyncio.create_task(self._housekeeping()))
+        if self.trader_agent is not None:
+            self._tasks.append(asyncio.create_task(self._trader_heartbeat_loop()))
 
     async def run(self) -> None:
         await self.start()
