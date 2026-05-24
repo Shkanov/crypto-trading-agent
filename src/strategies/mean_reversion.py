@@ -38,6 +38,48 @@ log = structlog.get_logger(__name__)
 
 
 @dataclass
+class ScaledMeanReversionConfig:
+    """Scaled mean-rev parameters (v2). Fixes the R/R inversion of v1
+    by widening the stop, scaling into deeper stretches, and taking
+    partial profits before the full revert.
+
+    Geometry (long entry below BB lower, target BB middle):
+
+      entry_1 ────┐
+                  │  (price drops further)
+      entry_2 ───>│
+        avg ────  │            <─ TP1 close 50%
+                  │            <─ TP2 close 50%
+                  │
+        stop ─── (3 ATR below avg, much wider than v1)
+
+    With wider stops, the strategy can survive a deeper drawdown before
+    being stopped out, giving the mean-revert thesis time. Partial TP
+    captures gains on partial-reverts that don't reach the BB middle.
+    """
+    allowed_symbols: list[str]
+    enabled_sides: tuple[str, ...] = ("long", "short")
+    rsi_oversold: float = 30.0
+    rsi_overbought: float = 70.0
+    stoch_oversold: float = 20.0
+    stoch_overbought: float = 80.0
+    adx_max_for_meanrev: float = 20.0
+    # Scale-in: how many entries allowed and step between them in ATR.
+    max_entries: int = 2
+    scale_in_atr_step: float = 1.0
+    # Stop is `atr_stop_mult` ATR from AVERAGE entry (using ATR at first entry).
+    atr_stop_mult: float = 3.0
+    # TP1 takes `tp1_close_fraction` of position off at this fraction of the
+    # way from avg entry to TP2 anchor (BB middle). 0.5 = halfway.
+    tp1_distance_frac: float = 0.5
+    tp1_close_fraction: float = 0.5
+    min_target_atr: float = 0.5
+    time_stop_bars: int = 48
+    htf_timeframe: str = "1h"
+    trigger_timeframe_pref: tuple[str, ...] = ("5m", "15m", "3m", "1m")
+
+
+@dataclass
 class MeanReversionConfig:
     allowed_symbols: list[str]
     enabled_sides: tuple[str, ...] = ("long", "short")

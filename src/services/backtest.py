@@ -423,6 +423,271 @@ async def backtest_mean_reversion(
     return _stats_from_trades("mean_reversion", trades, s.account_equity_usd, span_days), trades
 
 
+# ─────────────────  Scaled mean-reversion (v2) backtest  ────────────────────
+
+
+@dataclass
+class _ScaledMRState:
+    """In-flight state of a scaled-mean-rev trade. Tracks multiple entry
+    legs, partial TP1 close, and overall realized P&L from partials."""
+    symbol: str
+    side: str
+    legs: list[tuple[int, float, float]] = field(default_factory=list)  # (ts_ms, price, qty)
+    initial_entry_price: float = 0.0
+    initial_atr: float = 0.0
+    tp2_target: float = 0.0
+    tp1_hit: bool = False
+    closed_qty: float = 0.0
+    realized_pnl_usd: float = 0.0
+    bars_held: int = 0
+
+    @property
+    def total_qty(self) -> float:
+        return sum(q for _, _, q in self.legs)
+
+    @property
+    def avg_entry(self) -> float:
+        tq = self.total_qty
+        if tq <= 0:
+            return 0.0
+        return sum(p * q for _, p, q in self.legs) / tq
+
+    @property
+    def open_qty(self) -> float:
+        return max(0.0, self.total_qty - self.closed_qty)
+
+    def stop_price(self, mult: float) -> float:
+        if self.side == "long":
+            return self.avg_entry - mult * self.initial_atr
+        return self.avg_entry + mult * self.initial_atr
+
+    def tp1_price(self, distance_frac: float) -> float:
+        avg = self.avg_entry
+        return avg + (self.tp2_target - avg) * distance_frac
+
+
+async def backtest_mean_reversion_scaled(
+    binance: BinanceClient,
+    symbol: str,
+    tf: str = "5m",
+    htf: str = "1h",
+    bars: int = 5000,
+    cfg: Optional["ScaledMeanReversionConfig"] = None,
+    settings: Optional[Settings] = None,
+) -> tuple[BacktestStats, list[SimTrade]]:
+    """Scaled mean-rev: scale-in entries + partial TP + wider stop.
+
+    Fixes the broken R/R of mean_reversion v1 (~1:1 R/R, needs 53% win
+    rate to clear costs but observed 18-30%). Geometry:
+
+      - Initial entry on standard mean-rev gate (RSI/StochRSI/BB/ADX)
+      - Second entry if price moves `scale_in_atr_step` ATR further into
+        the stretch AND gates still hold (i.e. still oversold / overbought)
+      - Stop: 3 ATR from AVERAGE entry (vs 1.5 in v1) — gives the thesis
+        room to breathe
+      - TP1: halfway from avg to BB middle — close 50% of position
+      - TP2: BB middle — close remaining
+      - Time-stop: 48 bars (doubled vs v1)
+
+    Each completed scaled trade emits ONE SimTrade record with the FULL
+    realized P&L (TP1 partial + final exit). entry_price is the avg of
+    all legs, exit_price is the final exit (or the only exit if no TP1).
+    """
+    from src.strategies.mean_reversion import ScaledMeanReversionConfig
+
+    s = settings or get_settings()
+    cfg = cfg or ScaledMeanReversionConfig(allowed_symbols=[symbol], htf_timeframe=htf)
+    ind = IndicatorEngine()
+
+    raw = await binance.fetch_klines_paginated(symbol, tf, total=bars, market="spot")
+    ks = [Kline(
+        symbol=symbol, timeframe=tf,
+        open_time=int(r[0]), close_time=int(r[6]),
+        open=float(r[1]), high=float(r[2]), low=float(r[3]), close=float(r[4]),
+        volume=float(r[5]), quote_volume=float(r[7]), trades=int(r[8]),
+        taker_buy_volume=float(r[9]), is_closed=True,
+    ) for r in raw]
+    htf_raw = await binance.fetch_klines_paginated(symbol, htf,
+                                                    total=max(300, bars // 12),
+                                                    market="spot")
+    htf_ks = [Kline(
+        symbol=symbol, timeframe=htf,
+        open_time=int(r[0]), close_time=int(r[6]),
+        open=float(r[1]), high=float(r[2]), low=float(r[3]), close=float(r[4]),
+        volume=float(r[5]), quote_volume=float(r[7]), trades=int(r[8]),
+        taker_buy_volume=float(r[9]), is_closed=True,
+    ) for r in htf_raw]
+    warmup_n = min(200, len(ks) // 4)
+    ind.warmup(symbol, tf, ks[:warmup_n])
+    ind.warmup(symbol, htf, htf_ks)
+
+    trades: list[SimTrade] = []
+    state: Optional[_ScaledMRState] = None
+    equity = s.account_equity_usd
+    fee_bps = s.spot_taker_fee_bps + s.slippage_bps  # one-way
+    stop_slip = s.paper_stop_slippage_bps / 10_000
+    tp_slip = s.paper_tp_slippage_bps / 10_000
+    entry_slip = s.slippage_bps / 10_000
+
+    def _finalize(state: _ScaledMRState, exit_px: float, exit_reason: str,
+                  ts_ms: int) -> SimTrade:
+        # Compute remaining-leg P&L and combine with already-realized.
+        remaining = state.open_qty
+        if state.side == "long":
+            gross_remaining = (exit_px - state.avg_entry) * remaining
+        else:
+            gross_remaining = (state.avg_entry - exit_px) * remaining
+        exit_fee = remaining * exit_px * (fee_bps / 10_000)
+        final_pnl = state.realized_pnl_usd + gross_remaining - exit_fee
+        return SimTrade(
+            symbol=state.symbol, strategy="mean_reversion_scaled",
+            side=state.side, qty=state.total_qty,
+            entry_price=state.avg_entry,
+            stop=state.stop_price(cfg.atr_stop_mult),
+            tp=state.tp2_target, entry_ts_ms=state.legs[0][0],
+            exit_price=exit_px, exit_reason=exit_reason,
+            exit_ts_ms=ts_ms, pnl_usd=final_pnl,
+        )
+
+    def _try_open(snap: IndicatorSnapshot, htf_snap: Optional[IndicatorSnapshot],
+                   k: Kline) -> Optional[_ScaledMRState]:
+        # Mirror the gate logic from generate_mean_reversion_signal but
+        # build a scaled state instead of a Signal.
+        if symbol not in cfg.allowed_symbols:
+            return None
+        if snap.atr14 is None or snap.atr14 <= 0:
+            return None
+        if snap.bb_upper is None or snap.bb_lower is None or snap.bb_middle is None:
+            return None
+        if snap.rsi14 is None or snap.stoch_rsi_k is None:
+            return None
+        if snap.adx14 is None or snap.adx14 > cfg.adx_max_for_meanrev:
+            return None
+        if htf_snap is not None and htf_snap.adx14 is not None and htf_snap.adx14 > 30.0:
+            return None
+        side: Optional[str] = None
+        if (k.close < snap.bb_lower
+                and snap.stoch_rsi_k < cfg.stoch_oversold
+                and snap.rsi14 < cfg.rsi_oversold
+                and snap.bb_middle > k.close
+                and "long" in cfg.enabled_sides):
+            side = "long"
+        elif (k.close > snap.bb_upper
+                and snap.stoch_rsi_k > cfg.stoch_overbought
+                and snap.rsi14 > cfg.rsi_overbought
+                and snap.bb_middle < k.close
+                and "short" in cfg.enabled_sides):
+            side = "short"
+        if side is None:
+            return None
+        if abs(snap.bb_middle - k.close) < cfg.min_target_atr * snap.atr14:
+            return None
+        # Size FIRST leg using full risk budget at the initial stop distance
+        # (initial_atr * atr_stop_mult). Scale-in legs ADD to the position
+        # — so a scaled trade ends up risking ~1.5-2x the base budget on
+        # the wider stop, which is the design intent (higher conviction =
+        # more size). Cap at max_notional_usd across all legs.
+        risk_pct = s.risk_per_trade_pct / 100.0
+        risk_usd = equity * risk_pct
+        risk_per_unit = cfg.atr_stop_mult * snap.atr14
+        if risk_per_unit <= 0:
+            return None
+        first_leg_qty = min(risk_usd / risk_per_unit,
+                            (s.max_notional_usd / cfg.max_entries) / k.close)
+        if first_leg_qty <= 0:
+            return None
+        entry_px = k.close * (1 + entry_slip) if side == "long" else k.close * (1 - entry_slip)
+        # Entry fee on first leg
+        entry_fee = first_leg_qty * entry_px * (fee_bps / 10_000)
+        st = _ScaledMRState(
+            symbol=symbol, side=side,
+            legs=[(k.close_time, entry_px, first_leg_qty)],
+            initial_entry_price=k.close, initial_atr=snap.atr14,
+            tp2_target=snap.bb_middle,
+            realized_pnl_usd=-entry_fee,
+        )
+        return st
+
+    for k in ks[warmup_n:]:
+        snap = ind.get(symbol, tf).on_closed_kline(k)
+        htf_snap = ind.latest(symbol, htf)
+
+        if state is not None:
+            state.bars_held += 1
+            avg = state.avg_entry
+            stop = state.stop_price(cfg.atr_stop_mult)
+            tp1 = state.tp1_price(cfg.tp1_distance_frac)
+            tp2 = state.tp2_target
+
+            # Pessimistic ordering: check stop first (assume worst path).
+            hit_stop = (k.low <= stop) if state.side == "long" else (k.high >= stop)
+            hit_tp2 = (k.high >= tp2) if state.side == "long" else (k.low <= tp2)
+            hit_tp1 = (k.high >= tp1) if state.side == "long" else (k.low <= tp1)
+
+            if hit_stop:
+                exit_px = stop * (1 - stop_slip) if state.side == "long" else stop * (1 + stop_slip)
+                trades.append(_finalize(state, exit_px, "stop", k.close_time))
+                state = None
+                continue
+            if hit_tp2:
+                exit_px = tp2 * (1 - tp_slip) if state.side == "long" else tp2 * (1 + tp_slip)
+                trades.append(_finalize(state, exit_px, "tp2", k.close_time))
+                state = None
+                continue
+            if not state.tp1_hit and hit_tp1:
+                # Realize partial: close `tp1_close_fraction` of total.
+                close_qty = state.total_qty * cfg.tp1_close_fraction
+                tp1_px = tp1 * (1 - tp_slip) if state.side == "long" else tp1 * (1 + tp_slip)
+                if state.side == "long":
+                    gross = (tp1_px - avg) * close_qty
+                else:
+                    gross = (avg - tp1_px) * close_qty
+                exit_fee = close_qty * tp1_px * (fee_bps / 10_000)
+                state.realized_pnl_usd += gross - exit_fee
+                state.closed_qty += close_qty
+                state.tp1_hit = True
+                # Don't continue — same bar may also have scale-in or time-stop.
+
+            # Scale-in: only if we haven't taken TP1 yet (after TP1, we're
+            # reducing not adding) and price is deeper into stretch.
+            if (not state.tp1_hit and len(state.legs) < cfg.max_entries
+                    and snap.adx14 is not None and snap.adx14 <= cfg.adx_max_for_meanrev):
+                step_px = cfg.scale_in_atr_step * state.initial_atr
+                if state.side == "long":
+                    trigger = state.initial_entry_price - step_px
+                    triggered = (k.low <= trigger)
+                else:
+                    trigger = state.initial_entry_price + step_px
+                    triggered = (k.high >= trigger)
+                if triggered:
+                    leg_qty = state.legs[0][2]  # same as first leg
+                    leg_px = trigger * (1 + entry_slip) if state.side == "long" else trigger * (1 - entry_slip)
+                    entry_fee = leg_qty * leg_px * (fee_bps / 10_000)
+                    state.realized_pnl_usd -= entry_fee
+                    state.legs.append((k.close_time, leg_px, leg_qty))
+
+            if state is not None and state.bars_held >= cfg.time_stop_bars:
+                exit_px = k.close * (1 - tp_slip) if state.side == "long" else k.close * (1 + tp_slip)
+                trades.append(_finalize(state, exit_px, "time_stop", k.close_time))
+                state = None
+                continue
+
+        if state is None:
+            new_state = _try_open(snap, htf_snap, k)
+            if new_state is not None:
+                state = new_state
+
+    # Close any dangling state at last bar.
+    if state is not None and ks:
+        last_k = ks[-1]
+        exit_px = last_k.close
+        trades.append(_finalize(state, exit_px, "eod", last_k.close_time))
+
+    span_days = (ks[-1].close_time - ks[0].close_time) / 1000 / 86400 if ks else 0.0
+    return _stats_from_trades("mean_reversion_scaled", trades,
+                              s.account_equity_usd, span_days), trades
+
+
 # ─────────────────────────────  Funding strategy backtest  ──────────────────
 
 

@@ -23,6 +23,7 @@ from src.services.backtest import (
     BacktestStats,
     backtest_indicator,
     backtest_mean_reversion,
+    backtest_mean_reversion_scaled,
 )
 from src.tools.binance_client import BinanceClient
 
@@ -59,7 +60,7 @@ async def amain() -> None:
     ap.add_argument("--htf", default="1h")
     ap.add_argument("--bars", type=int, default=5000)
     ap.add_argument("--strategies", default="indicator,meanrev",
-                    help="comma list: indicator,meanrev")
+                    help="comma list: indicator,meanrev,meanrev_scaled")
     args = ap.parse_args()
 
     symbols = [s.strip().upper() for s in args.symbols.split(",") if s.strip()]
@@ -79,6 +80,10 @@ async def amain() -> None:
                         )
                     elif strat == "meanrev":
                         stats, _ = await backtest_mean_reversion(
+                            b, symbol=sym, tf=args.tf, htf=args.htf, bars=args.bars,
+                        )
+                    elif strat == "meanrev_scaled":
+                        stats, _ = await backtest_mean_reversion_scaled(
                             b, symbol=sym, tf=args.tf, htf=args.htf, bars=args.bars,
                         )
                     else:
