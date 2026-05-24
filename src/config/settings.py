@@ -77,6 +77,22 @@ class Settings(BaseSettings):
     llm_news_daily_budget_usd: float = 2.0
     llm_anomaly_daily_budget_usd: float = 0.5
 
+    # TraderAgent — the "human trader at a desk" loop.
+    #   Reads tools (klines, indicators, news, OI, liquidations, ...) and
+    #   proposes trades. Backtest mode: direct paper execution. Live mode:
+    #   every proposal requires Telegram approval (force_user_approval bypasses
+    #   the auto_approve_max_notional_usd threshold for trader-agent props).
+    trader_agent_enabled: bool = False
+    llm_trader_daily_budget_usd: float = 5.0
+    trader_agent_force_user_approval: bool = True
+    trader_agent_max_tool_iters: int = 12
+    # Event-driven wake triggers
+    trader_agent_wake_atr_threshold: float = 1.0      # |close-open| in ATR units
+    trader_agent_wake_news_sentiment_threshold: float = 0.5
+    trader_agent_wake_position_drawdown_pct: float = 0.5
+    trader_agent_heartbeat_sec: int = 1800            # 30 min idle check-in
+    trader_agent_min_wake_gap_sec: int = 60           # per-kind dedup window
+
     # Funding-rate harvesting strategy
     funding_harvest_enabled: bool = True
     funding_entry_threshold_bps: float = 10.0      # 8h funding must exceed
