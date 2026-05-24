@@ -1,0 +1,68 @@
+services:
+  agent:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://agent:${POSTGRES_PASSWORD:-agent}@postgres:5432/agent
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:9090:9090"   # Prometheus /metrics (loopback only)
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: agent
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agent}
+      POSTGRES_DB: agent
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/db-backup.sh:/scripts/db-backup.sh:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agent -d agent"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb",
+              "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redisdata:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Optional: backup sidecar that runs db-backup.sh on a schedule.
+  # Uncomment after configuring S3/B2 credentials in .env.
+  # backup:
+  #   image: postgres:16-alpine
+  #   env_file: .env
+  #   depends_on: [postgres]
+  #   volumes:
+  #     - ./scripts/db-backup.sh:/scripts/db-backup.sh:ro
+  #     - ./data/backups:/backups
+  #   entrypoint: ["/bin/sh", "-c", "while true; do /scripts/db-backup.sh; sleep 86400; done"]
+  #   restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
