@@ -198,6 +198,69 @@ class BinanceClient:
                 return await self.client.get_klines(symbol=symbol, interval=interval, limit=limit)
             return await self.client.futures_klines(symbol=symbol, interval=interval, limit=limit)
 
+    async def fetch_klines_paginated(self, symbol: str, interval: str,
+                                      total: int, market: str = "spot") -> list[list]:
+        """Page back from now to collect up to `total` closed klines.
+
+        Binance caps each call at 1000 rows; for backtests that want a
+        longer window (>1000 bars) we must page. Returns rows in ascending
+        time order (oldest first), deduped by close_time across boundaries.
+
+        For live warmup the existing `fetch_klines(... limit=...)` (single
+        call) is still preferred.
+        """
+        assert self.client is not None
+        if total <= 1000:
+            return await self.fetch_klines(symbol, interval, limit=total, market=market)
+        interval_ms_map = {
+            "1m": 60_000, "3m": 180_000, "5m": 300_000, "15m": 900_000,
+            "30m": 1_800_000, "1h": 3_600_000, "2h": 7_200_000, "4h": 14_400_000,
+            "6h": 21_600_000, "8h": 28_800_000, "12h": 43_200_000,
+            "1d": 86_400_000, "3d": 259_200_000, "1w": 604_800_000,
+        }
+        if interval not in interval_ms_map:
+            raise ValueError(f"unsupported interval for pagination: {interval}")
+        step_ms = interval_ms_map[interval]
+        end_ms = int(time.time() * 1000)
+        # +1 page of buffer to absorb edge effects from in-progress candles
+        start_ms = end_ms - (total + 1) * step_ms
+        out: list[list] = []
+        cursor = start_ms
+        while cursor < end_ms and len(out) < total:
+            async with self.rest_limiter:
+                if market == "spot":
+                    page = await self.client.get_klines(
+                        symbol=symbol, interval=interval,
+                        startTime=cursor, endTime=end_ms, limit=1000,
+                    )
+                else:
+                    page = await self.client.futures_klines(
+                        symbol=symbol, interval=interval,
+                        startTime=cursor, endTime=end_ms, limit=1000,
+                    )
+            if not page:
+                break
+            out.extend(page)
+            last_close = int(page[-1][6])  # close_time
+            if len(page) < 1000 or last_close <= cursor:
+                break
+            cursor = last_close + 1
+        # Dedupe by close_time and sort ascending (defensive).
+        seen: set[int] = set()
+        dedup: list[list] = []
+        for row in out:
+            t = int(row[6])
+            if t in seen:
+                continue
+            seen.add(t)
+            dedup.append(row)
+        dedup.sort(key=lambda r: int(r[6]))
+        # Drop any in-progress candle at the very end (close_time > now is
+        # impossible for closed bars, but defensively trim).
+        now_ms = int(time.time() * 1000)
+        dedup = [r for r in dedup if int(r[6]) <= now_ms]
+        return dedup[-total:]
+
     # ----- REST: account state -----
     async def spot_balances(self) -> dict[str, float]:
         assert self.client is not None

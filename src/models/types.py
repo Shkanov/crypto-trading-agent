@@ -69,6 +69,20 @@ class IndicatorSnapshot(BaseModel):
     cvd: Optional[float] = None
     cvd_slope: Optional[float] = None
     volume_z: Optional[float] = None
+    # Trend strength (Wilder ADX 14, with DI+/DI-)
+    adx14: Optional[float] = None
+    di_plus: Optional[float] = None
+    di_minus: Optional[float] = None
+    # Stochastic RSI (14/14/3/3) — sensitive OB/OS
+    stoch_rsi_k: Optional[float] = None  # 0..100
+    stoch_rsi_d: Optional[float] = None  # 0..100
+    # Donchian channels (20) — pure high/low breakout
+    donchian_upper: Optional[float] = None
+    donchian_lower: Optional[float] = None
+    donchian_mid: Optional[float] = None
+    # On-balance volume (cumulative + recent slope)
+    obv: Optional[float] = None
+    obv_slope: Optional[float] = None
     ts_ms: int = Field(default_factory=now_ms)
 
 

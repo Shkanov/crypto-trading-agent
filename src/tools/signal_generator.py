@@ -55,7 +55,23 @@ def _trend_score(snap: IndicatorSnapshot) -> float:
         diff = snap.close - snap.vwap
         scale = max(snap.atr14 or (snap.close * 0.005), 1e-9)
         contribs.append(_clip(diff / scale))
-    return sum(contribs) / len(contribs) if contribs else 0.0
+    # Donchian breakout direction: close near upper = bullish, near lower = bearish.
+    if (snap.donchian_upper is not None and snap.donchian_lower is not None
+            and snap.donchian_upper > snap.donchian_lower):
+        rng = snap.donchian_upper - snap.donchian_lower
+        # Map [lower, upper] to [-1, +1].
+        contribs.append(_clip(((snap.close - snap.donchian_lower) / rng) * 2.0 - 1.0))
+    base = sum(contribs) / len(contribs) if contribs else 0.0
+    # ADX (trend strength) damps the trend contribution when there's no
+    # actual trend. <15 = chop (×0.25); 15-25 = weak (×0.6); 25-40 = decent
+    # (×1.0); >40 = very strong (clamped to ×1.0). This is a multiplicative
+    # gate — sign of the trend stays the same, magnitude shrinks in chop.
+    if snap.adx14 is not None:
+        if snap.adx14 < 15:
+            base *= 0.25
+        elif snap.adx14 < 25:
+            base *= 0.6
+    return base
 
 
 def _momentum_score(snap: IndicatorSnapshot) -> float:
@@ -64,6 +80,10 @@ def _momentum_score(snap: IndicatorSnapshot) -> float:
         contribs.append(_normalize_macd_hist(snap.macd_hist, snap.atr14))
     if snap.rsi14 is not None:
         contribs.append(_normalize_rsi(snap.rsi14))
+    # StochRSI K maps 20→-1 (oversold), 50→0, 80→+1 (overbought). Same
+    # sign convention as RSI for trend-follow: higher = stronger momentum.
+    if snap.stoch_rsi_k is not None:
+        contribs.append(_clip((snap.stoch_rsi_k - 50.0) / 30.0))
     return sum(contribs) / len(contribs) if contribs else 0.0
 
 
@@ -74,6 +94,10 @@ def _volume_score(snap: IndicatorSnapshot) -> float:
     if snap.cvd_slope is not None:
         # heuristic: positive CVD slope = buyers in control
         contribs.append(_clip(snap.cvd_slope / (abs(snap.cvd_slope) + 1e-9)))
+    if snap.obv_slope is not None:
+        # OBV is in raw volume units; sign-of-slope is the durable signal,
+        # not magnitude (which scales with the symbol's typical volume).
+        contribs.append(_clip(snap.obv_slope / (abs(snap.obv_slope) + 1e-9)))
     return sum(contribs) / len(contribs) if contribs else 0.0
 
 
@@ -95,9 +119,21 @@ def _build_feature_vector(snap: IndicatorSnapshot) -> FeatureVector:
     )
 
 
+ADX_TREND_MIN = 20.0  # below this on the regime TF, treat as no-trend
+
+
 def htf_regime(snap: Optional[IndicatorSnapshot]) -> int:
-    """Higher-TF regime filter. +1 bullish, -1 bearish, 0 unclear."""
+    """Higher-TF regime filter. +1 bullish, -1 bearish, 0 unclear/chop.
+
+    Requires ADX above ADX_TREND_MIN on the regime timeframe — otherwise we
+    return 0 even if EMA/Supertrend agree. This prevents trend-follow from
+    firing in choppy regimes where the mean-reversion strategy should own
+    the bar instead.
+    """
     if snap is None or snap.ema21 is None or snap.ema55 is None:
+        return 0
+    # ADX is optional — if missing (early bars), fall back to old behavior.
+    if snap.adx14 is not None and snap.adx14 < ADX_TREND_MIN:
         return 0
     if snap.ema21 > snap.ema55 and (snap.supertrend_dir or 1) > 0:
         return 1

@@ -65,6 +65,25 @@ class IndicatorState:
     cvd: float = 0.0
     cvd_history: Deque[float] = field(default_factory=lambda: deque(maxlen=50))
 
+    # ADX (Wilder, 14) — Wilder-smoothed DM/TR and DX
+    adx_period: int = 14
+    adx_plus_dm: Optional[float] = None
+    adx_minus_dm: Optional[float] = None
+    adx_tr: Optional[float] = None
+    adx_value: Optional[float] = None
+    prev_high: Optional[float] = None
+    prev_low: Optional[float] = None
+
+    # Stochastic RSI — needs rolling history of raw RSI values
+    stoch_rsi_period: int = 14
+    rsi_history: Deque[float] = field(default_factory=lambda: deque(maxlen=64))
+    stoch_rsi_raw_history: Deque[float] = field(default_factory=lambda: deque(maxlen=16))
+    stoch_rsi_k_history: Deque[float] = field(default_factory=lambda: deque(maxlen=16))
+
+    # OBV running sum
+    obv_value: float = 0.0
+    obv_history: Deque[float] = field(default_factory=lambda: deque(maxlen=50))
+
     last_snapshot: Optional[IndicatorSnapshot] = None
 
     def reset_session(self) -> None:
@@ -184,7 +203,80 @@ class IndicatorState:
             if sd > 0:
                 volume_z = float((v - mu) / sd)
 
+        # ADX / DI+ / DI- (Wilder, 14). Standard formulation:
+        #   +DM = max(high-prev_high, 0) if high-prev_high > prev_low-low else 0
+        #   -DM = max(prev_low-low, 0)  if prev_low-low > high-prev_high else 0
+        #   TR  = max(h-l, |h-prev_close|, |l-prev_close|)
+        # All three Wilder-smoothed; DX = 100*|+DI - -DI|/(+DI + -DI);
+        # ADX = Wilder-smoothed DX.
+        adx14: Optional[float] = None
+        di_plus_val: Optional[float] = None
+        di_minus_val: Optional[float] = None
+        if self.prev_high is not None and self.prev_low is not None \
+                and self.prev_close is not None:
+            up_move = h - self.prev_high
+            dn_move = self.prev_low - l
+            plus_dm = up_move if up_move > dn_move and up_move > 0 else 0.0
+            minus_dm = dn_move if dn_move > up_move and dn_move > 0 else 0.0
+            tr = max(h - l, abs(h - self.prev_close), abs(l - self.prev_close))
+            self.adx_plus_dm = _wilder(self.adx_plus_dm, plus_dm, self.adx_period)
+            self.adx_minus_dm = _wilder(self.adx_minus_dm, minus_dm, self.adx_period)
+            self.adx_tr = _wilder(self.adx_tr, tr, self.adx_period)
+            if self.adx_tr and self.adx_tr > 0:
+                di_plus_val = 100.0 * self.adx_plus_dm / self.adx_tr
+                di_minus_val = 100.0 * self.adx_minus_dm / self.adx_tr
+                denom = di_plus_val + di_minus_val
+                if denom > 0:
+                    dx = 100.0 * abs(di_plus_val - di_minus_val) / denom
+                    self.adx_value = _wilder(self.adx_value, dx, self.adx_period)
+                    adx14 = self.adx_value
+
+        # Stochastic RSI (RSI lookback 14, stoch period 14, K=3 SMA, D=3 SMA).
+        # Needs at least `stoch_rsi_period` raw RSI values in history.
+        stoch_k: Optional[float] = None
+        stoch_d: Optional[float] = None
+        if rsi is not None:
+            self.rsi_history.append(rsi)
+            if len(self.rsi_history) >= self.stoch_rsi_period:
+                window_rsi = list(self.rsi_history)[-self.stoch_rsi_period:]
+                lo = min(window_rsi)
+                hi = max(window_rsi)
+                if hi > lo:
+                    raw = (rsi - lo) / (hi - lo) * 100.0
+                else:
+                    raw = 50.0
+                self.stoch_rsi_raw_history.append(raw)
+                if len(self.stoch_rsi_raw_history) >= 3:
+                    k = float(np.mean(list(self.stoch_rsi_raw_history)[-3:]))
+                    self.stoch_rsi_k_history.append(k)
+                    stoch_k = k
+                    if len(self.stoch_rsi_k_history) >= 3:
+                        stoch_d = float(np.mean(list(self.stoch_rsi_k_history)[-3:]))
+
+        # Donchian channels (20-bar high/low)
+        donchian_upper = donchian_lower = donchian_mid = None
+        if len(self.highs) >= 20 and len(self.lows) >= 20:
+            donchian_upper = float(max(list(self.highs)[-20:]))
+            donchian_lower = float(min(list(self.lows)[-20:]))
+            donchian_mid = (donchian_upper + donchian_lower) / 2.0
+
+        # OBV — cumulative volume weighted by close-direction.
+        if self.prev_close is not None:
+            if c > self.prev_close:
+                self.obv_value += v
+            elif c < self.prev_close:
+                self.obv_value -= v
+        self.obv_history.append(self.obv_value)
+        obv_slope: Optional[float] = None
+        if len(self.obv_history) >= 10:
+            hist = np.array(list(self.obv_history)[-10:])
+            xs = np.arange(len(hist))
+            obv_slope = float(np.polyfit(xs, hist, 1)[0])
+
+        # Record prev_* AFTER all computations that need them above.
         self.prev_close = c
+        self.prev_high = h
+        self.prev_low = l
 
         snap = IndicatorSnapshot(
             symbol=self.symbol, timeframe=self.timeframe, close=c,
@@ -195,6 +287,11 @@ class IndicatorState:
             bb_width_pct_rank=bb_width_rank,
             vwap=vwap, supertrend=self.st_value, supertrend_dir=self.st_dir,
             cvd=self.cvd, cvd_slope=cvd_slope, volume_z=volume_z,
+            adx14=adx14, di_plus=di_plus_val, di_minus=di_minus_val,
+            stoch_rsi_k=stoch_k, stoch_rsi_d=stoch_d,
+            donchian_upper=donchian_upper, donchian_lower=donchian_lower,
+            donchian_mid=donchian_mid,
+            obv=self.obv_value, obv_slope=obv_slope,
         )
         self.last_snapshot = snap
         return snap

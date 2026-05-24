@@ -40,6 +40,10 @@ import structlog
 
 from src.config.settings import Settings, get_settings
 from src.models.types import IndicatorSnapshot, Kline, Signal, StrategyConfig
+from src.strategies.mean_reversion import (
+    MeanReversionConfig,
+    generate_mean_reversion_signal,
+)
 from src.tools.binance_client import BinanceClient
 from src.tools.indicators import IndicatorEngine
 from src.tools.signal_generator import generate_signal
@@ -171,7 +175,7 @@ async def backtest_indicator(
     cfg = cfg or StrategyConfig(allowed_symbols=[symbol], htf_timeframe=htf)
     ind = IndicatorEngine()
 
-    raw = await binance.fetch_klines(symbol, tf, limit=bars, market="spot")
+    raw = await binance.fetch_klines_paginated(symbol, tf, total=bars, market="spot")
     ks = [Kline(
         symbol=symbol, timeframe=tf,
         open_time=int(r[0]), close_time=int(r[6]),
@@ -179,8 +183,9 @@ async def backtest_indicator(
         volume=float(r[5]), quote_volume=float(r[7]), trades=int(r[8]),
         taker_buy_volume=float(r[9]), is_closed=True,
     ) for r in raw]
-    htf_raw = await binance.fetch_klines(symbol, htf, limit=max(300, bars // 12),
-                                          market="spot")
+    htf_raw = await binance.fetch_klines_paginated(symbol, htf,
+                                                    total=max(300, bars // 12),
+                                                    market="spot")
     htf_ks = [Kline(
         symbol=symbol, timeframe=htf,
         open_time=int(r[0]), close_time=int(r[6]),
@@ -272,6 +277,122 @@ async def backtest_indicator(
 
     span_days = (ks[-1].close_time - ks[0].close_time) / 1000 / 86400 if ks else 0.0
     return _stats_from_trades("indicator", trades, s.account_equity_usd, span_days), trades
+
+
+# ─────────────────────────────  Mean-reversion strategy backtest  ────────────
+
+
+async def backtest_mean_reversion(
+    binance: BinanceClient,
+    symbol: str,
+    tf: str = "5m",
+    htf: str = "1h",
+    bars: int = 5000,
+    cfg: Optional[MeanReversionConfig] = None,
+    settings: Optional[Settings] = None,
+) -> tuple[BacktestStats, list[SimTrade]]:
+    """Walk-forward replay of the mean-reversion strategy.
+
+    Same fill / slippage / fee model as `backtest_indicator` — different
+    only in how each bar's Signal is generated. This guarantees comparable
+    P&L numbers between the two strategies on the same symbol/window.
+    """
+    s = settings or get_settings()
+    cfg = cfg or MeanReversionConfig(allowed_symbols=[symbol], htf_timeframe=htf)
+    ind = IndicatorEngine()
+
+    raw = await binance.fetch_klines_paginated(symbol, tf, total=bars, market="spot")
+    ks = [Kline(
+        symbol=symbol, timeframe=tf,
+        open_time=int(r[0]), close_time=int(r[6]),
+        open=float(r[1]), high=float(r[2]), low=float(r[3]), close=float(r[4]),
+        volume=float(r[5]), quote_volume=float(r[7]), trades=int(r[8]),
+        taker_buy_volume=float(r[9]), is_closed=True,
+    ) for r in raw]
+    htf_raw = await binance.fetch_klines_paginated(symbol, htf,
+                                                    total=max(300, bars // 12),
+                                                    market="spot")
+    htf_ks = [Kline(
+        symbol=symbol, timeframe=htf,
+        open_time=int(r[0]), close_time=int(r[6]),
+        open=float(r[1]), high=float(r[2]), low=float(r[3]), close=float(r[4]),
+        volume=float(r[5]), quote_volume=float(r[7]), trades=int(r[8]),
+        taker_buy_volume=float(r[9]), is_closed=True,
+    ) for r in htf_raw]
+    warmup_n = min(200, len(ks) // 4)
+    ind.warmup(symbol, tf, ks[:warmup_n])
+    ind.warmup(symbol, htf, htf_ks)
+
+    trades: list[SimTrade] = []
+    open_trade: Optional[SimTrade] = None
+    equity = s.account_equity_usd
+    fee_bps = s.spot_taker_fee_bps + s.slippage_bps  # one-way
+
+    for k in ks[warmup_n:]:
+        if open_trade is not None:
+            hit_stop = (k.low <= open_trade.stop) if open_trade.side == "long" else (k.high >= open_trade.stop)
+            hit_tp = (k.high >= open_trade.tp) if open_trade.side == "long" else (k.low <= open_trade.tp)
+            if hit_stop:
+                exit_px = open_trade.stop * (1 - 25 / 10_000) if open_trade.side == "long" else open_trade.stop * (1 + 25 / 10_000)
+                open_trade.exit_price = exit_px
+                open_trade.exit_reason = "stop"
+                open_trade.exit_ts_ms = k.close_time
+                gross = (exit_px - open_trade.entry_price) * open_trade.qty
+                if open_trade.side == "short":
+                    gross = -gross
+                exit_fee = open_trade.qty * exit_px * (fee_bps / 10_000)
+                open_trade.pnl_usd = gross - exit_fee
+                trades.append(open_trade)
+                open_trade = None
+            elif hit_tp:
+                exit_px = open_trade.tp * (1 - 5 / 10_000) if open_trade.side == "long" else open_trade.tp * (1 + 5 / 10_000)
+                open_trade.exit_price = exit_px
+                open_trade.exit_reason = "tp"
+                open_trade.exit_ts_ms = k.close_time
+                gross = (exit_px - open_trade.entry_price) * open_trade.qty
+                if open_trade.side == "short":
+                    gross = -gross
+                exit_fee = open_trade.qty * exit_px * (fee_bps / 10_000)
+                open_trade.pnl_usd = gross - exit_fee
+                trades.append(open_trade)
+                open_trade = None
+
+        snap = ind.get(symbol, tf).on_closed_kline(k)
+        if open_trade is not None:
+            continue
+        htf_snap = ind.latest(symbol, htf)
+        sig: Optional[Signal] = generate_mean_reversion_signal(symbol, snap, htf_snap, cfg)
+        if not sig:
+            continue
+
+        risk_pct = s.risk_per_trade_pct / 100.0
+        risk_usd = equity * risk_pct
+        risk_per_unit = abs(sig.entry - sig.stop)
+        if risk_per_unit <= 0:
+            continue
+        qty = min(risk_usd / risk_per_unit, s.max_notional_usd / sig.entry)
+        entry_slip = sig.entry * (s.slippage_bps / 10_000)
+        entry_px = sig.entry + entry_slip if sig.side == "long" else sig.entry - entry_slip
+        open_trade = SimTrade(
+            symbol=symbol, strategy="mean_reversion",
+            side=sig.side, qty=qty,
+            entry_price=entry_px, stop=sig.stop, tp=sig.take_profit,
+            entry_ts_ms=k.close_time,
+        )
+
+    if open_trade is not None and ks:
+        last = ks[-1].close
+        open_trade.exit_price = last
+        open_trade.exit_reason = "eod"
+        open_trade.exit_ts_ms = ks[-1].close_time
+        gross = (last - open_trade.entry_price) * open_trade.qty
+        if open_trade.side == "short":
+            gross = -gross
+        open_trade.pnl_usd = gross
+        trades.append(open_trade)
+
+    span_days = (ks[-1].close_time - ks[0].close_time) / 1000 / 86400 if ks else 0.0
+    return _stats_from_trades("mean_reversion", trades, s.account_equity_usd, span_days), trades
 
 
 # ─────────────────────────────  Funding strategy backtest  ──────────────────
