@@ -1,41 +1,45 @@
 """Backtest harness for the TraderAgent.
 
 Replays historical klines through the IndicatorEngine and invokes a REAL
-spawned TraderAgent on each wake event. Tool callbacks read only data
-<= the replay cursor — no peeking forward. Tools that lack historical
-fidelity (orderbook depth, news, liquidations) return an explicit
-"not available in backtest" notice so the agent learns to ignore them
-rather than rely on fabricated data.
+spawned trader on each wake event, via the Claude Code CLI (`claude -p`)
+talking to our MCP server in `src/agents/trader_mcp_server.py`.
 
-Cost: every wake event is a real Opus 4.7 call (~$0.03/cycle with ~5
-tool iterations). Use --max-wakes to bound spend. The TokenBudget on
-the agent itself also caps daily USD.
+Why CLI subprocess and not the Anthropic SDK: the user has no
+ANTHROPIC_API_KEY but does have Claude Code installed. The CLI handles
+auth, model selection, and tool plumbing.
 
-Authority in backtest: propose_trade executes paper-mode directly (no
-Telegram). Risk gate still validates. propose_close closes the matching
-SimTrade at the current bar close, applying tp_slippage_bps.
+Per-wake flow:
+    1. Harness writes snapshot.json (full state visible to the trader)
+       and resets outbox.json under a per-run tempdir.
+    2. Harness spawns `claude -p --mcp-config <tempdir>/mcp.json --model opus
+       --strict-mcp-config --bare --output-format json ...`
+    3. Claude launches our MCP server as a child stdio process, which
+       reads snapshot.json (envvar TRADER_STATE_PATH) for every read tool
+       and appends to outbox.json (envvar TRADER_OUTBOX_PATH) on
+       propose_trade / propose_close.
+    4. Claude exits; harness drains outbox.json, runs each trade decision
+       through the existing risk_gate + SimTrade machinery.
 
 Outputs (per run):
     BacktestStats: trades / win-rate / total P&L / Sharpe / max DD
     The full SimTrade ledger (for export to CSV / further analysis)
     Wake-event counts by kind
-    Total tool-call count + USD spent
+    Total claude subprocess turns + USD spent (from claude's json output)
 """
 from __future__ import annotations
 
 import asyncio
+import json
+import os
+import shutil
+import sys
+import tempfile
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Optional
 
 import structlog
 
-from src.agents.llm_client import LLMAgent
-from src.agents.trader_agent import (
-    attach_tools as attach_trader_tools,
-    build_trader_agent,
-    run_trader_cycle,
-)
-from src.agents.trader_tools import TraderToolContext
 from src.config.settings import Settings, get_settings
 from src.models.types import FeatureVector, Kline, Position, Signal
 from src.services.backtest import (
@@ -49,6 +53,39 @@ from src.tools.indicators import IndicatorEngine
 from src.tools.risk_gate import AccountState, RiskGate
 
 log = structlog.get_logger(__name__)
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+TRADER_SYSTEM_PROMPT = """\
+You are an intraday crypto trader operating a small account on Binance.
+This is BACKTEST MODE — historical klines are replayed; your trades and
+closes are paper-executed by the harness once you exit this turn.
+
+You have a fixed set of MCP tools (mcp__trader-backtest__*). Use them to
+read state, then decide. Final action is exactly one of:
+  - propose_trade: open a new position (stop and take_profit required)
+  - propose_close: close an existing position
+  - exit silently (no action) if nothing actionable
+
+Decision discipline:
+  - READ first. Always call get_position_state and get_indicator_snapshot
+    at minimum before deciding.
+  - Backtest gaps: orderbook, news, liquidations, correlation, hodl, and
+    sometimes funding/OI are unavailable. The tools say so explicitly —
+    do NOT invent or guess values.
+  - Use the `calc` tool for arithmetic. Do not arithmetic in-prompt.
+  - Every long needs stop < entry < take_profit; every short needs
+    take_profit < entry < stop.
+  - Hard cap: max 2 open positions. Don't pyramid the same symbol.
+  - Risk gate runs after you exit. If a trade is rejected, you'll see it
+    in your next wake's account state.
+
+Be terse. Keep reasoning under 200 words before tool calls. Final text
+after tools should be one sentence summarizing what you did (or "no
+action — <one-line reason>").
+"""
 
 
 def _kline_from_raw(symbol: str, tf: str, r: list) -> Kline:
@@ -87,8 +124,8 @@ class TraderBacktestResult:
     stats: BacktestStats
     closed_trades: list[SimTrade]
     wake_counts: dict[str, int]
-    total_tool_calls: int
-    total_usd_spent: float
+    total_turns: int           # sum of num_turns across claude invocations
+    total_usd_spent: float     # sum of total_cost_usd across invocations
     wakes_invoked: int
 
 
@@ -102,6 +139,7 @@ class TraderBacktestHarness:
         htf: str = "1h",
         bars: int = 200,
         max_wakes: int = 10,
+        per_wake_budget_usd: float = 0.50,
         settings: Optional[Settings] = None,
     ) -> None:
         self.s = settings or get_settings()
@@ -110,13 +148,14 @@ class TraderBacktestHarness:
         self.htf = htf
         self.bars = bars
         self.max_wakes = max_wakes
+        self.per_wake_budget_usd = per_wake_budget_usd
 
         self.binance = BinanceClient()
         self.indicators = IndicatorEngine()
         self.risk = RiskGate(self.s)
-        self.wake_triggers = WakeTriggers(self.s)
 
-        # Replay state
+        # Replay state (must exist before WakeTriggers so its clock lambda
+        # can read cursor_ts_ms at construction time)
         self._klines: list[Kline] = []
         self._htf_klines: list[Kline] = []
         self._funding_hist: list[tuple[int, float]] = []  # (ts_ms, rate)
@@ -124,6 +163,13 @@ class TraderBacktestHarness:
         self.cursor_ts_ms: int = 0
         self.cursor_idx: int = 0
         self.last_price: dict[str, float] = {}
+
+        # Wake cooldowns must advance with the replay cursor, not wall-clock.
+        # Without this, a backtest that finishes in seconds collapses every
+        # post-first cooldown window to zero advance and suppresses all wakes.
+        self.wake_triggers = WakeTriggers(
+            self.s, clock_ms=lambda: self.cursor_ts_ms,
+        )
 
         # Account / trades
         self.equity: float = self.s.account_equity_usd
@@ -138,21 +184,24 @@ class TraderBacktestHarness:
         # Diagnostics
         self.wake_counts: dict[str, int] = {}
         self.wakes_invoked: int = 0
-        self.total_tool_calls: int = 0
+        self.total_turns: int = 0
+        self.total_usd_spent: float = 0.0
 
-        # Agent (set in prepare)
-        self.agent: Optional[LLMAgent] = None
+        # Per-run tempdir (filled by prepare())
+        self._tempdir: Optional[str] = None
+        self._state_path: Optional[Path] = None
+        self._outbox_path: Optional[Path] = None
+        self._mcp_config_path: Optional[Path] = None
 
     # ------------------------------------------------------------------ data
 
     async def prepare(self) -> None:
-        """Fetch all historical data once. Builds the agent + tools. Must
-        be called inside an active asyncio loop with binance started."""
-        # Fail fast before any I/O if there's no API key — avoids burning
-        # Binance fetches just to error out at the agent-build step.
-        if not self.s.anthropic_api_key:
+        """Fetch all historical data once. Lay out the per-run tempdir
+        used for snapshot.json / outbox.json / mcp_config.json."""
+        if shutil.which("claude") is None:
             raise RuntimeError(
-                "anthropic_api_key not set — backtest needs a real key to spawn the agent"
+                "`claude` CLI not found on PATH — backtest needs Claude Code "
+                "installed to spawn the trader."
             )
         await self.binance.start()
         log.info("backtest.prepare.fetching",
@@ -219,41 +268,41 @@ class TraderBacktestHarness:
         self.indicators.warmup(self.symbol, self.htf, self._htf_klines)
         self.cursor_idx = warmup_n
 
-        # Build agent + tools
-        self.agent = build_trader_agent()
-        attach_trader_tools(self.agent, self._build_context())
-        # Override tools that would otherwise call live Binance endpoints
-        # and leak future state into the replay (orderbook, current funding,
-        # current OI). Replace with backtest-aware variants that either serve
-        # historical data or return an explicit "unavailable" notice.
-        self._install_backtest_overrides()
+        # Per-run tempdir for snapshot/outbox/mcp-config files
+        self._tempdir = tempfile.mkdtemp(prefix="trader_backtest_")
+        self._state_path = Path(self._tempdir) / "snapshot.json"
+        self._outbox_path = Path(self._tempdir) / "outbox.json"
+        self._mcp_config_path = Path(self._tempdir) / "mcp_config.json"
+        self._mcp_config_path.write_text(json.dumps({
+            "mcpServers": {
+                "trader-backtest": {
+                    "command": sys.executable,
+                    "args": ["-m", "src.agents.trader_mcp_server"],
+                    "env": {
+                        "TRADER_STATE_PATH": str(self._state_path),
+                        "TRADER_OUTBOX_PATH": str(self._outbox_path),
+                        # Inherit caller's PYTHONPATH so the editable install resolves
+                        "PYTHONPATH": os.environ.get("PYTHONPATH", str(PROJECT_ROOT)),
+                    },
+                }
+            }
+        }))
+
         log.info("backtest.prepare.done",
                   klines=len(self._klines), htf_klines=len(self._htf_klines),
                   warmup=warmup_n, funding_pts=len(self._funding_hist),
-                  oi_pts=len(self._oi_hist))
+                  oi_pts=len(self._oi_hist), tempdir=self._tempdir)
 
     async def close(self) -> None:
         await self.binance.close()
+        # Best-effort tempdir cleanup
+        if self._tempdir and os.path.isdir(self._tempdir):
+            try:
+                shutil.rmtree(self._tempdir)
+            except OSError as e:
+                log.info("backtest.tempdir.cleanup_skip", err=str(e))
 
-    # --------------------------------------------------------- tool callbacks
-
-    def _build_context(self) -> TraderToolContext:
-        return TraderToolContext(
-            settings=self.s,
-            binance=self.binance,
-            indicator_engine=self.indicators,
-            storage=None,  # type: ignore[arg-type]  # not used in backtest paths
-            funding_monitor=None, basis_monitor=None,
-            correlation=None, hodl=None,
-            get_open_positions=lambda: [p.to_position() for p in self.open_positions],
-            get_account_state=self._account_state_dict,
-            get_recent_anomalies=lambda n: [],
-            get_last_prices=lambda: dict(self.last_price),
-            get_recent_liquidations=lambda sym, n: [],
-            news_sentiment_subagent=self._stub_news,
-            propose_trade_callback=self._propose_trade,
-            propose_close_callback=self._propose_close,
-        )
+    # ----------------------------------------------------- account / snapshot
 
     def _account_state_dict(self) -> dict[str, Any]:
         return {
@@ -265,106 +314,155 @@ class TraderBacktestHarness:
             "mode": "backtest",
         }
 
-    async def _stub_news(self, symbols: list[str]) -> dict[str, Any]:
-        return {
-            "sentiments": {},
-            "summary": "",
-            "notice": "news sentiment not available in backtest mode — "
-                      "no historical corpus aligned to replay cursor; "
-                      "make decisions on price/indicator data alone",
-        }
-
-    # ---- Backtest-mode tool overrides (replace live Binance fetches) -------
-
-    def _install_backtest_overrides(self) -> None:
-        assert self.agent is not None
-        for t in self.agent.tools:
-            if t.name == "get_orderbook_snapshot":
-                t.handler = self._stub_orderbook
-            elif t.name == "get_funding_basis":
-                t.handler = self._historical_funding_basis
-            elif t.name == "get_open_interest_change":
-                t.handler = self._historical_oi_change
-            elif t.name == "get_recent_klines":
-                t.handler = self._historical_klines
-
-    async def _stub_orderbook(self, symbol: str, market: str = "spot",
-                               limit: int = 20) -> dict[str, Any]:
-        return {
-            "symbol": symbol, "market": market,
-            "notice": "orderbook snapshot not available in backtest mode "
-                      "(no historical depth data); reason about liquidity "
-                      "from kline volume + spread proxies if needed",
-        }
-
-    async def _historical_funding_basis(self, symbol: str) -> dict[str, Any]:
-        """Serve the funding rate at the nearest prior funding-time to the
-        cursor. Returns notice when funding history is absent (spot-only
-        symbol or testnet)."""
+    def _funding_at_cursor(self) -> Optional[dict[str, Any]]:
         if not self._funding_hist:
-            return {
-                "symbol": symbol,
-                "notice": "funding history not available in backtest mode "
-                          "(no perp data fetched for this symbol/run)",
-            }
-        # Binary search would be cleaner; linear scan is fine for ~500 rows.
-        rate = None
-        rate_ts = 0
-        for ts, r in self._funding_hist:
-            if ts > self.cursor_ts_ms:
+            return None
+        rate, ts = None, 0
+        for ts_, r in self._funding_hist:
+            if ts_ > self.cursor_ts_ms:
                 break
-            rate = r
-            rate_ts = ts
+            rate, ts = r, ts_
         if rate is None:
-            return {"symbol": symbol,
-                    "notice": "no funding data prior to replay cursor"}
-        return {
-            "symbol": symbol,
-            "funding_current_bps": rate * 10_000,
-            "funding_at_ts_ms": rate_ts,
-            "notice": "basis snapshot not available in backtest mode "
-                      "(no historical spot vs perp prices); funding only",
-        }
+            return None
+        return {"rate_bps": rate * 10_000, "ts_ms": ts}
 
-    async def _historical_oi_change(self, symbol: str, period: str = "5m"
-                                     ) -> dict[str, Any]:
+    def _oi_change_at_cursor(self) -> Optional[dict[str, Any]]:
         if not self._oi_hist:
-            return {"symbol": symbol,
-                    "notice": "OI history not available in backtest mode "
-                              "(mainnet-only and not pre-fetched)"}
-        # Pre-cursor slice
+            return None
         prior = [(ts, oi) for ts, oi in self._oi_hist if ts <= self.cursor_ts_ms]
         if len(prior) < 2:
-            return {"symbol": symbol,
-                    "notice": "insufficient OI history before cursor"}
+            return None
         oldest = prior[max(0, len(prior) - 12)][1]
         newest = prior[-1][1]
         return {
-            "symbol": symbol,
-            "oi_newest": newest, "oi_oldest": oldest,
+            "oi_oldest": oldest, "oi_newest": newest,
             "oi_change_pct": ((newest - oldest) / oldest * 100.0)
                 if oldest > 0 else None,
-            "period": period, "samples": min(len(prior), 12),
+            "period": "5m",
         }
 
-    async def _historical_klines(self, symbol: str, tf: str, n: int = 20
-                                  ) -> dict[str, Any]:
-        """Serve historical klines up to (but not past) the cursor. Without
-        this override, get_recent_klines hits Binance's live endpoint and
-        leaks future bars into the replay."""
-        if tf == self.tf:
-            klines = [k for k in self._klines if k.close_time <= self.cursor_ts_ms]
-        elif tf == self.htf:
-            klines = [k for k in self._htf_klines if k.close_time <= self.cursor_ts_ms]
-        else:
-            return {"error": f"backtest run only loaded tf={self.tf} and htf={self.htf}; "
-                              f"timeframe '{tf}' not available"}
-        n = min(max(int(n), 1), 200)
-        recent = klines[-n:]
-        return {"symbol": symbol, "tf": tf, "bars": [
-            {"t": k.open_time, "o": k.open, "h": k.high, "l": k.low,
-             "c": k.close, "v": k.volume} for k in recent
-        ]}
+    def _build_snapshot_payload(self) -> dict[str, Any]:
+        tf_state = self.indicators.get(self.symbol, self.tf)
+        htf_state = self.indicators.get(self.symbol, self.htf)
+
+        tf_recent = [k for k in self._klines if k.close_time <= self.cursor_ts_ms][-50:]
+        htf_recent = [k for k in self._htf_klines if k.close_time <= self.cursor_ts_ms][-50:]
+
+        def _bar(k: Kline) -> dict[str, Any]:
+            return {"t": k.open_time, "o": k.open, "h": k.high,
+                    "l": k.low, "c": k.close, "v": k.volume}
+
+        return {
+            "cursor_ts_ms": self.cursor_ts_ms,
+            "symbol": self.symbol, "tf": self.tf, "htf": self.htf,
+            "settings": {
+                "fee_bps_spot": self.s.spot_taker_fee_bps,
+                "fee_bps_perps": self.s.perps_taker_fee_bps,
+                "slippage_bps": self.s.slippage_bps,
+                "max_notional_usd": self.s.max_notional_usd,
+                "risk_per_trade_pct": self.s.risk_per_trade_pct,
+            },
+            "indicators": {
+                self.tf: tf_state.last_snapshot.model_dump()
+                    if tf_state.last_snapshot else None,
+                self.htf: htf_state.last_snapshot.model_dump()
+                    if htf_state.last_snapshot else None,
+            },
+            "klines_recent": [_bar(k) for k in tf_recent],
+            "klines_htf_recent": [_bar(k) for k in htf_recent],
+            "open_positions": [
+                {"symbol": p.sim_trade.symbol, "side": p.sim_trade.side,
+                 "qty": p.sim_trade.qty, "entry": p.sim_trade.entry_price,
+                 "stop": p.sim_trade.stop, "tp": p.sim_trade.tp,
+                 "bars_held": p.bars_held, "leverage": 1}
+                for p in self.open_positions
+            ],
+            "closed_trades_recent": [
+                {"symbol": t.symbol, "side": t.side, "entry": t.entry_price,
+                 "exit": t.exit_price, "pnl_usd": t.pnl_usd,
+                 "exit_reason": t.exit_reason}
+                for t in self.closed_trades[-10:]
+            ],
+            "account": self._account_state_dict(),
+            "funding_at_cursor": self._funding_at_cursor(),
+            "oi_change": self._oi_change_at_cursor(),
+        }
+
+    # ------------------------------------------------------ claude subprocess
+
+    async def _invoke_claude(self, wake_payload: dict[str, Any]) -> dict[str, Any]:
+        """Write snapshot, reset outbox, spawn `claude -p`, return parsed
+        json result. Outbox is drained separately by _apply_outbox()."""
+        assert self._state_path and self._outbox_path and self._mcp_config_path
+        self._state_path.write_text(
+            json.dumps(self._build_snapshot_payload(), default=str)
+        )
+        self._outbox_path.write_text(json.dumps({"decisions": []}))
+
+        user_prompt = (
+            "WAKE EVENT — make a decision and exit.\n\n"
+            f"Trigger:\n{json.dumps(wake_payload, default=str, indent=2)}\n\n"
+            "Read state via tools, then propose_trade / propose_close / "
+            "exit silently. Be terse."
+        )
+        cmd = [
+            "claude", "-p",
+            "--no-session-persistence",
+            "--strict-mcp-config",
+            "--mcp-config", str(self._mcp_config_path),
+            "--model", "opus",
+            "--max-budget-usd", f"{self.per_wake_budget_usd:.2f}",
+            "--output-format", "json",
+            "--tools", "",
+            "--allowedTools", "mcp__trader-backtest",
+            "--dangerously-skip-permissions",
+            "--system-prompt", TRADER_SYSTEM_PROMPT,
+            user_prompt,
+        ]
+
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=str(PROJECT_ROOT),
+        )
+        stdout, stderr = await proc.communicate()
+
+        if proc.returncode != 0:
+            log.warning("backtest.claude.nonzero_exit",
+                         rc=proc.returncode,
+                         stderr=stderr.decode(errors="replace")[:2000])
+        try:
+            return json.loads(stdout.decode(errors="replace"))
+        except json.JSONDecodeError:
+            log.warning("backtest.claude.parse_fail",
+                         out=stdout.decode(errors="replace")[:500],
+                         stderr=stderr.decode(errors="replace")[:500])
+            return {"result": "", "total_cost_usd": 0.0, "num_turns": 0}
+
+    async def _apply_outbox(self) -> int:
+        """Drain outbox.json, run each trade/close through existing logic.
+        Returns number of decisions applied."""
+        assert self._outbox_path
+        try:
+            data = json.loads(self._outbox_path.read_text())
+        except (FileNotFoundError, json.JSONDecodeError):
+            return 0
+        n = 0
+        for d in data.get("decisions", []):
+            action = d.get("action")
+            params = d.get("params", {})
+            if action == "trade":
+                res = await self._propose_trade(params)
+                log.info("backtest.outbox.trade", **res)
+            elif action == "close":
+                res = await self._propose_close(params)
+                log.info("backtest.outbox.close", **res)
+            else:
+                log.warning("backtest.outbox.unknown_action", action=action)
+                continue
+            n += 1
+        return n
 
     # ------------------------------------------------------- write tool impls
 
@@ -510,9 +608,8 @@ class TraderBacktestHarness:
     async def run(self) -> TraderBacktestResult:
         """Walk closed bars from cursor → end. On each bar: update
         indicators, mark/manage open positions, evaluate wake triggers,
-        invoke the agent (up to max_wakes), continue."""
-        assert self.agent is not None, "call prepare() first"
-        budget = self.agent.budget
+        invoke the trader subprocess (up to max_wakes), continue."""
+        assert self._state_path is not None, "call prepare() first"
 
         for k in self._klines[self.cursor_idx:]:
             self.cursor_ts_ms = k.close_time
@@ -529,11 +626,9 @@ class TraderBacktestHarness:
             if self.wakes_invoked >= self.max_wakes:
                 # Soft-stop further wakes but keep replaying so position
                 # outcomes (stop/TP) on existing trades still materialize.
-                self.wakes_skipped_cap += 0  # no-op tracker
                 continue
 
             wake = self.wake_triggers.on_closed_bar(k, snap)
-            # Also check position-pressure wake (drawdown on open longs/shorts)
             if wake is None:
                 wake = self.wake_triggers.on_position_pressure(
                     [p.to_position() for p in self.open_positions],
@@ -542,7 +637,7 @@ class TraderBacktestHarness:
             if wake is None:
                 continue
 
-            # 4) invoke the real agent on this wake event
+            # 4) spawn the trader subprocess for this wake
             self.wake_counts[wake["kind"]] = self.wake_counts.get(wake["kind"], 0) + 1
             self.wakes_invoked += 1
             log.info("backtest.wake.invoke",
@@ -551,18 +646,17 @@ class TraderBacktestHarness:
                       equity=self.equity,
                       open_positions=len(self.open_positions))
             try:
-                cycle_result = await run_trader_cycle(self.agent, wake)
-                self.total_tool_calls += cycle_result.tool_calls_made
+                result = await self._invoke_claude(wake)
+                turns = int(result.get("num_turns", 0) or 0)
+                cost = float(result.get("total_cost_usd", 0.0) or 0.0)
+                self.total_turns += turns
+                self.total_usd_spent += cost
+                applied = await self._apply_outbox()
+                log.info("backtest.wake.done",
+                          turns=turns, cost_usd=round(cost, 4),
+                          decisions_applied=applied)
             except Exception:
                 log.exception("backtest.wake.error", kind=wake.get("kind"))
-
-            # Budget exhausted? Stop calling the agent (replay continues so
-            # open trades can still resolve).
-            if budget and not budget.can_spend(0.001):
-                log.warning("backtest.budget_exhausted",
-                             spent=budget.spent_24h_usd(),
-                             cap=budget.daily_usd)
-                self.max_wakes = self.wakes_invoked  # gate further wakes
 
         # Flush any still-open positions at end-of-data
         for pos in list(self.open_positions):
@@ -583,7 +677,7 @@ class TraderBacktestHarness:
             stats=stats,
             closed_trades=self.closed_trades,
             wake_counts=self.wake_counts,
-            total_tool_calls=self.total_tool_calls,
-            total_usd_spent=budget.spent_24h_usd() if budget else 0.0,
+            total_turns=self.total_turns,
+            total_usd_spent=self.total_usd_spent,
             wakes_invoked=self.wakes_invoked,
         )

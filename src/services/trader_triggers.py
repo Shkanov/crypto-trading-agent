@@ -18,7 +18,7 @@ Wake payload schema (kept compact — fed as the user message to the agent):
 from __future__ import annotations
 
 import time
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 import structlog
 
@@ -36,12 +36,17 @@ class WakeTriggers:
     """Stateless aside from per-kind cooldown timestamps and the last
     heartbeat time. Cheap to allocate, cheap to call on every bar."""
 
-    def __init__(self, settings: Optional[Settings] = None) -> None:
+    def __init__(
+        self,
+        settings: Optional[Settings] = None,
+        clock_ms: Optional[Callable[[], int]] = None,
+    ) -> None:
         self.s = settings or get_settings()
+        self._clock = clock_ms or _now_ms
         self._last_wake_ms: dict[str, int] = {}
         # Heartbeat starts fresh on construction — first heartbeat fires
         # after `trader_agent_heartbeat_sec` from init, not immediately.
-        self._last_heartbeat_ms = _now_ms()
+        self._last_heartbeat_ms = self._clock()
 
     # ---- shared cooldown check ---------------------------------------------
 
@@ -63,7 +68,7 @@ class WakeTriggers:
         atr_units = move / snap.atr14
         if atr_units < self.s.trader_agent_wake_atr_threshold:
             return None
-        now = _now_ms()
+        now = self._clock()
         # Cooldown keyed per-symbol so an ETH move doesn't suppress a BTC move.
         kind = f"atr_move:{k.symbol}"
         if not self._cooldown_ok(kind, now):
@@ -87,7 +92,7 @@ class WakeTriggers:
         score = float(news_item.get("score", 0.0))
         if abs(score) < self.s.trader_agent_wake_news_sentiment_threshold:
             return None
-        now = _now_ms()
+        now = self._clock()
         symbol = news_item.get("symbol") or "MARKET"
         kind = f"news:{symbol}"
         if not self._cooldown_ok(kind, now):
@@ -108,7 +113,7 @@ class WakeTriggers:
         sev = anomaly_payload.get("severity", "info")
         if sev not in ("warn", "warning", "critical"):
             return None
-        now = _now_ms()
+        now = self._clock()
         symbol = anomaly_payload.get("symbol") or "MARKET"
         kind = f"anomaly:{symbol}:{anomaly_payload.get('kind', '?')}"
         if not self._cooldown_ok(kind, now):
@@ -146,7 +151,7 @@ class WakeTriggers:
                 worst_sym = p.symbol
         if worst_sym is None or worst_dd < threshold:
             return None
-        now = _now_ms()
+        now = self._clock()
         kind = f"drawdown:{worst_sym}"
         if not self._cooldown_ok(kind, now):
             return None
@@ -162,7 +167,7 @@ class WakeTriggers:
         """Returns a wake payload if the heartbeat interval has elapsed
         since the last heartbeat. Caller invokes this periodically (e.g.
         every 60s); the trigger itself is rate-limited internally."""
-        now = _now_ms()
+        now = self._clock()
         if (now - self._last_heartbeat_ms) < self.s.trader_agent_heartbeat_sec * 1000:
             return None
         self._last_heartbeat_ms = now

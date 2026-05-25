@@ -66,7 +66,7 @@ async def amain() -> None:
           f"bars={args.bars}  max_wakes={args.max_wakes}")
     print(_fmt_stats(result))
     print(f"wakes_invoked={result.wakes_invoked}  "
-          f"tool_calls={result.total_tool_calls}  "
+          f"turns={result.total_turns}  "
           f"usd_spent=${result.total_usd_spent:.4f}")
     print("wake_counts:")
     for k, v in sorted(result.wake_counts.items(), key=lambda x: -x[1]):
