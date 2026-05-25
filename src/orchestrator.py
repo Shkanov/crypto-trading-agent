@@ -93,6 +93,7 @@ from src.services.user_data_stream import UserDataStream
 from src.strategies.base import Strategy
 from src.strategies.funding_harvest import FundingHarvestStrategy, HarvestParams
 from src.strategies.indicator_confluence import IndicatorConfluenceStrategy
+from src.strategies.level_breakout import LevelBreakoutParams, LevelBreakoutStrategy
 from src.tools.binance_client import BinanceClient
 from src.tools.executor import Executor
 from src.tools.indicators import IndicatorEngine
@@ -1494,6 +1495,31 @@ class Orchestrator:
                 symbols=self.s.symbol_list,
             )
             self.register_strategy(self.funding_strategy)
+
+        # Level-breakout (inspired by the "пробой дневки" pattern from an
+        # external scalping channel). Off by default — flip on only after
+        # `scripts/backtest.py --strategy levelbreak` shows positive
+        # deflated Sharpe on multiple symbols and windows. Requires
+        # `1d` (or whatever `level_breakout_htf` is set to) in TIMEFRAMES.
+        if self.s.level_breakout_enabled:
+            lb_params = LevelBreakoutParams(
+                htf=self.s.level_breakout_htf,
+                trigger_tf=self.s.level_breakout_trigger_tf,
+                atr_stop_mult=self.s.level_breakout_atr_stop_mult,
+                rr_target=self.s.level_breakout_rr_target,
+                cooldown_min=self.s.level_breakout_cooldown_min,
+                vol_z_min=self.s.level_breakout_vol_z_min,
+                rsi_long_min=self.s.level_breakout_rsi_long_min,
+                rsi_short_max=self.s.level_breakout_rsi_short_max,
+                max_atr_pct=self.s.level_breakout_max_atr_pct,
+                trendline_enabled=self.s.level_breakout_trendline_enabled,
+                trendline_tf=self.s.level_breakout_trendline_tf,
+                pivot_window=self.s.level_breakout_pivot_window,
+                trendline_max_age_bars=self.s.level_breakout_trendline_max_age_bars,
+            )
+            self.register_strategy(LevelBreakoutStrategy(
+                params=lb_params, symbols=self.s.symbol_list,
+            ))
 
         for strat in self.strategies:
             try:

@@ -24,6 +24,7 @@ from src.services.backtest import (
     FundingBacktestParams,
     backtest_funding,
     backtest_indicator,
+    backtest_level_breakout,
     backtest_mean_reversion,
     format_stats,
 )
@@ -35,7 +36,7 @@ async def amain() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument(
         "--strategy",
-        choices=["indicator", "meanrev", "funding", "both", "all"],
+        choices=["indicator", "meanrev", "funding", "levelbreak", "both", "all"],
         default="indicator",
     )
     ap.add_argument("--symbol", default="BTCUSDT")
@@ -70,6 +71,22 @@ async def amain() -> None:
             )
             print(format_stats(stats))
             print("last 10 mean-rev trades:")
+            for t in trades[-10:]:
+                exit_px = f"{t.exit_price:.4f}" if t.exit_price else "?"
+                pnl = f"{t.pnl_usd:+.2f}" if t.pnl_usd is not None else "?"
+                print(f"  {t.side:5s} {t.entry_price:.4f} -> {exit_px} "
+                      f"({t.exit_reason}) pnl=${pnl}")
+
+        if args.strategy in ("levelbreak", "all"):
+            # Default to 15m trigger + 1d HTF for the level-breakout backtest.
+            # (Channel uses both M5+D1 and M15+D1; 15m has more bars-per-pivot
+            # and gives the trendline path more room to work.)
+            lb_tf = args.tf if args.tf != "5m" else "15m"
+            stats, trades = await backtest_level_breakout(
+                b, symbol=args.symbol, tf=lb_tf, htf="1d", bars=args.bars,
+            )
+            print(format_stats(stats))
+            print("last 10 level-breakout trades:")
             for t in trades[-10:]:
                 exit_px = f"{t.exit_price:.4f}" if t.exit_price else "?"
                 pnl = f"{t.pnl_usd:+.2f}" if t.pnl_usd is not None else "?"

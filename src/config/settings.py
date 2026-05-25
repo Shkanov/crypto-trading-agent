@@ -93,6 +93,27 @@ class Settings(BaseSettings):
     trader_agent_heartbeat_sec: int = 1800            # 30 min idle check-in
     trader_agent_min_wake_gap_sec: int = 60           # per-kind dedup window
 
+    # Level-breakout strategy (encodes the multi-TF "пробой дневки" pattern:
+    # break of prior-day high/low on the trigger TF, with HTF regime + volume
+    # + momentum filters, ATR-based stop, and post-stop cooldown). Inspired
+    # by a scalping channel; validated only by your own backtest.
+    # Requires `htf` (default "1d") to be present in `timeframes`.
+    level_breakout_enabled: bool = False
+    level_breakout_htf: str = "1d"
+    level_breakout_trigger_tf: str = "5m"
+    level_breakout_atr_stop_mult: float = 1.0
+    level_breakout_rr_target: float = 2.0
+    level_breakout_cooldown_min: int = 240
+    level_breakout_vol_z_min: float = 1.0
+    level_breakout_rsi_long_min: float = 50.0
+    level_breakout_rsi_short_max: float = 50.0
+    level_breakout_max_atr_pct: float = 5.0  # skip if M5 atr/close > this
+    # Trendline (наклонка) variant
+    level_breakout_trendline_enabled: bool = True
+    level_breakout_trendline_tf: str = "15m"
+    level_breakout_pivot_window: int = 3          # bars before/after for pivot confirm
+    level_breakout_trendline_max_age_bars: int = 100
+
     # Funding-rate harvesting strategy
     funding_harvest_enabled: bool = True
     funding_entry_threshold_bps: float = 10.0      # 8h funding must exceed

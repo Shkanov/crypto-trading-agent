@@ -40,6 +40,16 @@ import structlog
 
 from src.config.settings import Settings, get_settings
 from src.models.types import IndicatorSnapshot, Kline, Signal, StrategyConfig
+from src.strategies.level_breakout import (
+    LevelBreakoutParams,
+    _PivotBuffer,
+    _build_signal,
+    _htf_regime_long_ok,
+    _htf_regime_short_ok,
+    _trendline_slope,
+    _trendline_value_at,
+    _trigger_filters_ok,
+)
 from src.strategies.mean_reversion import (
     MeanReversionConfig,
     generate_mean_reversion_signal,
@@ -686,6 +696,280 @@ async def backtest_mean_reversion_scaled(
     span_days = (ks[-1].close_time - ks[0].close_time) / 1000 / 86400 if ks else 0.0
     return _stats_from_trades("mean_reversion_scaled", trades,
                               s.account_equity_usd, span_days), trades
+
+
+# ─────────────────────────────  Level-breakout strategy backtest  ───────────
+
+
+async def backtest_level_breakout(
+    binance: BinanceClient,
+    symbol: str,
+    tf: str = "15m",
+    htf: str = "1d",
+    bars: int = 5000,
+    params: Optional[LevelBreakoutParams] = None,
+    settings: Optional[Settings] = None,
+    market: str = "spot",
+) -> tuple[BacktestStats, list[SimTrade]]:
+    """Walk-forward replay of level-breakout (fetch + simulate).
+
+    `market` controls which Binance endpoint serves klines AND which
+    taker-fee constant is used in the cost model. Pass "perps" when
+    validating against the channel's universe (it trades perps); the
+    default "spot" matches the other backtests in this module for
+    apples-to-apples comparison on the same symbol.
+
+    Restriction vs. live: trigger_tf must equal trendline_tf (so we only
+    interleave HTF + one trigger series). The live strategy supports a
+    third TF for trendlines, but in v1 of the backtest we unify them.
+    """
+    s = settings or get_settings()
+    params = params or LevelBreakoutParams(htf=htf, trigger_tf=tf, trendline_tf=tf)
+
+    bars_per_day = max(1, int(round(1440 / _tf_minutes(tf))))
+    htf_total = max(60, bars // bars_per_day + 60)
+
+    raw = await binance.fetch_klines_paginated(symbol, tf, total=bars, market=market)
+    ks = [Kline(
+        symbol=symbol, timeframe=tf,
+        open_time=int(r[0]), close_time=int(r[6]),
+        open=float(r[1]), high=float(r[2]), low=float(r[3]), close=float(r[4]),
+        volume=float(r[5]), quote_volume=float(r[7]), trades=int(r[8]),
+        taker_buy_volume=float(r[9]), is_closed=True,
+    ) for r in raw]
+
+    htf_raw = await binance.fetch_klines_paginated(symbol, htf, total=htf_total,
+                                                    market=market)
+    htf_ks = [Kline(
+        symbol=symbol, timeframe=htf,
+        open_time=int(r[0]), close_time=int(r[6]),
+        open=float(r[1]), high=float(r[2]), low=float(r[3]), close=float(r[4]),
+        volume=float(r[5]), quote_volume=float(r[7]), trades=int(r[8]),
+        taker_buy_volume=float(r[9]), is_closed=True,
+    ) for r in htf_raw]
+
+    return simulate_level_breakout(symbol, ks, htf_ks, params=params,
+                                    settings=s, market=market)
+
+
+def simulate_level_breakout(
+    symbol: str,
+    ks: list[Kline],
+    htf_ks: list[Kline],
+    *,
+    params: Optional[LevelBreakoutParams] = None,
+    settings: Optional[Settings] = None,
+    market: str = "spot",
+) -> tuple[BacktestStats, list[SimTrade]]:
+    """Pure-data simulation. Same logic as the fetch+sim entry point, but
+    takes pre-fetched klines so callers (walk-forward driver, multi-symbol
+    sweep) can fetch once and slice.
+
+    Honest caveats specific to this backtest:
+    - Donchian/EMA/etc. on the trigger TF need warmup. We warmup with the
+      first 200 trigger bars; signals before that point are skipped.
+    - Prior-HTF level updates lag by one HTF bar — correct: the level you
+      can trade off of today is yesterday's high/low.
+    - Pivots are confirmed with a `pivot_window` lookforward, so by
+      construction we never act on a pivot we couldn't have known.
+    """
+    s = settings or get_settings()
+    params = params or LevelBreakoutParams()
+    ind = IndicatorEngine()
+    tf = params.trigger_tf
+    htf = params.htf
+
+    warmup_n = min(200, len(ks) // 4)
+    ind.warmup(symbol, tf, ks[:warmup_n])
+    ind.warmup(symbol, htf, htf_ks)
+
+    htf_close_times = [hk.close_time for hk in htf_ks]
+    htf_highs = [hk.high for hk in htf_ks]
+    htf_lows = [hk.low for hk in htf_ks]
+
+    def _prior_htf_high_low(ts_ms: int) -> tuple[Optional[float], Optional[float]]:
+        lo, hi = 0, len(htf_close_times)
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if htf_close_times[mid] < ts_ms:
+                lo = mid + 1
+            else:
+                hi = mid
+        idx = lo - 1
+        if idx < 0:
+            return None, None
+        return htf_highs[idx], htf_lows[idx]
+
+    pivots = _PivotBuffer(window=params.pivot_window) if params.trendline_enabled else None
+
+    trades: list[SimTrade] = []
+    open_trade: Optional[SimTrade] = None
+    last_trigger_close: Optional[float] = None
+    cooldown_until_ms: int = 0
+    last_signal_bar_ts_ms: int = 0
+    equity = s.account_equity_usd
+    taker_bps = s.perps_taker_fee_bps if market == "perps" else s.spot_taker_fee_bps
+    fee_bps = taker_bps + s.slippage_bps
+    stop_slip = s.paper_stop_slippage_bps / 10_000
+    tp_slip = s.paper_tp_slippage_bps / 10_000
+
+    for k in ks[warmup_n:]:
+        # Resolve any open trade against THIS bar first.
+        if open_trade is not None:
+            hit_stop = (k.low <= open_trade.stop) if open_trade.side == "long" else (k.high >= open_trade.stop)
+            hit_tp = (k.high >= open_trade.tp) if open_trade.side == "long" else (k.low <= open_trade.tp)
+            if hit_stop:
+                exit_px = open_trade.stop * (1 - stop_slip) if open_trade.side == "long" else open_trade.stop * (1 + stop_slip)
+                open_trade.exit_price = exit_px
+                open_trade.exit_reason = "stop"
+                open_trade.exit_ts_ms = k.close_time
+                gross = (exit_px - open_trade.entry_price) * open_trade.qty
+                if open_trade.side == "short":
+                    gross = -gross
+                exit_fee = open_trade.qty * exit_px * (fee_bps / 10_000)
+                open_trade.pnl_usd = gross - exit_fee
+                trades.append(open_trade)
+                # Post-stop cooldown using the BAR's close_time (this is
+                # backtest time, not wall-clock — `now_ms()` would be wrong).
+                cooldown_until_ms = k.close_time + params.cooldown_min * 60_000
+                open_trade = None
+            elif hit_tp:
+                exit_px = open_trade.tp * (1 - tp_slip) if open_trade.side == "long" else open_trade.tp * (1 + tp_slip)
+                open_trade.exit_price = exit_px
+                open_trade.exit_reason = "tp"
+                open_trade.exit_ts_ms = k.close_time
+                gross = (exit_px - open_trade.entry_price) * open_trade.qty
+                if open_trade.side == "short":
+                    gross = -gross
+                exit_fee = open_trade.qty * exit_px * (fee_bps / 10_000)
+                open_trade.pnl_usd = gross - exit_fee
+                trades.append(open_trade)
+                open_trade = None
+
+        # Update indicators with this closed trigger bar.
+        snap = ind.get(symbol, tf).on_closed_kline(k)
+        # Update pivot buffer (trendline-TF == trigger-TF in this backtest).
+        if pivots is not None:
+            pivots.push(k.high, k.low)
+
+        # No new entries while a trade is open, or in cooldown.
+        if open_trade is not None or k.close_time < cooldown_until_ms:
+            last_trigger_close = k.close
+            continue
+        if last_signal_bar_ts_ms == k.close_time:
+            last_trigger_close = k.close
+            continue
+
+        # Resolve prior HTF level for this trigger bar's timestamp.
+        prior_high, prior_low = _prior_htf_high_low(k.close_time)
+        htf_snap = ind.latest(symbol, htf)
+
+        sig: Optional[Signal] = None
+        rationale = ""
+
+        # HTF-break path
+        if (prior_high is not None and last_trigger_close is not None
+                and k.close > prior_high and last_trigger_close <= prior_high
+                and _htf_regime_long_ok(htf_snap)):
+            ok, _ = _trigger_filters_ok("long", snap, params)
+            if ok:
+                sig = _build_signal(
+                    symbol=symbol, side="long",
+                    entry=k.close, atr=snap.atr14 or 0.0, params=params,
+                    confidence=params.htf_break_confidence,
+                    score=params.htf_break_score,
+                    rationale=f"htf_break_long {prior_high:.6f}",
+                )
+        if (sig is None and prior_low is not None and last_trigger_close is not None
+                and k.close < prior_low and last_trigger_close >= prior_low
+                and _htf_regime_short_ok(htf_snap)):
+            ok, _ = _trigger_filters_ok("short", snap, params)
+            if ok:
+                sig = _build_signal(
+                    symbol=symbol, side="short",
+                    entry=k.close, atr=snap.atr14 or 0.0, params=params,
+                    confidence=params.htf_break_confidence,
+                    score=params.htf_break_score,
+                    rationale=f"htf_break_short {prior_low:.6f}",
+                )
+
+        # Trendline path (only if HTF-break didn't fire)
+        if sig is None and pivots is not None:
+            cur_ix = pivots.current_bar_ix
+            max_age = params.trendline_max_age_bars
+            if (len(pivots.highs) >= 2 and _htf_regime_long_ok(htf_snap)):
+                p2, p1 = pivots.highs[-1], pivots.highs[-2]
+                if cur_ix - p2.bar_ix <= max_age and _trendline_slope(p1, p2) < 0:
+                    line_val = _trendline_value_at(p1, p2, cur_ix)
+                    if k.close > line_val:
+                        ok, _ = _trigger_filters_ok("long", snap, params)
+                        if ok:
+                            sig = _build_signal(
+                                symbol=symbol, side="long",
+                                entry=k.close, atr=snap.atr14 or 0.0,
+                                params=params,
+                                confidence=params.trendline_confidence,
+                                score=params.trendline_score,
+                                rationale=f"trendline_long {line_val:.6f}",
+                            )
+            if sig is None and len(pivots.lows) >= 2 and _htf_regime_short_ok(htf_snap):
+                p2, p1 = pivots.lows[-1], pivots.lows[-2]
+                if cur_ix - p2.bar_ix <= max_age and _trendline_slope(p1, p2) > 0:
+                    line_val = _trendline_value_at(p1, p2, cur_ix)
+                    if k.close < line_val:
+                        ok, _ = _trigger_filters_ok("short", snap, params)
+                        if ok:
+                            sig = _build_signal(
+                                symbol=symbol, side="short",
+                                entry=k.close, atr=snap.atr14 or 0.0,
+                                params=params,
+                                confidence=params.trendline_confidence,
+                                score=params.trendline_score,
+                                rationale=f"trendline_short {line_val:.6f}",
+                            )
+
+        last_trigger_close = k.close
+        if sig is None:
+            continue
+
+        # Size, open, mark cooldown so the next bar can't re-fire.
+        risk_pct = s.risk_per_trade_pct / 100.0
+        risk_usd = equity * risk_pct
+        risk_per_unit = abs(sig.entry - sig.stop)
+        if risk_per_unit <= 0:
+            continue
+        qty = min(risk_usd / risk_per_unit, s.max_notional_usd / sig.entry)
+        entry_slip = sig.entry * (s.slippage_bps / 10_000)
+        entry_px = sig.entry + entry_slip if sig.side == "long" else sig.entry - entry_slip
+        open_trade = SimTrade(
+            symbol=symbol, strategy="levelbreak",
+            side=sig.side, qty=qty,
+            entry_price=entry_px, stop=sig.stop, tp=sig.take_profit,
+            entry_ts_ms=k.close_time,
+        )
+        last_signal_bar_ts_ms = k.close_time
+        cooldown_until_ms = k.close_time + params.cooldown_min * 60_000
+
+    if open_trade is not None and ks:
+        last = ks[-1].close
+        open_trade.exit_price = last
+        open_trade.exit_reason = "eod"
+        open_trade.exit_ts_ms = ks[-1].close_time
+        gross = (last - open_trade.entry_price) * open_trade.qty
+        if open_trade.side == "short":
+            gross = -gross
+        open_trade.pnl_usd = gross
+        trades.append(open_trade)
+
+    span_days = (ks[-1].close_time - ks[0].close_time) / 1000 / 86400 if ks else 0.0
+    return _stats_from_trades("levelbreak", trades, s.account_equity_usd, span_days), trades
+
+
+def _tf_minutes(tf: str) -> int:
+    n = "".join(c for c in tf if c.isdigit()) or "1"
+    unit = tf[-1]
+    mult = {"m": 1, "h": 60, "d": 1440}.get(unit, 1)
+    return int(n) * mult
 
 
 # ─────────────────────────────  Funding strategy backtest  ──────────────────
