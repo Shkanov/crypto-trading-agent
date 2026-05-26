@@ -1256,6 +1256,7 @@ def simulate_cascade_breakout(
     params: Optional[CascadeBacktestParams] = None,
     settings: Optional[Settings] = None,
     market: str = "perps",
+    approved_timestamps: Optional[set[int]] = None,
 ) -> tuple[BacktestStats, list[SimTrade]]:
     """Iterate bar-by-bar through M15 klines, run the cascade pattern detector
     at each closed bar, and simulate the resulting trades with the v1
@@ -1363,6 +1364,11 @@ def simulate_cascade_breakout(
                     open_trade = None
 
         if open_trade is not None or k.close_time < cooldown_until_ms:
+            continue
+
+        # Scanner gating: if a filter set is passed, only consider bars
+        # the scanner approved. This is the production setup — joint sim.
+        if approved_timestamps is not None and k.close_time not in approved_timestamps:
             continue
 
         # ─── Detect pattern at this bar ───
