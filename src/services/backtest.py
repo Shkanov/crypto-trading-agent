@@ -40,6 +40,12 @@ import structlog
 
 from src.config.settings import Settings, get_settings
 from src.models.types import IndicatorSnapshot, Kline, Signal, StrategyConfig
+from src.strategies.cascade_breakout import (
+    CascadeParams,
+    CascadePattern,
+    _atr,
+    detect_pattern,
+)
 from src.strategies.level_breakout import (
     LevelBreakoutParams,
     _PivotBuffer,
@@ -1204,6 +1210,276 @@ class FundingBacktestParams:
     basis_exit_alert_bps: float = 150.0
     allow_negative_direction: bool = True
     spot_borrow_bps_per_8h: float = 1.5
+
+
+# ─────────────────────────────  Cascade-breakout backtest (v2)  ─────────────
+
+
+@dataclass
+class CascadeBacktestParams:
+    """Execution-layer knobs for `simulate_cascade_breakout`. Defaults from
+    research synthesis (see `project-cascade-strategy-research` memory)."""
+    # Pattern-detector knobs flow through this so callers can tune everything
+    # via one params object.
+    detector: CascadeParams = field(default_factory=CascadeParams)
+
+    # Stop placement
+    stop_atr_mult: float = 1.5            # entry - 1.5 × ATR is the volatility cap
+    stop_struct_buffer_atr: float = 0.25  # structural stop = struct_low - 0.25×ATR
+
+    # Partial-fill take-profit
+    tp1_r_multiple: float = 1.0           # +1.0R triggers 50% exit + stop→entry
+    tp1_exit_fraction: float = 0.5
+
+    # Trailing stop on remainder
+    trail_atr_mult: float = 1.0           # chandelier: extreme − 1.0×ATR
+
+    # Scratch — abort if no follow-through
+    scratch_bars: int = 3                 # bars after entry to check follow-through
+    scratch_retrace_pct: float = 0.50     # ≥50% retrace back into range = scratch
+
+    # Hard time-stop
+    hard_time_stop_bars: int = 24         # 24 M15 bars = 6h
+
+    # Gate: minimum pattern confluence to take the trade
+    min_confluence: int = 2
+
+    # Risk + cost overrides (otherwise from Settings)
+    risk_per_trade_pct: Optional[float] = None
+    cost_bps_override: Optional[float] = None  # one-leg slip+fee in bps; round-trip = 2×
+
+
+def simulate_cascade_breakout(
+    symbol: str,
+    ks: list[Kline],
+    *,
+    params: Optional[CascadeBacktestParams] = None,
+    settings: Optional[Settings] = None,
+    market: str = "perps",
+) -> tuple[BacktestStats, list[SimTrade]]:
+    """Iterate bar-by-bar through M15 klines, run the cascade pattern detector
+    at each closed bar, and simulate the resulting trades with the v1
+    execution rules.
+
+    Execution model:
+      Entry  : market at bar close after a pattern triggers
+      Stop   : max(struct_low − 0.25×ATR, entry − 1.5×ATR)
+      TP1    : +1R; exit 50% and move stop to entry
+      Trail  : 1.0×ATR chandelier on remainder
+      Scratch: ≥50% retrace into range within `scratch_bars` of entry
+      Hard   : 24 M15 bars (6h) time-stop
+
+    Stop fires BEFORE TP within a single bar (conservative for backtest)."""
+    s = settings or get_settings()
+    p = params or CascadeBacktestParams()
+
+    warmup_n = max(p.detector.cascade_lookback_bars + 30, 100)
+    if len(ks) < warmup_n + 10:
+        return _stats_from_trades("cascade_breakout", [], s.account_equity_usd, 0.0), []
+
+    risk_pct = (p.risk_per_trade_pct or s.risk_per_trade_pct) / 100.0
+    taker_bps = s.perps_taker_fee_bps if market == "perps" else s.spot_taker_fee_bps
+    if p.cost_bps_override is not None:
+        fee_bps = p.cost_bps_override
+    else:
+        fee_bps = taker_bps + s.slippage_bps
+    stop_slip = s.paper_stop_slippage_bps / 10_000
+    tp_slip = s.paper_tp_slippage_bps / 10_000
+
+    equity = s.account_equity_usd
+
+    trades: list[SimTrade] = []
+    open_trade: Optional[SimTrade] = None
+    cooldown_until_ms: int = 0
+
+    for i in range(warmup_n, len(ks)):
+        k = ks[i]
+
+        # ─── Resolve any open trade against THIS bar first ───
+        if open_trade is not None:
+            open_trade.bars_held += 1  # type: ignore[attr-defined]
+            side = open_trade.side
+            phase = open_trade.phase  # type: ignore[attr-defined]
+
+            stop_hit = ((side == "long" and k.low <= open_trade.stop)
+                        or (side == "short" and k.high >= open_trade.stop))
+
+            if phase == "pre_tp1":
+                tp1 = open_trade.tp1_price  # type: ignore[attr-defined]
+                tp1_hit = ((side == "long" and k.high >= tp1)
+                           or (side == "short" and k.low <= tp1))
+
+                if stop_hit:
+                    _close_cascade_trade(open_trade, open_trade.stop, "stop",
+                                         k.close_time, stop_slip, fee_bps, full=True)
+                    trades.append(open_trade)
+                    cooldown_until_ms = k.close_time + 60 * 60_000
+                    open_trade = None
+                elif tp1_hit:
+                    _take_partial(open_trade, tp1, k.close_time, tp_slip,
+                                  fee_bps, p.tp1_exit_fraction)
+                    open_trade.phase = "post_tp1"        # type: ignore[attr-defined]
+                    open_trade.stop = open_trade.entry_price
+                    open_trade.trail_extreme = (         # type: ignore[attr-defined]
+                        k.high if side == "long" else k.low)
+                elif (open_trade.bars_held >= p.scratch_bars                  # type: ignore[attr-defined]
+                      and _scratch_check(open_trade, k, p)):
+                    _close_cascade_trade(open_trade, k.close, "scratch",
+                                         k.close_time, 0.0, fee_bps, full=True)
+                    trades.append(open_trade)
+                    open_trade = None
+                elif open_trade.bars_held >= p.hard_time_stop_bars:           # type: ignore[attr-defined]
+                    _close_cascade_trade(open_trade, k.close, "time_stop",
+                                         k.close_time, 0.0, fee_bps, full=True)
+                    trades.append(open_trade)
+                    open_trade = None
+
+            elif phase == "post_tp1":
+                # Update trail extreme then check stop
+                if side == "long":
+                    open_trade.trail_extreme = max(                           # type: ignore[attr-defined]
+                        open_trade.trail_extreme, k.high)                    # type: ignore[attr-defined]
+                    trail_stop = open_trade.trail_extreme - (                # type: ignore[attr-defined]
+                        p.trail_atr_mult * open_trade.atr_at_entry)          # type: ignore[attr-defined]
+                    open_trade.stop = max(open_trade.stop, trail_stop)
+                else:
+                    open_trade.trail_extreme = min(                           # type: ignore[attr-defined]
+                        open_trade.trail_extreme, k.low)                     # type: ignore[attr-defined]
+                    trail_stop = open_trade.trail_extreme + (                # type: ignore[attr-defined]
+                        p.trail_atr_mult * open_trade.atr_at_entry)          # type: ignore[attr-defined]
+                    open_trade.stop = min(open_trade.stop, trail_stop)
+
+                stop_hit_post = ((side == "long" and k.low <= open_trade.stop)
+                                  or (side == "short" and k.high >= open_trade.stop))
+                if stop_hit_post:
+                    _close_cascade_trade(open_trade, open_trade.stop, "trail_stop",
+                                         k.close_time, stop_slip, fee_bps, full=False)
+                    trades.append(open_trade)
+                    open_trade = None
+                elif open_trade.bars_held >= p.hard_time_stop_bars:           # type: ignore[attr-defined]
+                    _close_cascade_trade(open_trade, k.close, "time_stop",
+                                         k.close_time, 0.0, fee_bps, full=False)
+                    trades.append(open_trade)
+                    open_trade = None
+
+        if open_trade is not None or k.close_time < cooldown_until_ms:
+            continue
+
+        # ─── Detect pattern at this bar ───
+        slice_ks = ks[: i + 1]
+        pat = detect_pattern(slice_ks, params=p.detector)
+        if pat is None or pat.confluence_count < p.min_confluence:
+            continue
+
+        atr = _atr(slice_ks, period=14)
+        if atr is None or atr <= 0:
+            continue
+
+        # Stop placement: max of structural buffer and volatility cap
+        if pat.side == "long":
+            chain_lows = [pp.price for pp in pat.cascade.pivots if pp.kind == "low"]
+            struct = min(chain_lows) if chain_lows else (k.close - atr)
+            stop = max(struct - p.stop_struct_buffer_atr * atr,
+                       k.close - p.stop_atr_mult * atr)
+        else:
+            chain_highs = [pp.price for pp in pat.cascade.pivots if pp.kind == "high"]
+            struct = max(chain_highs) if chain_highs else (k.close + atr)
+            stop = min(struct + p.stop_struct_buffer_atr * atr,
+                       k.close + p.stop_atr_mult * atr)
+
+        risk_per_unit = abs(k.close - stop)
+        if risk_per_unit <= 0:
+            continue
+
+        entry_slip = k.close * (s.slippage_bps / 10_000)
+        entry_px = k.close + entry_slip if pat.side == "long" else k.close - entry_slip
+        if pat.side == "long":
+            tp1 = entry_px + p.tp1_r_multiple * risk_per_unit
+        else:
+            tp1 = entry_px - p.tp1_r_multiple * risk_per_unit
+
+        risk_usd = equity * risk_pct
+        qty = min(risk_usd / risk_per_unit, s.max_notional_usd / entry_px)
+        if qty <= 0:
+            continue
+
+        open_trade = SimTrade(
+            symbol=symbol, strategy=f"cascade_{pat.mode}",
+            side=pat.side, qty=qty,
+            entry_price=entry_px, stop=stop, tp=tp1,
+            entry_ts_ms=k.close_time,
+        )
+        # Attach dynamic state for the simulator loop
+        open_trade.phase = "pre_tp1"             # type: ignore[attr-defined]
+        open_trade.tp1_price = tp1               # type: ignore[attr-defined]
+        open_trade.partial_pnl = 0.0             # type: ignore[attr-defined]
+        open_trade.partial_qty = 0.0             # type: ignore[attr-defined]
+        open_trade.bars_held = 0                 # type: ignore[attr-defined]
+        open_trade.atr_at_entry = atr            # type: ignore[attr-defined]
+        open_trade.trail_extreme = None          # type: ignore[attr-defined]
+        open_trade.entry_high = k.high           # type: ignore[attr-defined]
+        open_trade.entry_low = k.low             # type: ignore[attr-defined]
+
+    if open_trade is not None and ks:
+        last = ks[-1].close
+        _close_cascade_trade(open_trade, last, "eod", ks[-1].close_time,
+                             0.0, fee_bps,
+                             full=(open_trade.phase == "pre_tp1"))  # type: ignore[attr-defined]
+        trades.append(open_trade)
+
+    span_days = (ks[-1].close_time - ks[0].close_time) / 1000 / 86400 if ks else 0.0
+    return _stats_from_trades("cascade_breakout", trades,
+                               s.account_equity_usd, span_days), trades
+
+
+def _take_partial(t: SimTrade, tp_price: float, ts_ms: int,
+                   tp_slip: float, fee_bps: float, frac: float) -> None:
+    """Realize partial PnL on `frac` of the trade qty at tp_price."""
+    fill_px = tp_price * (1 - tp_slip) if t.side == "long" else tp_price * (1 + tp_slip)
+    partial_qty = t.qty * frac
+    gross = (fill_px - t.entry_price) * partial_qty
+    if t.side == "short":
+        gross = -gross
+    fee = partial_qty * fill_px * (fee_bps / 10_000)
+    t.partial_pnl = (t.partial_pnl or 0.0) + (gross - fee)  # type: ignore[attr-defined]
+    t.partial_qty = (t.partial_qty or 0.0) + partial_qty    # type: ignore[attr-defined]
+
+
+def _close_cascade_trade(t: SimTrade, exit_price: float, reason: str,
+                          ts_ms: int, slip: float, fee_bps: float, full: bool) -> None:
+    """Close the remaining qty. If full=False, only the non-partial-filled
+    qty is closed here; partial PnL is added to total."""
+    fill_px = exit_price * (1 - slip) if t.side == "long" else exit_price * (1 + slip)
+    if full:
+        remaining_qty = t.qty
+    else:
+        remaining_qty = t.qty - (t.partial_qty or 0.0)  # type: ignore[attr-defined]
+    gross = (fill_px - t.entry_price) * remaining_qty
+    if t.side == "short":
+        gross = -gross
+    fee = remaining_qty * fill_px * (fee_bps / 10_000)
+    final_leg_pnl = gross - fee
+    total = (t.partial_pnl or 0.0) + final_leg_pnl  # type: ignore[attr-defined]
+    t.exit_price = fill_px
+    t.exit_reason = reason
+    t.exit_ts_ms = ts_ms
+    t.pnl_usd = total
+
+
+def _scratch_check(t: SimTrade, k: Kline, p: CascadeBacktestParams) -> bool:
+    """Scratch if price has retraced ≥ scratch_retrace_pct into the range
+    formed by the breakout bar. For a long: if low has dropped ≥ X% of
+    (entry_high - entry_low) below the entry. Mirror for short."""
+    if not hasattr(t, "entry_high") or not hasattr(t, "entry_low"):
+        return False
+    rng = t.entry_high - t.entry_low                  # type: ignore[attr-defined]
+    if rng <= 0:
+        return False
+    if t.side == "long":
+        retrace = (t.entry_price - k.low) / rng
+    else:
+        retrace = (k.high - t.entry_price) / rng
+    return retrace >= p.scratch_retrace_pct
 
 
 def format_stats(stats: BacktestStats) -> str:
