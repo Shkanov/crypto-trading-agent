@@ -39,36 +39,37 @@ from src.models.types import Kline
 
 @dataclass(frozen=True)
 class CascadeParams:
-    """Knobs for the cascade-breakout detector. Defaults from research-
-    synthesized rules; expect to tune against the 36-call corpus."""
+    """Knobs for the cascade-breakout detector. Defaults relaxed from
+    research-synthesized rules on 2026-05-26 after 0/36 hits — see commit
+    history for the empirical recalibration journey."""
 
     # Swing-pivot fractal: a high is a swing high if it's the strict max over
     # ±k bars on each side. k=2 on M15 is typical in SMC literature.
     swing_k: int = 2
 
-    # Cascade chain
+    # Cascade chain — slope-on-highs + slope-on-lows must agree with side
     cascade_min_pivots: int = 3              # ≥3 sequential same-direction swings
-    cascade_leg_min_atr_mult: float = 1.0    # each leg ≥1× ATR(14)
-    cascade_max_pullback: float = 0.70       # pullback ≤70% of prior impulse
-    cascade_slope_r2_min: float = 0.5        # linear-fit R² over pivots
-    cascade_lookback_bars: int = 80          # search the most recent N bars
+    cascade_leg_min_atr_mult: float = 0.0    # was 1.0 — rejected clean cascades with small legs
+    cascade_max_pullback: float = 0.90       # was 0.70 — real cascades have noisier pullbacks
+    cascade_slope_r2_min: float = 0.3        # was 0.5 — choppy cascades still tradeable
+    cascade_lookback_bars: int = 80
 
     # Натopговка (re-accumulation against level)
-    natorgovka_min_touches: int = 2          # ≥2 wick touches of level
-    natorgovka_compression_bars_min: int = 3
-    natorgovka_compression_bars_max: int = 12
-    natorgovka_max_dist_atr: float = 0.5     # body midpoint within 0.5× ATR of level
-    natorgovka_range_contraction_min: float = 0.30
-    natorgovka_max_wick_beyond_pct: float = 0.40   # tail rejection cap
+    natorgovka_min_touches: int = 1          # was 2 — single touch sometimes is all
+    natorgovka_compression_bars_min: int = 2
+    natorgovka_compression_bars_max: int = 14
+    natorgovka_max_dist_atr: float = 0.8     # was 0.5 — looser press
+    natorgovka_range_contraction_min: float = 0.10  # was 0.30 — minimal compression
+    natorgovka_max_wick_beyond_pct: float = 0.50   # was 0.40
 
     # Trigger (breakout candle)
-    trigger_body_pct_min: float = 0.60       # body ≥60% of range
-    trigger_vol_mult_min: float = 1.3        # break-bar vol ≥1.3× MA20
-    trigger_close_beyond_pct_atr: float = 0.10  # min "beyond level" by ATR
+    trigger_body_pct_min: float = 0.50       # was 0.60
+    trigger_vol_mult_min: float = 1.20       # was 1.30
+    trigger_close_beyond_pct_atr: float = 0.05  # was 0.10
 
     # HTF-level confluence (optional bonus)
-    htf_level_tol_atr: float = 1.0           # natorgovka level within X*ATR of HTF pivot
-    htf_lookback_bars: int = 480             # 480 M15 bars = ~5d (covers ~D1)
+    htf_level_tol_atr: float = 1.0
+    htf_lookback_bars: int = 480
 
 
 # ─────────────────────────────── results ──────────────────────────────────
@@ -110,7 +111,14 @@ class Trigger:
 
 @dataclass
 class CascadePattern:
-    side: str
+    """Detected setup. `side` = trade direction. `mode` distinguishes:
+      - 'continuation': trade in cascade direction (long cascade → long; short → short)
+      - 'reversal':    trade opposite to cascade direction (long cascade → short
+                       via BOS down; short cascade → long via BOS up)
+    `cascade.side` is the cascade direction itself, which equals `side` for
+    continuation and opposes it for reversal."""
+    side: str                                 # 'long' | 'short' (trade direction)
+    mode: str                                 # 'continuation' | 'reversal'
     cascade: CascadeChain
     natorgovka: Natorgovka
     trigger: Trigger
@@ -411,9 +419,23 @@ def detect_pattern(
     klines_htf: Optional[list[Kline]] = None,
     params: Optional[CascadeParams] = None,
 ) -> Optional[CascadePattern]:
-    """Look at the last closed bar of `klines`; return a CascadePattern if
-    a complete setup (cascade + natorgovka + trigger) is in place there.
-    `klines_htf` (e.g. H4) is optional and only adds the 4th confluence."""
+    """Look at the last closed bar; return a CascadePattern if a complete
+    breakout setup is in place there.
+
+    Architecture (rev. 2 after 2026-05-26 validation showed cascade-required
+    rule excluded majority of his calls — many are pure "пробой" with no
+    cascade context):
+
+      Core gate = level + naторговка + trigger (always required).
+      Cascade   = OPTIONAL confluence booster + mode classifier.
+
+    For each side (long/short), enumerate candidate levels — the most-recent
+    swing highs (long) or swing lows (short) — and try the breakout setup
+    against each. The cascade context (if present) determines whether the
+    setup is `continuation`, `reversal`, or `breakout` (no cascade).
+
+    Picks the best candidate by (confluence_count, pivot count, R²).
+    """
     p = params or CascadeParams()
     if len(klines) < max(p.cascade_lookback_bars, 30):
         return None
@@ -422,59 +444,76 @@ def detect_pattern(
         return None
 
     highs, lows = _find_swing_pivots(klines, k=p.swing_k, lookback=p.cascade_lookback_bars)
-    if len(highs) + len(lows) < p.cascade_min_pivots:
+    if not highs and not lows:
         return None
 
-    # Try BOTH sides; pick the higher-quality match (more pivots, then higher R²)
-    best: Optional[CascadePattern] = None
+    # Compute cascade context once per direction (optional)
+    cascade_long = _build_cascade_chain(highs, lows, "long", atr, p)
+    cascade_short = _build_cascade_chain(highs, lows, "short", atr, p)
 
-    for side in ("long", "short"):
-        chain = _build_cascade_chain(highs, lows, side, atr, p)
-        if chain is None:
-            continue
+    candidates: list[CascadePattern] = []
 
-        # Level the cascade is pressing into: for a long cascade, it's the
-        # highest swing HIGH in the chain (next resistance); for short, the
-        # lowest swing LOW.
-        if side == "long":
-            level_candidates = [pp.price for pp in chain.pivots if pp.kind == "high"]
-            level = max(level_candidates) if level_candidates else None
+    # Candidate levels per side: the N most-recent swing pivots of the
+    # relevant kind. 5 is enough to catch the nearest 2-3 meaningful levels.
+    for trade_side in ("long", "short"):
+        if trade_side == "long":
+            level_pivots = highs[-5:]
         else:
-            level_candidates = [pp.price for pp in chain.pivots if pp.kind == "low"]
-            level = min(level_candidates) if level_candidates else None
-        if level is None:
+            level_pivots = lows[-5:]
+        if not level_pivots:
             continue
 
-        nat = _detect_natorgovka(klines, level, side, atr, p)
-        if nat is None:
-            continue
+        for pivot in level_pivots:
+            level = pivot.price
+            nat = _detect_natorgovka(klines, level, trade_side, atr, p)
+            if nat is None:
+                continue
+            trg = _detect_trigger(klines, level, trade_side, atr, p)
+            if trg is None:
+                continue
 
-        trg = _detect_trigger(klines, level, side, atr, p)
-        if trg is None:
-            continue
+            # Mode classification from cascade context
+            mode = "breakout"
+            cascade_used: Optional[CascadeChain] = None
+            if trade_side == "long" and cascade_long is not None:
+                mode = "continuation"
+                cascade_used = cascade_long
+            elif trade_side == "short" and cascade_short is not None:
+                mode = "continuation"
+                cascade_used = cascade_short
+            elif trade_side == "long" and cascade_short is not None:
+                mode = "reversal"
+                cascade_used = cascade_short
+            elif trade_side == "short" and cascade_long is not None:
+                mode = "reversal"
+                cascade_used = cascade_long
 
-        # HTF confluence (optional)
-        htf_ok = False
-        if klines_htf:
-            atr_htf = _atr(klines_htf, period=14) or atr
-            htf_ok = _has_htf_confluence(klines_htf, level, atr_htf, p)
+            if cascade_used is None:
+                # Build a degenerate "no cascade" record for the chain field
+                cascade_used = CascadeChain(
+                    side=trade_side, pivots=[],
+                    leg_lengths_atr=[], pullback_ratios=[], slope_r2=0.0,
+                )
 
-        confluence = 2 + (1 if htf_ok else 0) + 1   # cascade + natorgovka + trigger (+ htf?)
-        # Actually count distinct components: cascade(1) + natorgovka(1) + trigger(1) + htf(?)
-        confluence = 3 + (1 if htf_ok else 0)
+            htf_ok = False
+            if klines_htf:
+                atr_htf = _atr(klines_htf, period=14) or atr
+                htf_ok = _has_htf_confluence(klines_htf, level, atr_htf, p)
 
-        candidate = CascadePattern(
-            side=side, cascade=chain, natorgovka=nat, trigger=trg,
-            confluence_count=confluence, htf_level_confirmed=htf_ok,
-        )
-        if best is None:
-            best = candidate
-        else:
-            # Prefer higher confluence, then more pivots, then higher R²
-            if (candidate.confluence_count, len(candidate.cascade.pivots),
-                candidate.cascade.slope_r2) > (
-                best.confluence_count, len(best.cascade.pivots),
-                best.cascade.slope_r2):
-                best = candidate
+            # Confluence: natorgovka(1) + trigger(1) + cascade(0/1) + htf(0/1)
+            confluence = 2 + (1 if mode != "breakout" else 0) + (1 if htf_ok else 0)
 
-    return best
+            candidates.append(CascadePattern(
+                side=trade_side, mode=mode, cascade=cascade_used,
+                natorgovka=nat, trigger=trg,
+                confluence_count=confluence, htf_level_confirmed=htf_ok,
+            ))
+
+    if not candidates:
+        return None
+
+    candidates.sort(
+        key=lambda c: (c.confluence_count, len(c.cascade.pivots), c.cascade.slope_r2),
+        reverse=True,
+    )
+    return candidates[0]

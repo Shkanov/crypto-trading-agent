@@ -389,8 +389,10 @@ async def amain(refetch: bool, topn_report: int) -> None:
 
     # Save per-call detail
     out_path = REPO_ROOT / "data/research/aktradescalp/scanner_validation.json"
+    u_dict = asdict(UniverseParams())
+    u_dict["excluded_symbols"] = sorted(u_dict["excluded_symbols"])  # frozenset → list
     out_path.write_text(json.dumps({
-        "params": {"u": asdict(UniverseParams()), "s": asdict(s),
+        "params": {"u": u_dict, "s": asdict(s),
                    "comparison_top_n": COMPARISON_TOP_N,
                    "history_buffer_days": HISTORY_BUFFER_DAYS},
         "n_calls_total": len(calls),
