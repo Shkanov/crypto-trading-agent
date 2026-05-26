@@ -1243,6 +1243,9 @@ class CascadeBacktestParams:
 
     # Gate: minimum pattern confluence to take the trade
     min_confluence: int = 2
+    # Optional mode filter — restrict to a subset of {'continuation', 'reversal',
+    # 'breakout'}. If None, all modes allowed.
+    allowed_modes: Optional[frozenset[str]] = None
 
     # Risk + cost overrides (otherwise from Settings)
     risk_per_trade_pct: Optional[float] = None
@@ -1375,6 +1378,8 @@ def simulate_cascade_breakout(
         slice_ks = ks[: i + 1]
         pat = detect_pattern(slice_ks, params=p.detector)
         if pat is None or pat.confluence_count < p.min_confluence:
+            continue
+        if p.allowed_modes is not None and pat.mode not in p.allowed_modes:
             continue
 
         atr = _atr(slice_ks, period=14)
