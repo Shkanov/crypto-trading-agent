@@ -405,13 +405,27 @@ async def backtest_indicator(
     # Warmup with first 200 bars; then iterate forward bar-by-bar.
     warmup_n = min(200, len(ks) // 4)
     ind.warmup(symbol, tf, ks[:warmup_n])
-    ind.warmup(symbol, htf, htf_ks)
+    # HTF state: warm up only HTF bars that CLOSED BEFORE the first entry-TF
+    # bar of the live loop. Remaining HTF bars are fed incrementally as the
+    # entry-TF cursor advances past them. Without this the HTF gate reads
+    # end-of-history indicator values from every loop step (lookahead).
+    first_live_close = ks[warmup_n].close_time if warmup_n < len(ks) else 0
+    htf_warm_n = 0
+    while htf_warm_n < len(htf_ks) and htf_ks[htf_warm_n].close_time < first_live_close:
+        htf_warm_n += 1
+    ind.warmup(symbol, htf, htf_ks[:htf_warm_n])
+    htf_cursor = htf_warm_n
 
     trades: list[SimTrade] = []
     open_trade: Optional[SimTrade] = None
     equity = s.account_equity_usd
 
     for idx, k in enumerate(ks[warmup_n:], start=warmup_n):
+        # Advance HTF state through every HTF bar that has closed by now.
+        while (htf_cursor < len(htf_ks)
+               and htf_ks[htf_cursor].close_time <= k.close_time):
+            ind.get(symbol, htf).on_closed_kline(htf_ks[htf_cursor])
+            htf_cursor += 1
         adv5m = _adv_5m_usd(ks, idx)
         # Resolve any open trade against THIS bar first (price might have hit stop/TP).
         if open_trade is not None:
@@ -531,7 +545,12 @@ async def backtest_mean_reversion(
     ) for r in htf_raw]
     warmup_n = min(200, len(ks) // 4)
     ind.warmup(symbol, tf, ks[:warmup_n])
-    ind.warmup(symbol, htf, htf_ks)
+    first_live_close = ks[warmup_n].close_time if warmup_n < len(ks) else 0
+    htf_warm_n = 0
+    while htf_warm_n < len(htf_ks) and htf_ks[htf_warm_n].close_time < first_live_close:
+        htf_warm_n += 1
+    ind.warmup(symbol, htf, htf_ks[:htf_warm_n])
+    htf_cursor = htf_warm_n
 
     trades: list[SimTrade] = []
     open_trade: Optional[SimTrade] = None
@@ -539,6 +558,10 @@ async def backtest_mean_reversion(
     equity = s.account_equity_usd
 
     for idx, k in enumerate(ks[warmup_n:], start=warmup_n):
+        while (htf_cursor < len(htf_ks)
+               and htf_ks[htf_cursor].close_time <= k.close_time):
+            ind.get(symbol, htf).on_closed_kline(htf_ks[htf_cursor])
+            htf_cursor += 1
         adv5m = _adv_5m_usd(ks, idx)
         if open_trade is not None:
             hit_stop = (k.low <= open_trade.stop) if open_trade.side == "long" else (k.high >= open_trade.stop)

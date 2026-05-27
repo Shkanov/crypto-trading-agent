@@ -8,6 +8,7 @@ This module is pure: no I/O, no LLM calls.
 """
 from __future__ import annotations
 
+import math
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Deque, Optional
@@ -84,6 +85,10 @@ class IndicatorState:
     obv_value: float = 0.0
     obv_history: Deque[float] = field(default_factory=lambda: deque(maxlen=50))
 
+    # Choppiness Index (Dreiss) — true-range history for CHOP(14)
+    chop_period: int = 14
+    true_ranges: Deque[float] = field(default_factory=lambda: deque(maxlen=64))
+
     last_snapshot: Optional[IndicatorSnapshot] = None
 
     def reset_session(self) -> None:
@@ -137,6 +142,7 @@ class IndicatorState:
         if self.prev_close is not None:
             tr = max(h - l, abs(h - self.prev_close), abs(l - self.prev_close))
             self.atr = _wilder(self.atr, tr, 14)
+            self.true_ranges.append(tr)
 
         # Bollinger (20, 2)
         bb_upper = bb_middle = bb_lower = None
@@ -260,6 +266,19 @@ class IndicatorState:
             donchian_lower = float(min(list(self.lows)[-20:]))
             donchian_mid = (donchian_upper + donchian_lower) / 2.0
 
+        # Choppiness Index (Dreiss, 14): 100 * log10(sum(TR_n) / range_n) / log10(n).
+        # Bounded 0..100; CHOP < 38.2 = trending, > 61.8 = chop, in-between = mixed.
+        choppiness14: Optional[float] = None
+        n = self.chop_period
+        if (len(self.true_ranges) >= n and len(self.highs) >= n
+                and len(self.lows) >= n):
+            tr_sum = float(sum(list(self.true_ranges)[-n:]))
+            high_n = float(max(list(self.highs)[-n:]))
+            low_n = float(min(list(self.lows)[-n:]))
+            channel = high_n - low_n
+            if channel > 0 and tr_sum > 0:
+                choppiness14 = 100.0 * math.log10(tr_sum / channel) / math.log10(n)
+
         # OBV — cumulative volume weighted by close-direction.
         if self.prev_close is not None:
             if c > self.prev_close:
@@ -292,6 +311,7 @@ class IndicatorState:
             donchian_upper=donchian_upper, donchian_lower=donchian_lower,
             donchian_mid=donchian_mid,
             obv=self.obv_value, obv_slope=obv_slope,
+            choppiness14=choppiness14,
         )
         self.last_snapshot = snap
         return snap

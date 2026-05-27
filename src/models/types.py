@@ -83,6 +83,8 @@ class IndicatorSnapshot(BaseModel):
     # On-balance volume (cumulative + recent slope)
     obv: Optional[float] = None
     obv_slope: Optional[float] = None
+    # Choppiness Index (Dreiss, 14): 0..100. < 38.2 = strong trend; > 61.8 = chop.
+    choppiness14: Optional[float] = None
     ts_ms: int = Field(default_factory=now_ms)
 
 
@@ -267,6 +269,15 @@ class StrategyConfig(BaseModel):
     rr_target: float = 1.8
     htf_regime_filter: bool = True
     htf_timeframe: Timeframe = "1h"
+    # Strong-trend gate (QuantPedia D1H1 study; PyQuantLab regime-filter posts):
+    # require ADX > adx_strong_min AND Choppiness < chop_max on the HTF to
+    # take any trade. Compounded with htf_regime_filter (which only blocks
+    # counter-direction trades). Cuts trade count ~60-70% in chop regimes
+    # — expected to take the indicator strategy from negative to break-even
+    # on the BTC equivalent before any other tuning.
+    require_strong_trend_regime: bool = False
+    adx_strong_min: float = 25.0       # Wilder threshold; >25 = trend regime
+    chop_max: float = 50.0             # midpoint of Dreiss bounds (38.2/61.8)
     notes: str = ""
     created_ms: int = Field(default_factory=now_ms)
 

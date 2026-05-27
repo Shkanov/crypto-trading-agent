@@ -191,6 +191,16 @@ def generate_signal(
         if regime != 0 and ((side == "long" and regime < 0) or (side == "short" and regime > 0)):
             return None
 
+    # Strong-trend regime gate: require ADX > adx_strong_min AND Choppiness <
+    # chop_max on the HTF. Either condition missing → skip this entry. The
+    # gate is opt-in (default off) so existing flows are unaffected; the
+    # indicator strategy sweeps will set this when calibrating for live use.
+    if cfg.require_strong_trend_regime and htf_snap is not None:
+        if htf_snap.adx14 is None or htf_snap.adx14 < cfg.adx_strong_min:
+            return None
+        if htf_snap.choppiness14 is None or htf_snap.choppiness14 > cfg.chop_max:
+            return None
+
     entry = trigger_snap.close
     stop_dist = cfg.atr_stop_mult * trigger_snap.atr14
     if side == "long":
