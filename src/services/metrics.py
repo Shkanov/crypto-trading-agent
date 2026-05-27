@@ -35,6 +35,21 @@ halted_g = Gauge("agent_halted", "1 if trading halted, 0 otherwise")
 consecutive_losses_g = Gauge("agent_consecutive_losses",
                              "Recent consecutive losing trades")
 
+# Sprint #12 circuit breakers — three independent gauges so each can be
+# alerted on separately.
+circuit_size_mult_g = Gauge(
+    "agent_circuit_size_multiplier",
+    "Risk-circuit size multiplier applied to new positions (1.0, 0.5, or 0.0)",
+)
+circuit_dd_from_peak_g = Gauge(
+    "agent_circuit_dd_from_peak_pct",
+    "Trailing drawdown from rolling-peak equity, percent",
+)
+circuit_cooloff_active_g = Gauge(
+    "agent_circuit_cooloff_active",
+    "1 if a flatten-cooloff window is still in effect, 0 otherwise",
+)
+
 funding_rate_g = Gauge("agent_funding_rate_bps",
                        "Current 8h funding rate", ["symbol"])
 basis_g = Gauge("agent_basis_bps", "Current (perp - spot) / spot", ["symbol"])

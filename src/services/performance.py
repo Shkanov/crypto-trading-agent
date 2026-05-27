@@ -17,9 +17,75 @@ from typing import Optional
 import structlog
 from sqlalchemy import select
 
+from src.services.risk_circuits import AccountTimeSeries
 from src.services.storage import FillRow, Storage, TradeRow
 
 log = structlog.get_logger(__name__)
+
+DAY_MS = 86_400_000
+
+
+def _utc_midnight_ms(ts_ms: int) -> int:
+    return (ts_ms // DAY_MS) * DAY_MS
+
+
+async def build_equity_series(
+    storage: Storage,
+    start_equity_usd: float,
+    today_pnl_usd: float,
+    now_ms: int,
+    lookback_days: int = 60,
+) -> AccountTimeSeries:
+    """Daily equity curve + daily PnL % for the risk-circuit evaluator.
+
+    Walks CLOSED trades by UTC day to assemble:
+      equity_curve[t] = start_equity + cumulative realized PnL up to day t
+      daily_pnl_pct[t] = (equity[t] - equity[t-1]) / equity[t-1] * 100
+
+    The last row covers "today": its equity uses `today_pnl_usd` (the in-memory
+    running tally; the housekeeping loop refreshes it from
+    `realized_pnl_today_usd`), and its daily_pnl_pct is computed against
+    yesterday's close. This way the daily-loss circuit (#3) can fire intraday
+    without waiting for UTC midnight to roll the day over.
+
+    `lookback_days` sets how far back the curve extends. 60d is a comfortable
+    buffer over the 20d vol-lookback (#2). Days with no closes count as flat.
+    """
+    today_ms = _utc_midnight_ms(now_ms)
+    start_ms = today_ms - lookback_days * DAY_MS
+    per_day = await storage.realized_pnl_by_day(start_ms, today_ms + DAY_MS)
+    # Build a dense day grid spanning [start_ms, today_ms].
+    days = [start_ms + i * DAY_MS for i in range(lookback_days + 1)]
+
+    equity_curve: list[float] = []
+    daily_pnl_pct: list[float] = []
+    running_equity = float(start_equity_usd)
+    prev_equity = running_equity
+    for i, day in enumerate(days):
+        is_today = day == today_ms
+        pnl = float(per_day.get(day, 0.0))
+        # Today's row uses the live counter (which includes closes that have
+        # happened so far today). Don't double-count: realized_pnl_by_day already
+        # picks up today's closed trades, but we trust the live `today_pnl_usd`
+        # if it's larger (e.g. when the in-memory counter is fresher than the
+        # last storage scan). Use the live value as the source of truth for
+        # today since the orchestrator refreshes it from storage anyway.
+        if is_today:
+            pnl = float(today_pnl_usd)
+        new_equity = running_equity + pnl
+        if i == 0:
+            daily_pnl_pct.append(0.0)
+        else:
+            denom = prev_equity if prev_equity > 0 else 1.0
+            daily_pnl_pct.append(pnl / denom * 100.0)
+        equity_curve.append(new_equity)
+        prev_equity = new_equity
+        running_equity = new_equity
+    return AccountTimeSeries(
+        equity_curve=tuple(equity_curve),
+        daily_pnl_pct=tuple(daily_pnl_pct),
+        last_day_ms=today_ms,
+    )
 
 
 @dataclass

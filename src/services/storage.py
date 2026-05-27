@@ -115,6 +115,16 @@ class RampStateRow(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class CircuitStateRow(Base):
+    """Persists the trailing-DD cooloff timestamp from `risk_circuits.evaluate_circuits`.
+    Without persistence a crash mid-cooloff would reset to the rolling-peak
+    after restart and re-enable trading at the worst possible moment."""
+    __tablename__ = "circuit_state"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    cooloff_until_ms: Mapped[int] = mapped_column(Integer, default=0)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class ProposedConfigRow(Base):
     """LLM-proposed configs awaiting user promotion. Advisory-only by default."""
     __tablename__ = "proposed_configs"
@@ -444,6 +454,22 @@ class Storage:
             return (row.current_max_notional_usd, row.last_review_ts_ms,
                     row.consecutive_profitable_weeks)
 
+    # ----- Circuit-breaker state -----
+    async def save_circuit_state(self, cooloff_until_ms: int) -> None:
+        async with self.session() as s, s.begin():
+            row = await s.get(CircuitStateRow, 1)
+            if row is None:
+                s.add(CircuitStateRow(id=1, cooloff_until_ms=cooloff_until_ms))
+            else:
+                row.cooloff_until_ms = cooloff_until_ms
+                row.updated_at = datetime.utcnow()
+
+    async def load_circuit_state(self) -> int:
+        """Returns the persisted cooloff_until_ms, or 0 if never set."""
+        async with self.session() as s:
+            row = await s.get(CircuitStateRow, 1)
+            return int(row.cooloff_until_ms) if row else 0
+
     # ----- Audit -----
     async def audit(self, kind: str, payload: dict) -> None:
         try:
@@ -471,6 +497,29 @@ class Storage:
         import time as _t
         since_ms = int((_t.time() // 86_400) * 86_400 * 1000)
         return await self.realized_pnl_since_ms(since_ms)
+
+    async def realized_pnl_by_day(self, since_ms: int,
+                                   until_ms: int) -> dict[int, float]:
+        """Sum realized_pnl_usd of CLOSED trades by UTC day (key = UTC-midnight ms).
+        Days with no closes are omitted; callers should fill them with 0.
+        Range is half-open: closes with `exit_ts_ms in [since_ms, until_ms)` count."""
+        DAY_MS = 86_400_000
+        async with self.session() as s:
+            result = await s.execute(
+                select(TradeRow).where(
+                    TradeRow.status == TradeStatus.CLOSED.value,
+                    TradeRow.exit_ts_ms.isnot(None),
+                    TradeRow.exit_ts_ms >= since_ms,
+                    TradeRow.exit_ts_ms < until_ms,
+                )
+            )
+            out: dict[int, float] = {}
+            for r in result.scalars():
+                if r.realized_pnl_usd is None or r.exit_ts_ms is None:
+                    continue
+                day_ms = (int(r.exit_ts_ms) // DAY_MS) * DAY_MS
+                out[day_ms] = out.get(day_ms, 0.0) + float(r.realized_pnl_usd)
+            return out
 
     async def consecutive_losses(self, limit: int = 10) -> int:
         """Walk most-recent closed trades, count consecutive losers from the head.

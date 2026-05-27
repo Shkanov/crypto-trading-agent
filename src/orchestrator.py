@@ -70,6 +70,9 @@ from src.services.funding_monitor import FundingMonitor
 from src.services.hodl_benchmark import HodlBenchmark
 from src.services.metrics import (
     basis_g,
+    circuit_cooloff_active_g,
+    circuit_dd_from_peak_g,
+    circuit_size_mult_g,
     consecutive_losses_g,
     equity_g,
     funding_rate_g,
@@ -85,7 +88,12 @@ from src.services.metrics import (
 )
 from src.services.news import NewsService
 from src.services.notional_ramp import NotionalRamp
-from src.services.performance import build_report, format_report_markdown
+from src.services.performance import (
+    build_equity_series,
+    build_report,
+    format_report_markdown,
+)
+from src.services.risk_circuits import CircuitConfig, CircuitState, evaluate_circuits
 from src.services.reconciliation import format_report as format_recon_report
 from src.services.reconciliation import reconcile_on_boot
 from src.services.storage import Storage
@@ -153,6 +161,14 @@ class Orchestrator:
         self.last_trade_ms_by_symbol: dict[str, int] = {}
         self.halted_until_ms = 0
 
+        # Sprint #12 risk circuits. `circuit_state` is the most recent
+        # evaluation (refreshed by housekeeping); `circuit_cooloff_until_ms`
+        # carries the flatten-cooloff timestamp forward across evaluations
+        # and across orchestrator restarts (persisted via Storage).
+        self.circuit_cfg = CircuitConfig()
+        self.circuit_cooloff_until_ms: int = 0
+        self.circuit_state: Optional[CircuitState] = None
+
         # In-memory pending-approval map
         self.pending: dict[str, Proposal] = {}
         # TraderAgent-originated close requests awaiting human approval.
@@ -211,6 +227,14 @@ class Orchestrator:
         and reject_reason is None. On rejection or dedupe, proposal is None
         and reject_reason is a short string. Existing strategy callers
         discard the return value — only the TraderAgent reads it."""
+        # Sprint #12: short-circuit on trailing-DD / vol / daily-loss block
+        # BEFORE invoking the full RiskGate. The same state is enforced for
+        # pair trades in propose_pair.
+        if self.circuit_state is not None and self.circuit_state.no_new_entries:
+            log.info("circuit.blocked", symbol=signal.symbol, side=signal.side,
+                     triggered=self.circuit_state.triggered,
+                     reason=self.circuit_state.reason)
+            return None, f"risk circuit: {self.circuit_state.reason}"
         betas = None
         if self.correlation:
             betas = {s: self.correlation.beta_to_btc(s) for s in self.s.symbol_list}
@@ -229,6 +253,18 @@ class Orchestrator:
         if not decision.ok:
             log.info("risk.rejected", symbol=signal.symbol, side=signal.side, reason=decision.reason)
             return None, f"risk gate: {decision.reason}"
+
+        # Sprint #12: scale qty/notional by the circuit's size_multiplier
+        # (1.0 normal, 0.5 on −10% DD or sustained-high-vol, 0.0 if blocked —
+        # but the block branch above caught that case). Applied after the
+        # RiskGate so per-coin and BTC-beta caps stay measured at full notional;
+        # the halving just shrinks our take on the approved slot.
+        if self.circuit_state is not None and self.circuit_state.size_multiplier < 1.0:
+            mult = max(0.0, self.circuit_state.size_multiplier)
+            decision.qty *= mult
+            decision.notional_usd *= mult
+            if decision.qty <= 0 or decision.notional_usd <= 0:
+                return None, "risk circuit: size multiplier collapsed to zero"
 
         pid = stable_proposal_id(signal.symbol, signal.side, signal.id)
         if pid in self.pending:
@@ -1099,6 +1135,78 @@ class Orchestrator:
                  cur_pnl=cur_pnl, new_pnl=new_pnl)
         return False
 
+    async def _evaluate_risk_circuits(self) -> None:
+        """Run the trailing-DD / vol / daily-loss circuits and act on the
+        result. Called once per housekeeping cycle.
+
+        Actions:
+          - On a `flatten` transition (state.flatten True and we have open
+            positions), force-close everything via the existing _tg_flatten
+            path. Persist the new cooloff timestamp.
+          - On any change to `cooloff_until_ms`, persist.
+          - Alert the user on first trigger or recovery.
+        """
+        prev = self.circuit_state
+        ts = await build_equity_series(
+            self.storage,
+            start_equity_usd=self.equity,
+            today_pnl_usd=self.pnl_today,
+            now_ms=now_ms(),
+            lookback_days=max(60, self.circuit_cfg.vol_lookback_days * 3),
+        )
+        state = evaluate_circuits(
+            ts, cfg=self.circuit_cfg, now_ms=now_ms(),
+            active_cooloff_until_ms=self.circuit_cooloff_until_ms,
+        )
+        self.circuit_state = state
+
+        # Persist cooloff on change so a restart honours an in-flight window.
+        if state.cooloff_until_ms != self.circuit_cooloff_until_ms:
+            self.circuit_cooloff_until_ms = state.cooloff_until_ms
+            try:
+                await self.storage.save_circuit_state(self.circuit_cooloff_until_ms)
+            except Exception:
+                log.exception("circuit.persist_failed")
+
+        # Audit + alert on triggered transitions (state goes from clear → tripped
+        # or the set of triggered circuits changes).
+        prev_trig = set(prev.triggered) if prev else set()
+        cur_trig = set(state.triggered)
+        if cur_trig and cur_trig != prev_trig:
+            await self.storage.audit("risk_circuit_triggered", {
+                "triggered": list(cur_trig),
+                "size_multiplier": state.size_multiplier,
+                "flatten": state.flatten,
+                "no_new_entries": state.no_new_entries,
+                "dd_from_peak_pct": state.dd_from_peak_pct,
+                "recent_vol_annual_pct": state.recent_vol_annual_pct,
+                "consecutive_high_vol_days": state.consecutive_high_vol_days,
+                "cooloff_until_ms": state.cooloff_until_ms,
+                "reason": state.reason,
+            })
+            if self.telegram:
+                await self.telegram.send_critical(
+                    f"*RISK CIRCUIT* `{','.join(sorted(cur_trig))}` — "
+                    f"{state.reason}"
+                )
+        elif prev_trig and not cur_trig:
+            await self.storage.audit("risk_circuit_cleared", {"prev": list(prev_trig)})
+            if self.telegram:
+                await self.telegram.send_info(
+                    f"_Risk circuit cleared_ (was: `{','.join(sorted(prev_trig))}`)."
+                )
+
+        # If we just transitioned into `flatten` AND there's something to close,
+        # route through the existing flatten path. This also sets a 1h
+        # halted_until_ms which prevents re-entry until the cooloff arithmetic
+        # takes over.
+        if state.flatten and self.position_manager and self.position_manager.open:
+            log.critical("circuit.flatten", reason=state.reason)
+            try:
+                await self._tg_flatten()
+            except Exception:
+                log.exception("circuit.flatten_failed")
+
     async def _housekeeping(self) -> None:
         while not self._stop.is_set():
             await asyncio.sleep(60)
@@ -1143,6 +1251,15 @@ class Orchestrator:
                 self.consecutive_losses = await self.storage.consecutive_losses()
             except Exception:
                 log.exception("housekeeping.refresh_failed")
+            # Sprint #12: recompute trailing-DD / vol / daily-loss circuit
+            # state from the daily equity curve. Done after pnl_today refresh
+            # so the daily-loss gate sees today's running PnL. Off by setting
+            # so this can be flipped without removing code.
+            if self.s.risk_circuits_enabled:
+                try:
+                    await self._evaluate_risk_circuits()
+                except Exception:
+                    log.exception("housekeeping.risk_circuits_failed")
             # J1: refresh correlation matrix if stale.
             if self.correlation and self.correlation.is_stale():
                 try:
@@ -1172,6 +1289,12 @@ class Orchestrator:
                 pending_proposals_g.set(len(self.pending))
                 halted_g.set(1 if now_ms() < self.halted_until_ms else 0)
                 consecutive_losses_g.set(self.consecutive_losses)
+                if self.circuit_state is not None:
+                    circuit_size_mult_g.set(self.circuit_state.size_multiplier)
+                    circuit_dd_from_peak_g.set(self.circuit_state.dd_from_peak_pct)
+                    circuit_cooloff_active_g.set(
+                        1 if now_ms() < self.circuit_cooloff_until_ms else 0
+                    )
                 btc = self.last_price.get("BTCUSDT")
                 if btc:
                     last_price_g.labels(symbol="BTCUSDT").set(btc)
@@ -1277,6 +1400,15 @@ class Orchestrator:
             log.info("propose_pair.daily_loss_cap", strategy=pair.strategy,
                      pnl_today=self.pnl_today)
             return
+        # Sprint #12 risk circuits: block new pair entries on trailing-DD /
+        # daily-loss / cooloff. Size multiplier (0.5) is intentionally NOT
+        # applied to pair notionals — pair sizing is dollar-hedged at the
+        # strategy level and rescaling one leg would unbalance the hedge.
+        if self.circuit_state is not None and self.circuit_state.no_new_entries:
+            log.info("propose_pair.circuit_blocked", strategy=pair.strategy,
+                     triggered=self.circuit_state.triggered,
+                     reason=self.circuit_state.reason)
+            return
         # Each strategy gets an equity slice (orchestrator splits evenly).
         share = self.equity_available_usd(pair.strategy)
         if pair.notional_usd > share:
@@ -1364,6 +1496,12 @@ class Orchestrator:
             await self.notional_ramp.load()
         except Exception:
             log.exception("startup.ramp_load_failed")
+        # Sprint #12: restore persisted cooloff so a crash mid-cooloff doesn't
+        # silently re-enable trading after restart.
+        try:
+            self.circuit_cooloff_until_ms = await self.storage.load_circuit_state()
+        except Exception:
+            log.exception("startup.circuit_load_failed")
         # Rebuild OPEN trades + AWAITING_USER proposals so a process restart
         # doesn't lose state.
         await self.position_manager.rehydrate()

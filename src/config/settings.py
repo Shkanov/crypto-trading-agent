@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     consecutive_loss_halt_short: int = 3
     consecutive_loss_halt_long: int = 5
 
+    # Trailing-DD / vol / daily-loss circuit breakers (sprint #12).
+    # Defaults match `src/services/risk_circuits.py:CircuitConfig`; the wire-up
+    # in the orchestrator pulls those defaults. The flag below gates the
+    # whole subsystem so it can be turned off without removing code.
+    risk_circuits_enabled: bool = True
+
     # Approval
     auto_approve_max_notional_usd: float = 50.0
     twofa_threshold_notional_usd: float = 500.0
