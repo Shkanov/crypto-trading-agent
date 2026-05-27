@@ -94,6 +94,8 @@ class SimTrade:
     exit_reason: Optional[str] = None
     exit_ts_ms: Optional[int] = None
     pnl_usd: Optional[float] = None
+    # Chandelier-exit bookkeeping (only used when cfg.exit_rule="chandelier")
+    extreme_since_entry: Optional[float] = None    # max high (long) / min low (short)
 
 
 @dataclass
@@ -139,6 +141,68 @@ def _realized_vol_at(ks: list[Kline], idx: int, tf: str, window: int = 500) -> f
     if len(closes) < 30:
         return 0.0
     return realized_vol_annual_from_klines(closes, _bars_per_year_for_tf(tf))
+
+
+def _atr_n(ks: list[Kline], idx: int, period: int) -> float:
+    """Wilder ATR over `period` true ranges ending at bar idx-1. Used by the
+    Chandelier exit. Returns 0 when insufficient bars."""
+    if idx < period + 1:
+        return 0.0
+    trs: list[float] = []
+    for i in range(idx - period, idx):
+        h = ks[i].high
+        l = ks[i].low
+        pc = ks[i - 1].close if i - 1 >= 0 else ks[i].close
+        trs.append(max(h - l, abs(h - pc), abs(l - pc)))
+    if not trs:
+        return 0.0
+    return float(np.mean(trs))
+
+
+def _highest_high_n(ks: list[Kline], idx: int, period: int) -> float:
+    if idx < 1:
+        return 0.0
+    lo = max(0, idx - period)
+    return float(max(k.high for k in ks[lo:idx])) if ks[lo:idx] else 0.0
+
+
+def _lowest_low_n(ks: list[Kline], idx: int, period: int) -> float:
+    if idx < 1:
+        return float("inf")
+    lo = max(0, idx - period)
+    return float(min(k.low for k in ks[lo:idx])) if ks[lo:idx] else float("inf")
+
+
+def _update_chandelier_stop(
+    trade: SimTrade,
+    k: Kline,
+    ks: list[Kline],
+    idx: int,
+    period: int,
+    atr_mult: float,
+) -> None:
+    """Ratchet trade.stop using the Chandelier(period, atr_mult) trailing rule.
+
+    Long: stop = highest_high_since_entry - atr_mult × ATR(period); only moves UP.
+    Short: stop = lowest_low_since_entry + atr_mult × ATR(period); only moves DOWN.
+    """
+    atr = _atr_n(ks, idx, period)
+    if atr <= 0:
+        return
+    if trade.side == "long":
+        cur_extreme = trade.extreme_since_entry if trade.extreme_since_entry is not None else k.high
+        new_extreme = max(cur_extreme, k.high)
+        trade.extreme_since_entry = new_extreme
+        new_stop = new_extreme - atr_mult * atr
+        if new_stop > trade.stop:
+            trade.stop = new_stop
+    else:
+        cur_extreme = trade.extreme_since_entry if trade.extreme_since_entry is not None else k.low
+        new_extreme = min(cur_extreme, k.low)
+        trade.extreme_since_entry = new_extreme
+        new_stop = new_extreme + atr_mult * atr
+        if new_stop < trade.stop:
+            trade.stop = new_stop
 
 
 def _adv_5m_usd(ks: list[Kline], idx: int, window: int = 288) -> float:
@@ -430,7 +494,10 @@ async def backtest_indicator(
         # Resolve any open trade against THIS bar first (price might have hit stop/TP).
         if open_trade is not None:
             hit_stop = (k.low <= open_trade.stop) if open_trade.side == "long" else (k.high >= open_trade.stop)
-            hit_tp = (k.high >= open_trade.tp) if open_trade.side == "long" else (k.low <= open_trade.tp)
+            # Chandelier exit has no fixed TP; check TP only for fixed_atr.
+            hit_tp = False
+            if cfg.exit_rule == "fixed_atr":
+                hit_tp = (k.high >= open_trade.tp) if open_trade.side == "long" else (k.low <= open_trade.tp)
             if hit_stop:
                 _close_trade_with_costs(
                     open_trade, open_trade.stop, "stop", k.close_time,
@@ -445,6 +512,12 @@ async def backtest_indicator(
                 )
                 trades.append(open_trade)
                 open_trade = None
+            elif cfg.exit_rule == "chandelier":
+                # Ratchet the trailing stop using this bar's extreme + ATR.
+                _update_chandelier_stop(
+                    open_trade, k, ks, idx + 1,
+                    cfg.chandelier_period, cfg.chandelier_atr_mult,
+                )
 
         # Update indicators with this closed bar.
         snap = ind.get(symbol, tf).on_closed_kline(k)

@@ -266,6 +266,15 @@ class IndicatorState:
             donchian_lower = float(min(list(self.lows)[-20:]))
             donchian_mid = (donchian_upper + donchian_lower) / 2.0
 
+        # Donchian(55) — Turtle long entry. Uses PRIOR 55 bars (excluding the
+        # current bar's high/low) so a breakout signal compares "this bar's
+        # close" to "55 bars of past extremes."
+        donchian55_upper_prior: Optional[float] = None
+        donchian55_lower_prior: Optional[float] = None
+        if len(self.highs) >= 56 and len(self.lows) >= 56:
+            donchian55_upper_prior = float(max(list(self.highs)[-56:-1]))
+            donchian55_lower_prior = float(min(list(self.lows)[-56:-1]))
+
         # Choppiness Index (Dreiss, 14): 100 * log10(sum(TR_n) / range_n) / log10(n).
         # Bounded 0..100; CHOP < 38.2 = trending, > 61.8 = chop, in-between = mixed.
         choppiness14: Optional[float] = None
@@ -310,6 +319,8 @@ class IndicatorState:
             stoch_rsi_k=stoch_k, stoch_rsi_d=stoch_d,
             donchian_upper=donchian_upper, donchian_lower=donchian_lower,
             donchian_mid=donchian_mid,
+            donchian55_upper_prior=donchian55_upper_prior,
+            donchian55_lower_prior=donchian55_lower_prior,
             obv=self.obv_value, obv_slope=obv_slope,
             choppiness14=choppiness14,
         )

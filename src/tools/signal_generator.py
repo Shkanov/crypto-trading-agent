@@ -153,6 +153,33 @@ def score_features(fv: FeatureVector, cfg: StrategyConfig) -> float:
     )
 
 
+def _donchian_breakout_side(
+    trigger_snap: IndicatorSnapshot,
+    htf_snap: Optional[IndicatorSnapshot],
+) -> Optional[str]:
+    """Turtle-style Donchian(55) breakout with HTF EMA21>EMA55 trend agreement.
+
+    Long when close TODAY > the PRIOR 55-bar high AND HTF EMA21 > EMA55.
+    Short symmetric. Returns None when either condition fails. RogueQuant 2024
+    backtest: positive returns across 2017/2018/2020/2022/2023 BTC regimes."""
+    u = trigger_snap.donchian55_upper_prior
+    l = trigger_snap.donchian55_lower_prior
+    if u is None or l is None:
+        return None
+    c = trigger_snap.close
+    htf_up = (htf_snap is not None
+              and htf_snap.ema21 is not None and htf_snap.ema55 is not None
+              and htf_snap.ema21 > htf_snap.ema55)
+    htf_dn = (htf_snap is not None
+              and htf_snap.ema21 is not None and htf_snap.ema55 is not None
+              and htf_snap.ema21 < htf_snap.ema55)
+    if c > u and htf_up:
+        return "long"
+    if c < l and htf_dn:
+        return "short"
+    return None
+
+
 def generate_signal(
     symbol: str,
     trigger_snap: IndicatorSnapshot,
@@ -169,19 +196,29 @@ def generate_signal(
     if trigger_snap.atr14 is None or trigger_snap.atr14 <= 0:
         return None
 
-    fv = _build_feature_vector(trigger_snap)
-    score = score_features(fv, cfg)
-    conf = abs(score)
-    if conf < cfg.min_confidence:
-        return None
-
-    side: str
-    if score >= cfg.long_score_threshold:
-        side = "long"
-    elif score <= cfg.short_score_threshold:
-        side = "short"
+    if cfg.entry_rule == "donchian55":
+        side_opt = _donchian_breakout_side(trigger_snap, htf_snap)
+        if side_opt is None:
+            return None
+        side = side_opt
+        # Donchian path has no continuous score; assign full confidence so the
+        # downstream sizer treats it as a real signal.
+        fv = _build_feature_vector(trigger_snap)
+        score = 1.0 if side == "long" else -1.0
+        conf = 1.0
     else:
-        return None
+        fv = _build_feature_vector(trigger_snap)
+        score = score_features(fv, cfg)
+        conf = abs(score)
+        if conf < cfg.min_confidence:
+            return None
+
+        if score >= cfg.long_score_threshold:
+            side = "long"
+        elif score <= cfg.short_score_threshold:
+            side = "short"
+        else:
+            return None
 
     if side not in cfg.enabled_sides:
         return None

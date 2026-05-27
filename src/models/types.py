@@ -85,6 +85,9 @@ class IndicatorSnapshot(BaseModel):
     obv_slope: Optional[float] = None
     # Choppiness Index (Dreiss, 14): 0..100. < 38.2 = strong trend; > 61.8 = chop.
     choppiness14: Optional[float] = None
+    # Donchian(55) using PRIOR 55 bars (excludes current bar) — Turtle entry.
+    donchian55_upper_prior: Optional[float] = None
+    donchian55_lower_prior: Optional[float] = None
     ts_ms: int = Field(default_factory=now_ms)
 
 
@@ -278,6 +281,21 @@ class StrategyConfig(BaseModel):
     require_strong_trend_regime: bool = False
     adx_strong_min: float = 25.0       # Wilder threshold; >25 = trend regime
     chop_max: float = 50.0             # midpoint of Dreiss bounds (38.2/61.8)
+
+    # Entry rule selector.
+    # - "confluence": MACD+EMA+RSI+volume score (legacy, default).
+    # - "donchian55": Turtle-style. Long when close > Donchian(55)_prior high AND
+    #   HTF EMA21 > EMA55; short symmetric. RogueQuant 2024 / Clenow.
+    entry_rule: str = "confluence"
+
+    # Exit rule selector.
+    # - "fixed_atr": initial stop at atr_stop_mult, fixed take_profit at rr_target (legacy).
+    # - "chandelier": ratchet stop = highest_high_since_entry - chandelier_atr_mult ×
+    #   ATR(chandelier_period). No fixed TP — trail until stopped. StratBase 2024.
+    exit_rule: str = "fixed_atr"
+    chandelier_period: int = 22
+    chandelier_atr_mult: float = 3.0
+
     notes: str = ""
     created_ms: int = Field(default_factory=now_ms)
 
