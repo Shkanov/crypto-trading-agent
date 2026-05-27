@@ -130,6 +130,25 @@ def _zscore(x: float, series: list[float], min_n: int = 10) -> Optional[float]:
     return (x - mu) / sd
 
 
+def _nearest_round_prox_bps(px: float) -> Optional[float]:
+    """Basis-point distance from `px` to the nearest primary round-number
+    price level. Primary levels are {1, 2, 5} × 10^n — the levels aktrad
+    announces ("впереди 0.05", "пробой 0.2", "0.5"). Returns the minimum
+    of (above-distance, below-distance) so callers see the closest level
+    in either direction. Returns None when px <= 0."""
+    if px is None or px <= 0:
+        return None
+    mag = 10.0 ** math.floor(math.log10(px))
+    # Grid of primary levels around the current decade. Include the next
+    # decade so we catch px just under e.g. 1.0 (level 1.0 from below) and
+    # just over e.g. 5.0 (level 10.0 from above).
+    grid = [m * mag for m in (1.0, 2.0, 5.0)]
+    grid += [m * mag * 10.0 for m in (1.0, 2.0, 5.0)]
+    grid += [m * mag / 10.0 for m in (1.0, 2.0, 5.0)]
+    best = min(abs(px - g) for g in grid)
+    return best / px * 10_000.0
+
+
 def _interp_at(series: list[tuple[int, float]], ts_ms: int) -> Optional[float]:
     """Last sample with timestamp <= ts_ms. No interpolation — point-in-time."""
     val: Optional[float] = None
