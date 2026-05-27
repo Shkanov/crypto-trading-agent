@@ -67,6 +67,26 @@ class ScannerParams:
     session_start_utc: int = 7
     session_end_utc: int = 12             # inclusive
 
+    # ── Momentum-primary mode (sprint #15) ─────────────────────────────────
+    # When True, `score_universe` switches to the Drogen-Hoffstein-Otte
+    # SSRN 4322637 cross-sectional momentum ranking and demotes vol-z / OI-z
+    # / funding to confirmers. The legacy additive scoring remains the
+    # default to preserve back-compat with `joint_sim` and the cascade
+    # validation harnesses.
+    use_momentum_primary: bool = False
+    # Top-decile gate by momentum rank (long side) and bottom-decile by
+    # momentum rank (short side). 0.10 = top/bot 10% of the eligible universe.
+    momentum_top_pct: float = 0.10
+    # 60/40 blend of 30d and 7d returns — short window captures recency,
+    # long window captures persistence. Liu-Tsyvinski uses 30d as canonical.
+    momentum_blend_30d_weight: float = 0.6
+    # Minimum confirmers (of vol_z, oi_z, funding_extreme) required after
+    # the momentum-rank filter. 2 of 3 matches the §2.4.2 spec.
+    confirmers_required: int = 2
+    # Universe-wide percentile threshold for "extreme funding" in the
+    # momentum-primary branch. 0.95 ≈ top 5% of |funding| at scan time.
+    funding_pctile_threshold: float = 0.95
+
 
 # ────────────────────────────── data shapes ────────────────────────────────
 
@@ -91,6 +111,11 @@ class SymbolFeatures:
     oi_z_24h_30d: Optional[float] = None
     ret_24h_bps: Optional[float] = None
     funding_rate_8h: Optional[float] = None
+    # Cross-sectional momentum windows for the §2.4.2 momentum-primary
+    # scorer. 30d is the Liu-Tsyvinski / Drogen-Hoffstein-Otte canonical
+    # window; 7d is the short complement that captures recency.
+    ret_30d_bps: Optional[float] = None
+    ret_7d_bps: Optional[float] = None
     history_ok: bool = True
 
 
@@ -209,6 +234,18 @@ def compute_features(hist: SymbolHistory, at_ts_ms: int) -> SymbolFeatures:
         if ref > 0:
             ret_24h_bps = (px - ref) / ref * 10_000
 
+    ret_7d_bps: Optional[float] = None
+    if len(valid) >= 7 * 24:
+        ref7 = valid[-7 * 24].open
+        if ref7 > 0:
+            ret_7d_bps = (px - ref7) / ref7 * 10_000
+
+    ret_30d_bps: Optional[float] = None
+    if len(valid) >= 30 * 24:
+        ref30 = valid[-30 * 24].open
+        if ref30 > 0:
+            ret_30d_bps = (px - ref30) / ref30 * 10_000
+
     funding = _interp_at(hist.funding_rates, at_ts_ms)
 
     return SymbolFeatures(
@@ -219,6 +256,8 @@ def compute_features(hist: SymbolHistory, at_ts_ms: int) -> SymbolFeatures:
         vol_z_1h_sameHour_30d=vol_z,
         oi_z_24h_30d=oi_z,
         ret_24h_bps=ret_24h_bps,
+        ret_30d_bps=ret_30d_bps,
+        ret_7d_bps=ret_7d_bps,
         funding_rate_8h=funding,
         history_ok=True,
     )
@@ -255,13 +294,22 @@ def score_universe(
     """Score every eligible symbol at ts_ms and return Candidates whose
     side-neutral attention score crosses s.score_min, sorted desc.
 
-    Attention components (all side-neutral):
-      - vol_z hit:         unusual 1h volume vs 30d same-hour-of-day baseline
-      - oi_z hit:          unusual 24h ΔOI vs 30d baseline (None when OI absent)
-      - extreme rank:      symbol's 24h return is in top-N or bot-N of universe
-      - funding extreme:   |funding| > min(short_bias, |long_bias|) — any direction
+    Two scoring modes (selected by `ScannerParams.use_momentum_primary`):
 
-    `side_hint` is set only when rank-side and funding-side agree:
+    **Legacy additive (default)** — each of {vol_z, oi_z, rank_extreme,
+    funding_extreme} contributes 1 point; Friday × 1.2 multiplier; score
+    ≥ s.score_min qualifies.
+
+    **Momentum-primary (sprint #15, §2.4.2)** — Drogen-Hoffstein-Otte
+    SSRN 4322637 cross-sectional momentum becomes the primary signal.
+    Rank by 60/40 blend of 30d/7d return, gate to top/bot momentum_top_pct,
+    then require ≥ confirmers_required of {vol_z, oi_z, funding_extreme}
+    where funding_extreme uses a universe-wide funding_pctile_threshold
+    rather than absolute thresholds. Side_hint matches the momentum
+    direction (top-momentum → long continuation; bot-momentum → short
+    continuation), the OPPOSITE of the legacy fade-the-extreme heuristic.
+
+    `side_hint` (legacy mode) is set only when rank-side and funding-side agree:
       - top-rank + crowded-long funding → fade short
       - bot-rank + crowded-short funding → squeeze long
     Else None — pattern detector decides.
@@ -279,6 +327,9 @@ def score_universe(
     }
     if not eligible:
         return []
+
+    if s.use_momentum_primary:
+        return _score_momentum_primary(eligible, ts_ms, dt, s)
 
     ret_pairs = sorted(
         [(sym, f.ret_24h_bps) for sym, f in eligible.items()
@@ -343,3 +394,116 @@ def in_session(ts_ms: int, p: ScannerParams = ScannerParams()) -> bool:
     """True iff ts_ms's UTC hour falls in the configured session window."""
     h = datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc).hour
     return p.session_start_utc <= h <= p.session_end_utc
+
+
+# ──────────────────────── momentum-primary scorer ──────────────────────────
+
+def _universe_funding_pctile(
+    eligible: dict[str, SymbolFeatures], pctile: float,
+) -> Optional[float]:
+    """Return the `pctile` quantile of |funding| across the eligible
+    universe at scan time. None when too few symbols have funding data."""
+    vals = [abs(f.funding_rate_8h) for f in eligible.values()
+            if f.funding_rate_8h is not None]
+    if len(vals) < 10:
+        return None
+    vals.sort()
+    k = max(0, min(len(vals) - 1, int(pctile * (len(vals) - 1))))
+    return vals[k]
+
+
+def _score_momentum_primary(
+    eligible: dict[str, SymbolFeatures],
+    ts_ms: int,
+    dt: datetime,
+    s: ScannerParams,
+) -> list[Candidate]:
+    """Internal: rank by cross-sectional momentum first, gate by confirmers.
+
+    Mechanics:
+      1. Blend 30d and 7d returns: blend = w * ret_30d + (1-w) * ret_7d
+         (defaults to 0.6 * 30d + 0.4 * 7d — Liu-Tsyvinski 30d anchor +
+         Drogen-Hoffstein recency).
+      2. Sort eligible symbols by blend ascending. Top-decile = continuation
+         long candidates; bottom-decile = continuation short candidates.
+      3. Compute universe-wide 95th-percentile |funding| → threshold.
+      4. For each gated candidate, count confirmers:
+            vol_z   ≥ s.vol_z_min
+            oi_z    ≥ s.oi_z_min
+            funding |rate| ≥ universe_pctile_threshold
+         Require ≥ s.confirmers_required.
+      5. score = (1 - rank_pct) for top side / rank_pct for bot side,
+         + confirmer_count (so 0..1 momentum strength + 0..3 confirmers).
+         Friday × s.friday_multiplier as in legacy.
+      6. side_hint = "long" for top-momentum / "short" for bot-momentum
+         (continuation, not fade — the §2.4.2 interpretation).
+    """
+    # Need blended return for ranking. Symbols missing either window are
+    # dropped from the momentum gate (but still in the universe — they just
+    # can't be candidates this hour).
+    w30 = s.momentum_blend_30d_weight
+    w7 = 1.0 - w30
+    blended: list[tuple[str, float]] = []
+    for sym, f in eligible.items():
+        if f.ret_30d_bps is None or f.ret_7d_bps is None:
+            continue
+        blended.append((sym, w30 * f.ret_30d_bps + w7 * f.ret_7d_bps))
+    if not blended:
+        return []
+    blended.sort(key=lambda x: x[1])
+    n = len(blended)
+    rank_lookup = {sym: i + 1 for i, (sym, _) in enumerate(blended)}
+
+    # Top/bot decile (or whatever momentum_top_pct configures).
+    cutoff = max(1, int(round(n * s.momentum_top_pct)))
+    bot_set = {sym for sym, _ in blended[:cutoff]}
+    top_set = {sym for sym, _ in blended[max(0, n - cutoff):]}
+
+    fund_thresh = _universe_funding_pctile(eligible, s.funding_pctile_threshold)
+
+    is_friday = dt.weekday() == 4
+    fri_mult = s.friday_multiplier if is_friday else 1.0
+
+    out: list[Candidate] = []
+    for sym in top_set | bot_set:
+        f = eligible[sym]
+        vol_hit = (f.vol_z_1h_sameHour_30d is not None
+                   and f.vol_z_1h_sameHour_30d >= s.vol_z_min)
+        oi_hit = (f.oi_z_24h_30d is not None
+                  and f.oi_z_24h_30d >= s.oi_z_min)
+        fund_hit = False
+        if fund_thresh is not None and f.funding_rate_8h is not None:
+            # Strict `>`: a uniform universe (every symbol at the same
+            # |funding|) should produce ZERO extremes — otherwise the gate
+            # would degenerate to "always on" when funding is flat across
+            # the universe.
+            fund_hit = abs(f.funding_rate_8h) > fund_thresh
+
+        confirmers = int(vol_hit) + int(oi_hit) + int(fund_hit)
+        if confirmers < s.confirmers_required:
+            continue
+
+        rank = rank_lookup[sym]
+        rank_pct = rank / n
+        if sym in top_set:
+            momentum_strength = rank_pct           # closer to 1 = higher rank
+            side_hint = "long"
+        else:
+            momentum_strength = 1.0 - rank_pct     # closer to 1 = stronger bot
+            side_hint = "short"
+
+        score = (momentum_strength + confirmers) * fri_mult
+        components = {
+            "momentum_primary": True,
+            "vol_z": vol_hit,
+            "oi_z": oi_hit,
+            "funding_extreme": fund_hit,
+        }
+        out.append(Candidate(
+            symbol=sym, score=score, ts_ms=ts_ms,
+            rank_in_returns=rank, universe_n=n,
+            side_hint=side_hint, components=components,
+        ))
+
+    out.sort(key=lambda c: c.score, reverse=True)
+    return out
