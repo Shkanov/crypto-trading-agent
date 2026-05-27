@@ -40,10 +40,16 @@ import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 from dotenv import load_dotenv
 
+from src.scanners.universe_pit import (
+    SymbolListing,
+    is_active_at,
+    load_pit_log,
+)
 from src.services.backtest import (
     _deflated_sharpe,
     _equity_curve,
@@ -91,6 +97,7 @@ class WeeklyResult:
     short_funding_pnl: float
     fee_pnl: float
     total_pnl_usd: float
+    pit_filtered: int = 0          # # of symbols dropped by PIT gate this week
 
 
 # ---------------------------------------------------------------------------
@@ -183,8 +190,21 @@ def simulate_carry(
     p: CarryParams,
     start_equity: float,
     costs: Costs,
+    pit_log: Optional[dict[str, SymbolListing]] = None,
 ) -> list[WeeklyResult]:
-    """Walk weekly rebalances over [start_ms, end_ms]."""
+    """Walk weekly rebalances over [start_ms, end_ms].
+
+    When `pit_log` is provided, the per-week funding snapshot is filtered
+    to symbols that were tradeable AT `ts`. Symbols absent from the PIT
+    log are dropped (conservative). Symbols whose `listed_ms > ts` are
+    also dropped — this is the survivorship correction: a symbol can't
+    be in our universe before its actual listing date.
+
+    Note: today's PIT log holds only currently-active symbols (we don't
+    have a delistings inventory yet), so the only correction this provides
+    is filtering pre-listing periods of currently-active symbols. That is
+    still the most important survivorship leak in the 1y carry backtest.
+    """
     rebalance_step = p.rebalance_period_hours * 3_600_000
     results: list[WeeklyResult] = []
     equity = start_equity
@@ -195,10 +215,15 @@ def simulate_carry(
 
         # Build funding snapshot at `ts` from each symbol's history.
         snapshot: dict[str, float] = {}
+        pit_drops = 0
         for sym, hist in histories.items():
             r = _funding_rate_at(hist.funding, ts)
-            if r is not None:
-                snapshot[sym] = r
+            if r is None:
+                continue
+            if pit_log is not None and not is_active_at(pit_log, sym, ts):
+                pit_drops += 1
+                continue
+            snapshot[sym] = r
 
         rb = build_rebalance(snapshot, equity_usd=equity, ts_ms=ts, p=p)
         if not rb.is_active:
@@ -240,6 +265,7 @@ def simulate_carry(
             long_price_pnl=long_px_pnl, short_price_pnl=short_px_pnl,
             long_funding_pnl=long_fnd_pnl, short_funding_pnl=short_fnd_pnl,
             fee_pnl=fee_pnl, total_pnl_usd=weekly_pnl,
+            pit_filtered=pit_drops,
         ))
         ts = next_ts
 
@@ -291,8 +317,26 @@ async def amain() -> None:
     ap.add_argument("--book-pct-per-side", type=float, default=0.25)
     ap.add_argument("--rebalance-hours", type=int, default=168)
     ap.add_argument("--equity-usd", type=float, default=1_000.0)
+    ap.add_argument("--pit-log",
+                    default="data/research/universe/binance_delistings.json",
+                    help="PIT listings JSON. Set to '' to disable PIT correction.")
     ap.add_argument("--out-tag", default="")
     args = ap.parse_args()
+
+    pit_log: Optional[dict[str, SymbolListing]] = None
+    if args.pit_log:
+        pit_path = Path(args.pit_log)
+        if not pit_path.is_absolute():
+            pit_path = REPO / pit_path
+        pit_log = load_pit_log(pit_path)
+        if not pit_log:
+            print(f"WARNING: --pit-log={pit_path} not found or empty; "
+                  "running WITHOUT survivorship correction.")
+            pit_log = None
+        else:
+            print(f"PIT log: {len(pit_log)} symbols loaded from {pit_path}")
+    else:
+        print("PIT correction DISABLED (--pit-log='')")
 
     p = CarryParams(top_n=args.top_n,
                     rebalance_period_hours=args.rebalance_hours,
@@ -326,6 +370,7 @@ async def amain() -> None:
         results = simulate_carry(
             histories, start_ms=start_ms, end_ms=now_ms,
             p=p, start_equity=args.equity_usd, costs=costs,
+            pit_log=pit_log,
         )
         span_days = (now_ms - start_ms) / 86_400_000
         stats = summarise(results, start_equity=args.equity_usd, span_days=span_days)
@@ -347,6 +392,9 @@ async def amain() -> None:
         print(f"  long  fund PnL:  ${stats.get('long_funding_pnl', 0):+.2f}")
         print(f"  short fund PnL:  ${stats.get('short_funding_pnl', 0):+.2f}")
         print(f"  fees:            ${stats.get('fee_pnl', 0):+.2f}")
+        total_pit_drops = sum(r.pit_filtered for r in results)
+        if pit_log is not None:
+            print(f"  PIT drops:       {total_pit_drops} symbol-weeks filtered")
 
         ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         tag = f"_{args.out_tag}" if args.out_tag else ""
@@ -355,6 +403,8 @@ async def amain() -> None:
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "days": args.days,
             "params": asdict(p),
+            "pit_corrected": pit_log is not None,
+            "pit_drops_total": total_pit_drops,
             "universe": universe,
             "stats": stats,
             "weekly": [asdict(r) for r in results],
