@@ -297,6 +297,9 @@ async def amain() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--top-n", type=int, default=20,
                     help="candidate spot universe size before PIT filter")
+    ap.add_argument("--skip-top", type=int, default=0,
+                    help="drop the leading N highest-volume symbols (e.g. "
+                         "--skip-top 100 --top-n 200 → small-cap ranks 101..200)")
     ap.add_argument("--max-symbols", type=int, default=10,
                     help="cap on PIT-survivors actually validated")
     ap.add_argument("--tf", default="1h")
@@ -334,7 +337,13 @@ async def amain() -> None:
     await b.start()
     try:
         candidates = await build_universe(b, top_n=args.top_n)
-        print(f"\nspot candidate universe ({len(candidates)} symbols)")
+        if args.skip_top:
+            n_before = len(candidates)
+            candidates = candidates[args.skip_top:]
+            print(f"\nspot candidate universe ({len(candidates)} symbols after "
+                  f"skipping top-{args.skip_top} of {n_before} by 24h volume)")
+        else:
+            print(f"\nspot candidate universe ({len(candidates)} symbols)")
 
         now_ms = int(time.time() * 1000)
         bar_ms = {"1m": 60_000, "5m": 300_000, "15m": 900_000, "1h": 3_600_000,
