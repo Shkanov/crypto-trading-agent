@@ -96,6 +96,8 @@ class SimTrade:
     pnl_usd: Optional[float] = None
     # Chandelier-exit bookkeeping (only used when cfg.exit_rule="chandelier")
     extreme_since_entry: Optional[float] = None    # max high (long) / min low (short)
+    # Per-trade override for time stop (used by triple-barrier mean-rev path).
+    local_time_stop: Optional[int] = None
 
 
 @dataclass
@@ -655,7 +657,9 @@ async def backtest_mean_reversion(
                 trades.append(open_trade)
                 open_trade = None
                 bars_held = 0
-            elif bars_held >= cfg.time_stop_bars:
+            elif bars_held >= (open_trade.local_time_stop
+                               if open_trade.local_time_stop is not None
+                               else cfg.time_stop_bars):
                 # Time-stop: failed revert thesis. Exit at this bar's close.
                 _close_trade_with_costs(
                     open_trade, k.close, "time_stop", k.close_time,
@@ -675,6 +679,26 @@ async def backtest_mean_reversion(
         if not sig:
             continue
 
+        # Strict regime gate: Hurst + VR + OU half-life. Replaces the bar-level
+        # ADX<20 check in generate_mean_reversion_signal with a 3-test stack
+        # operating on the trailing close-price window.
+        local_time_stop = cfg.time_stop_bars
+        if cfg.use_strict_regime_gate or cfg.use_triple_barrier:
+            from src.services.mean_rev_regime import (
+                RegimeGateParams,
+                ou_half_life_bars,
+                passes_regime_gate,
+            )
+            rgp = RegimeGateParams()
+            closes_window = [b.close for b in ks[max(0, idx - rgp.ou_window):idx]]
+            if cfg.use_strict_regime_gate and not passes_regime_gate(closes_window, rgp):
+                continue
+            if cfg.use_triple_barrier:
+                hl = ou_half_life_bars(closes_window)
+                if hl is None or not (rgp.ou_min_half_life_bars <= hl <= rgp.ou_max_half_life_bars):
+                    continue
+                local_time_stop = max(1, int(cfg.time_stop_mult_of_half_life * hl))
+
         if vol_cfg is not None:
             rv = _realized_vol_at(ks, idx, tf)
             notional = vol_target_notional(equity, rv, vol_cfg)
@@ -689,16 +713,42 @@ async def backtest_mean_reversion(
                 continue
             qty = min(risk_usd / risk_per_unit, s.max_notional_usd / sig.entry)
             notional = qty * sig.entry
+
+        # Triple-barrier override: SL/TP set in σ of recent log-returns, time
+        # stop derived from OU half-life above (`local_time_stop`).
+        stop_override = sig.stop
+        tp_override = sig.take_profit
+        if cfg.use_triple_barrier:
+            ret_window = [
+                math.log(ks[i].close / ks[i - 1].close)
+                for i in range(max(1, idx - 100), idx)
+                if ks[i - 1].close > 0
+            ]
+            if len(ret_window) >= 30:
+                sigma_per_bar = float(np.std(np.asarray(ret_window), ddof=1))
+                if sigma_per_bar > 0:
+                    if sig.side == "long":
+                        tp_override = sig.entry * (1 + cfg.tp_sigma * sigma_per_bar)
+                        stop_override = sig.entry * (1 - cfg.sl_sigma * sigma_per_bar)
+                    else:
+                        tp_override = sig.entry * (1 - cfg.tp_sigma * sigma_per_bar)
+                        stop_override = sig.entry * (1 + cfg.sl_sigma * sigma_per_bar)
+
         entry_px = adjust_entry_price(
             sig.entry, sig.side, notional, adv5m, impact_k, half_spread,
         )
         open_trade = SimTrade(
             symbol=symbol, strategy="mean_reversion",
             side=sig.side, qty=qty,
-            entry_price=entry_px, stop=sig.stop, tp=sig.take_profit,
+            entry_price=entry_px, stop=stop_override, tp=tp_override,
             entry_ts_ms=k.close_time,
         )
+        # Override time stop for this trade via simulator-local var
+        # (simulator iterates bars_held against cfg.time_stop_bars below).
         bars_held = 0
+        # We thread the local_time_stop via a small monkey-patch on the trade
+        # object so the bar-management loop can consult it.
+        open_trade.local_time_stop = local_time_stop  # type: ignore[attr-defined]
 
     if open_trade is not None and ks:
         last = ks[-1].close

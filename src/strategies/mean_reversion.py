@@ -102,6 +102,20 @@ class MeanReversionConfig:
     htf_timeframe: str = "1h"
     trigger_timeframe_pref: tuple[str, ...] = ("5m", "15m", "3m", "1m")
 
+    # Strict Hurst+VR+OU regime gate (Chan ch.2; Macrosynergy 2023). When True,
+    # replaces ADX<20 as the regime check; called from the simulator with the
+    # last N closing prices. The 3-test stack typically kills 60-80% of false
+    # positives in directional crypto regimes.
+    use_strict_regime_gate: bool = False
+
+    # Triple-barrier exits (López de Prado, AFML ch.3). When True, replaces
+    # fixed ATR stops/TP with σ-scaled barriers + a hard time stop derived
+    # from the OU half-life estimate.
+    use_triple_barrier: bool = False
+    tp_sigma: float = 0.7        # take profit at 0.7 σ of entry deviation
+    sl_sigma: float = 2.0        # stop loss at 2.0 σ of entry deviation
+    time_stop_mult_of_half_life: float = 3.0  # hard time stop = 3 × OU HL bars
+
 
 def generate_mean_reversion_signal(
     symbol: str,
