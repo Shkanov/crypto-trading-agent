@@ -1,0 +1,177 @@
+"""Tests for src.strategies.funding_carry — pure logic, no network."""
+from __future__ import annotations
+
+import math
+
+from src.strategies.funding_carry import (
+    CarryParams,
+    build_rebalance,
+    cycle_pnl,
+    rank_for_carry,
+)
+
+
+# ---------------------------------------------------------------------------
+# Ranking
+
+def test_rank_for_carry_picks_extremes() -> None:
+    """Build a universe with monotonic funding rates and confirm the
+    longs/shorts come from the right ends."""
+    funding = {f"SYM{i:02d}": (i - 10) * 0.001 for i in range(20)}
+    # SYM00 has -0.010, SYM19 has +0.009
+    longs, shorts = rank_for_carry(funding, CarryParams(top_n=3))
+    assert longs == ["SYM17", "SYM18", "SYM19"]      # highest funding = longs
+    assert shorts == ["SYM00", "SYM01", "SYM02"]     # lowest funding = shorts
+
+
+def test_rank_for_carry_breaks_ties_alphabetically() -> None:
+    # All zero → alphabetical ordering
+    funding = {f"SYM{c}": 0.0 for c in "ABCDEFGHIJ"}
+    longs, shorts = rank_for_carry(funding, CarryParams(top_n=3))
+    assert shorts == ["SYMA", "SYMB", "SYMC"]
+    assert longs == ["SYMH", "SYMI", "SYMJ"]
+
+
+def test_rank_for_carry_drops_missing_funding() -> None:
+    funding = {"BTC": 0.001, "ETH": None, "SOL": 0.002, "MISSING": float("nan")}
+    longs, shorts = rank_for_carry(funding, CarryParams(top_n=1))
+    # Only BTC + SOL are eligible. top_n=1 → 1 long + 1 short, need 2.
+    assert longs == ["SOL"]
+    assert shorts == ["BTC"]
+
+
+def test_rank_for_carry_returns_empty_when_too_few_symbols() -> None:
+    funding = {"A": 0.001, "B": -0.001, "C": 0.002}  # only 3 symbols
+    longs, shorts = rank_for_carry(funding, CarryParams(top_n=3))
+    # Need 2*top_n = 6, only 3 → empty
+    assert longs == [] and shorts == []
+
+
+# ---------------------------------------------------------------------------
+# build_rebalance
+
+def test_build_rebalance_equal_notional_per_leg() -> None:
+    funding = {f"SYM{i:02d}": i * 0.0001 for i in range(20)}
+    p = CarryParams(top_n=3, book_pct_per_side=0.20)
+    rb = build_rebalance(funding, equity_usd=10_000.0,
+                          ts_ms=1_700_000_000_000, p=p)
+    assert rb.is_active
+    assert len(rb.longs) == 3
+    assert len(rb.shorts) == 3
+    # 20% of $10k = $2k per leg; / 3 = ~$666.67 per position
+    expected = 10_000.0 * 0.20 / 3
+    for pos in rb.longs + rb.shorts:
+        assert abs(pos.notional_usd - expected) < 1e-9
+
+
+def test_build_rebalance_skips_small_universe() -> None:
+    funding = {f"SYM{i}": i * 0.001 for i in range(5)}
+    rb = build_rebalance(funding, equity_usd=10_000.0,
+                          ts_ms=1_700_000_000_000,
+                          p=CarryParams(top_n=3, min_universe_size=10))
+    assert not rb.is_active
+    assert "universe too small" in rb.skipped_reason
+
+
+def test_build_rebalance_skips_zero_equity() -> None:
+    funding = {f"SYM{i:02d}": i * 0.0001 for i in range(20)}
+    rb = build_rebalance(funding, equity_usd=0.0,
+                          ts_ms=1_700_000_000_000, p=CarryParams())
+    assert not rb.is_active
+    assert "non-positive equity" in rb.skipped_reason
+
+
+def test_build_rebalance_dollar_neutral() -> None:
+    funding = {f"SYM{i:02d}": i * 0.0001 for i in range(20)}
+    rb = build_rebalance(funding, equity_usd=10_000.0,
+                          ts_ms=1_700_000_000_000,
+                          p=CarryParams(top_n=3, book_pct_per_side=0.30))
+    long_gross = sum(p.notional_usd for p in rb.longs)
+    short_gross = sum(p.notional_usd for p in rb.shorts)
+    assert abs(long_gross - short_gross) < 1e-9
+    assert abs(long_gross - 10_000.0 * 0.30) < 1e-9
+
+
+# ---------------------------------------------------------------------------
+# cycle_pnl
+
+def _funding_events(t0: int, n_cycles: int, rate: float, cycle_h: int = 8) -> list[tuple[int, float]]:
+    return [(t0 + (i + 1) * cycle_h * 3_600_000, rate) for i in range(n_cycles)]
+
+
+def test_cycle_pnl_long_price_up_gains() -> None:
+    t0 = 1_700_000_000_000
+    t1 = t0 + 7 * 86_400_000
+    pos = type("Pos", (), {})()  # use real CarryPosition for type safety:
+    from src.strategies.funding_carry import CarryPosition
+    pos = CarryPosition(symbol="X", side="long", notional_usd=1_000.0,
+                        entry_funding_rate=0.001)
+    r = cycle_pnl(pos, entry_price=100.0, exit_price=105.0,
+                   funding_events=[], entry_ts_ms=t0, exit_ts_ms=t1)
+    assert abs(r.price_pnl_usd - 50.0) < 1e-9       # 5% on $1k notional
+    assert r.funding_pnl_usd == 0.0                 # no funding events provided
+    assert r.fee_pnl_usd < 0.0                      # two-sided perp taker
+    assert r.total_pnl_usd > 0.0
+
+
+def test_cycle_pnl_short_price_up_loses() -> None:
+    from src.strategies.funding_carry import CarryPosition
+    t0 = 1_700_000_000_000
+    t1 = t0 + 7 * 86_400_000
+    pos = CarryPosition(symbol="X", side="short", notional_usd=1_000.0,
+                        entry_funding_rate=-0.001)
+    r = cycle_pnl(pos, entry_price=100.0, exit_price=105.0,
+                   funding_events=[], entry_ts_ms=t0, exit_ts_ms=t1)
+    # Short with price up = adverse
+    assert abs(r.price_pnl_usd - (-50.0)) < 1e-9
+    assert r.total_pnl_usd < 0.0
+
+
+def test_cycle_pnl_long_pays_positive_funding() -> None:
+    from src.strategies.funding_carry import CarryPosition
+    t0 = 1_700_000_000_000
+    # 7 days * 3 cycles/day = 21 cycles
+    events = _funding_events(t0, 21, rate=0.001)
+    t1 = events[-1][0] + 1
+    pos = CarryPosition(symbol="X", side="long", notional_usd=1_000.0,
+                        entry_funding_rate=0.001)
+    r = cycle_pnl(pos, entry_price=100.0, exit_price=100.0,
+                   funding_events=events, entry_ts_ms=t0, exit_ts_ms=t1)
+    # Long pays 21 cycles × 0.001 × $1000 = $21 (negative for trader)
+    assert abs(r.funding_pnl_usd - (-21.0)) < 1e-9
+
+
+def test_cycle_pnl_short_receives_positive_funding() -> None:
+    from src.strategies.funding_carry import CarryPosition
+    t0 = 1_700_000_000_000
+    events = _funding_events(t0, 21, rate=0.001)
+    t1 = events[-1][0] + 1
+    pos = CarryPosition(symbol="X", side="short", notional_usd=1_000.0,
+                        entry_funding_rate=0.001)
+    r = cycle_pnl(pos, entry_price=100.0, exit_price=100.0,
+                   funding_events=events, entry_ts_ms=t0, exit_ts_ms=t1)
+    # Short with positive funding receives 21 cycles × 0.001 × $1000 = +$21
+    assert abs(r.funding_pnl_usd - 21.0) < 1e-9
+
+
+def test_cycle_pnl_invalid_prices_returns_zero() -> None:
+    from src.strategies.funding_carry import CarryPosition
+    t0 = 1_700_000_000_000
+    pos = CarryPosition(symbol="X", side="long", notional_usd=1_000.0,
+                        entry_funding_rate=0.0)
+    r = cycle_pnl(pos, entry_price=0.0, exit_price=100.0,
+                   funding_events=[], entry_ts_ms=t0, exit_ts_ms=t0 + 1)
+    assert r.price_pnl_usd == 0.0
+    assert r.fee_pnl_usd == 0.0
+    assert r.total_pnl_usd == 0.0
+
+
+def test_cycle_pnl_fee_scales_with_notional() -> None:
+    from src.strategies.funding_carry import CarryPosition
+    t0 = 1_700_000_000_000
+    small = CarryPosition("A", "long", 100.0, 0.0)
+    big = CarryPosition("B", "long", 10_000.0, 0.0)
+    r1 = cycle_pnl(small, 100.0, 100.0, [], t0, t0 + 1)
+    r2 = cycle_pnl(big, 100.0, 100.0, [], t0, t0 + 1)
+    # fees scale linearly with notional
+    assert math.isclose(r2.fee_pnl_usd / r1.fee_pnl_usd, 100.0, rel_tol=1e-9)
