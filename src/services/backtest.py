@@ -40,6 +40,19 @@ import structlog
 
 from src.config.settings import Settings, get_settings
 from src.models.types import IndicatorSnapshot, Kline, Signal, StrategyConfig
+from src.services.costs import (
+    Costs,
+    adjust_entry_price,
+    adjust_exit_price,
+    impact_k_for_symbol,
+    taker_fee_usd,
+)
+from src.services.sizing import (
+    VolTargetConfig,
+    qty_from_notional,
+    realized_vol_annual_from_klines,
+    vol_target_notional,
+)
 from src.strategies.cascade_breakout import (
     CascadeParams,
     CascadePattern,
@@ -105,6 +118,85 @@ def _equity_curve(pnls: list[float], start_equity: float) -> np.ndarray:
     return np.cumsum(np.array([start_equity] + pnls))
 
 
+_BARS_PER_YEAR = {
+    "1m": 525_600, "3m": 175_200, "5m": 105_120, "15m": 35_040, "30m": 17_520,
+    "1h": 8_760, "2h": 4_380, "4h": 2_190, "6h": 1_460, "8h": 1_095, "12h": 730,
+    "1d": 365, "3d": 122, "1w": 52,
+}
+
+
+def _bars_per_year_for_tf(tf: str) -> float:
+    return float(_BARS_PER_YEAR.get(tf, 8_760))
+
+
+def _realized_vol_at(ks: list[Kline], idx: int, tf: str, window: int = 500) -> float:
+    """Annualised realized vol over the last `window` bars ending at idx-1
+    (excludes the current bar). Used to size new entries at bar `idx`."""
+    if idx <= 1:
+        return 0.0
+    lo = max(0, idx - window)
+    closes = [k.close for k in ks[lo:idx]]
+    if len(closes) < 30:
+        return 0.0
+    return realized_vol_annual_from_klines(closes, _bars_per_year_for_tf(tf))
+
+
+def _adv_5m_usd(ks: list[Kline], idx: int, window: int = 288) -> float:
+    """Trailing 5m-equivalent dollar volume at bar `idx`. For non-5m bars we
+    scale by the bar duration so that downstream sqrt-impact math always
+    sees a 5-minute participation denominator.
+
+    `window` defaults to 288 = 24h of 5m bars; for higher TFs the window
+    auto-truncates to whatever history exists. Returns 0 when the window
+    is empty (caller falls back to half-spread-only impact)."""
+    if idx <= 0 or not ks:
+        return 0.0
+    lo = max(0, idx - window)
+    sl = ks[lo:idx]
+    if not sl:
+        return 0.0
+    # Scale each bar's quote_volume by 5min/bar_duration so the result is
+    # quote-volume PER 5 MINUTES at this bar's recent activity level.
+    bar_dur_min = (sl[-1].close_time - sl[-1].open_time) / 60_000.0
+    if bar_dur_min <= 0:
+        return 0.0
+    avg_qv = float(np.mean([k.quote_volume for k in sl]))
+    return avg_qv * (5.0 / bar_dur_min)
+
+
+def _close_trade_with_costs(
+    trade: SimTrade,
+    raw_exit_price: float,
+    reason: str,
+    exit_ts_ms: int,
+    adv_5m_usd: float,
+    impact_k: float,
+    half_spread_bps: float,
+    costs: Costs,
+    venue: str = "spot",
+    stop_slippage_mult: float = 5.0,
+) -> None:
+    """Close `trade` at `raw_exit_price` after applying adverse slippage and
+    taker fees. Stop fills get an extra `stop_slippage_mult` since stops
+    trigger in fast moves; TP/eod fills use base slippage."""
+    notional = abs(trade.qty * raw_exit_price)
+    base_hs = half_spread_bps
+    # Stop fills are worse — multiply the spread component to reflect that
+    # taking liquidity into a fast move costs more.
+    eff_hs = base_hs * stop_slippage_mult if reason == "stop" else base_hs
+    exit_px = adjust_exit_price(
+        raw_exit_price, trade.side, notional, adv_5m_usd, impact_k, eff_hs,
+    )
+    trade.exit_price = exit_px
+    trade.exit_reason = reason
+    trade.exit_ts_ms = exit_ts_ms
+    gross = (exit_px - trade.entry_price) * trade.qty
+    if trade.side == "short":
+        gross = -gross
+    fee = taker_fee_usd(notional, venue, costs)  # type: ignore[arg-type]
+    trade.pnl_usd = gross - fee
+
+
 def _max_drawdown(curve: np.ndarray) -> tuple[float, float]:
     if curve.size == 0:
         return 0.0, 0.0
@@ -142,13 +234,109 @@ def _sharpe_from_pnls_and_span(pnls: list[float], span_days: float) -> float:
     return _sharpe(pnls, periods_per_year=periods_per_year)
 
 
-def _deflated_sharpe(sharpe: float, n_trades: int, n_trials: int = 5) -> float:
-    """López de Prado deflation. Without the full skew/kurt machinery we use a
-    conservative approximation: Sharpe is penalized by `sqrt(log(n_trials))/n`."""
+_EULER = 0.5772156649015329
+
+
+def _norm_cdf(x: float) -> float:
+    return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
+
+
+def _norm_ppf(p: float) -> float:
+    """Inverse standard-normal CDF via Beasley-Springer-Moro approximation
+    (Wichura 1988, AS241). Accurate to ~7 decimal places in (0,1)."""
+    if p <= 0.0 or p >= 1.0:
+        raise ValueError("ppf input must be in (0,1)")
+    a = [
+        -3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02,
+        1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00,
+    ]
+    b = [
+        -5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02,
+        6.680131188771972e+01, -1.328068155288572e+01,
+    ]
+    c = [
+        -7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00,
+        -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00,
+    ]
+    d = [
+        7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00,
+        3.754408661907416e+00,
+    ]
+    plow = 0.02425
+    phigh = 1 - plow
+    if p < plow:
+        q = math.sqrt(-2.0 * math.log(p))
+        return (((((c[0]*q + c[1])*q + c[2])*q + c[3])*q + c[4])*q + c[5]) / \
+               ((((d[0]*q + d[1])*q + d[2])*q + d[3])*q + 1.0)
+    if p > phigh:
+        q = math.sqrt(-2.0 * math.log(1 - p))
+        return -(((((c[0]*q + c[1])*q + c[2])*q + c[3])*q + c[4])*q + c[5]) / \
+                ((((d[0]*q + d[1])*q + d[2])*q + d[3])*q + 1.0)
+    q = p - 0.5
+    r = q * q
+    return (((((a[0]*r + a[1])*r + a[2])*r + a[3])*r + a[4])*r + a[5]) * q / \
+           (((((b[0]*r + b[1])*r + b[2])*r + b[3])*r + b[4])*r + 1.0)
+
+
+def _deflated_sharpe(
+    sharpe: float,
+    n_trades: int,
+    n_trials: int = 5,
+    pnls: Optional[list[float]] = None,
+    sr_trial_distribution: Optional[list[float]] = None,
+) -> float:
+    """Bailey & López de Prado (2014) deflated Sharpe ratio.
+
+        DSR = Φ((SR_obs - E[max_SR]) * sqrt(T - 1)
+                 / sqrt(1 - skew*SR_obs + ((kurt - 1)/4) * SR_obs²))
+
+    where
+        E[max_SR] = √V[SR] * ((1-γ)*Φ⁻¹(1 - 1/N) + γ*Φ⁻¹(1 - 1/(N*e)))
+
+    `sr_trial_distribution` is the Sharpe of each parameter-grid trial; its
+    variance feeds V[SR]. If not supplied we fall back to V[SR] = 0.5 (a
+    reasonable prior across crypto strategy sweeps).
+
+    `pnls` lets us compute the trade-return skew and kurtosis used in the
+    denominator. Without them we assume gaussian (skew=0, kurt=3 → term=0.5).
+
+    Returns the deflated SR in **units of standard Sharpe** (not the
+    cumulative-probability form) so it is directly comparable to the raw
+    Sharpe. Floors at 0 — a strategy whose raw SR doesn't clear E[max_SR]
+    by enough is "no evidence of edge after multiple-testing penalty."
+    """
     if n_trades < 2:
         return 0.0
-    penalty = math.sqrt(math.log(max(2, n_trials))) / math.sqrt(n_trades)
-    return max(0.0, sharpe - penalty)
+    n_trials = max(2, n_trials)
+    if sr_trial_distribution is not None and len(sr_trial_distribution) >= 2:
+        v_sr = float(np.var(np.asarray(sr_trial_distribution), ddof=1))
+    else:
+        v_sr = 0.5
+    expected_max = math.sqrt(max(v_sr, 0.0)) * (
+        (1.0 - _EULER) * _norm_ppf(1.0 - 1.0 / n_trials)
+        + _EULER * _norm_ppf(1.0 - 1.0 / (n_trials * math.e))
+    )
+    # Skew / kurt term — fall back to gaussian when no pnls supplied.
+    skew = 0.0
+    kurt = 3.0
+    if pnls is not None and len(pnls) > 3:
+        a = np.asarray(pnls, dtype=float)
+        mu = a.mean()
+        sd = a.std(ddof=1)
+        if sd > 0:
+            z = (a - mu) / sd
+            skew = float(np.mean(z ** 3))
+            kurt = float(np.mean(z ** 4))
+    denom_inside = 1.0 - skew * sharpe + ((kurt - 1.0) / 4.0) * sharpe * sharpe
+    if denom_inside <= 0:
+        return 0.0
+    # Bailey/LdP cumulative-probability form:
+    #   DSR_pct = Φ((SR - E[max]) * √(T-1) / √denom_inside)
+    # We report the LOSS-OF-SHARPE deflation: SR - E[max_SR], floored at 0.
+    # That is the working-quant interpretation: "what is my Sharpe after
+    # subtracting the level the best-of-N would reach by chance alone."
+    deflated = sharpe - expected_max
+    return max(0.0, deflated)
 
 
 def _stats_from_trades(strategy: str, trades: list[SimTrade],
@@ -166,7 +354,7 @@ def _stats_from_trades(strategy: str, trades: list[SimTrade],
     out.win_rate = out.wins / out.trades
     # F9: annualize using realized trade frequency, not a flat 365.
     out.sharpe = _sharpe_from_pnls_and_span(pnls, span_days)
-    out.deflated_sharpe = _deflated_sharpe(out.sharpe, out.trades)
+    out.deflated_sharpe = _deflated_sharpe(out.sharpe, out.trades, pnls=pnls)
     curve = _equity_curve(pnls, start_equity)
     out.ending_equity_usd = float(curve[-1])
     out.max_drawdown_usd, out.max_drawdown_pct = _max_drawdown(curve)
@@ -186,10 +374,15 @@ async def backtest_indicator(
     bars: int = 5000,
     cfg: Optional[StrategyConfig] = None,
     settings: Optional[Settings] = None,
+    costs: Optional[Costs] = None,
+    vol_cfg: Optional[VolTargetConfig] = None,
 ) -> tuple[BacktestStats, list[SimTrade]]:
     s = settings or get_settings()
     cfg = cfg or StrategyConfig(allowed_symbols=[symbol], htf_timeframe=htf)
     ind = IndicatorEngine()
+    costs = costs or Costs()
+    impact_k = impact_k_for_symbol(symbol)
+    half_spread = costs.half_spread_bps_default
 
     raw = await binance.fetch_klines_paginated(symbol, tf, total=bars, market="spot")
     ks = [Kline(
@@ -217,40 +410,25 @@ async def backtest_indicator(
     trades: list[SimTrade] = []
     open_trade: Optional[SimTrade] = None
     equity = s.account_equity_usd
-    fee_bps = s.spot_taker_fee_bps + s.slippage_bps  # one-way
 
-    stop_slip = s.paper_stop_slippage_bps / 10_000
-    tp_slip = s.paper_tp_slippage_bps / 10_000
-
-    for k in ks[warmup_n:]:
+    for idx, k in enumerate(ks[warmup_n:], start=warmup_n):
+        adv5m = _adv_5m_usd(ks, idx)
         # Resolve any open trade against THIS bar first (price might have hit stop/TP).
         if open_trade is not None:
             hit_stop = (k.low <= open_trade.stop) if open_trade.side == "long" else (k.high >= open_trade.stop)
             hit_tp = (k.high >= open_trade.tp) if open_trade.side == "long" else (k.low <= open_trade.tp)
             if hit_stop:
-                # Adverse slippage on stop, from settings (paper_stop_slippage_bps).
-                exit_px = open_trade.stop * (1 - stop_slip) if open_trade.side == "long" else open_trade.stop * (1 + stop_slip)
-                open_trade.exit_price = exit_px
-                open_trade.exit_reason = "stop"
-                open_trade.exit_ts_ms = k.close_time
-                gross = (exit_px - open_trade.entry_price) * open_trade.qty
-                if open_trade.side == "short":
-                    gross = -gross
-                # Round-trip fees + entry slippage already in entry_price.
-                exit_fee = open_trade.qty * exit_px * (fee_bps / 10_000)
-                open_trade.pnl_usd = gross - exit_fee
+                _close_trade_with_costs(
+                    open_trade, open_trade.stop, "stop", k.close_time,
+                    adv5m, impact_k, half_spread, costs, venue="spot",
+                )
                 trades.append(open_trade)
                 open_trade = None
             elif hit_tp:
-                exit_px = open_trade.tp * (1 - tp_slip) if open_trade.side == "long" else open_trade.tp * (1 + tp_slip)
-                open_trade.exit_price = exit_px
-                open_trade.exit_reason = "tp"
-                open_trade.exit_ts_ms = k.close_time
-                gross = (exit_px - open_trade.entry_price) * open_trade.qty
-                if open_trade.side == "short":
-                    gross = -gross
-                exit_fee = open_trade.qty * exit_px * (fee_bps / 10_000)
-                open_trade.pnl_usd = gross - exit_fee
+                _close_trade_with_costs(
+                    open_trade, open_trade.tp, "tp", k.close_time,
+                    adv5m, impact_k, half_spread, costs, venue="spot",
+                )
                 trades.append(open_trade)
                 open_trade = None
 
@@ -265,16 +443,24 @@ async def backtest_indicator(
         sig: Optional[Signal] = generate_signal(symbol, snap, htf_snap, cfg)
         if not sig:
             continue
-        # Cost-of-edge filter is built into generate_signal already.
-        risk_pct = s.risk_per_trade_pct / 100.0
-        risk_usd = equity * risk_pct
-        risk_per_unit = abs(sig.entry - sig.stop)
-        if risk_per_unit <= 0:
-            continue
-        qty = min(risk_usd / risk_per_unit, s.max_notional_usd / sig.entry)
-        # Entry slippage built into entry_price (worse for buyer).
-        entry_slip = sig.entry * (s.slippage_bps / 10_000)
-        entry_px = sig.entry + entry_slip if sig.side == "long" else sig.entry - entry_slip
+        # Sizing: vol-targeted if vol_cfg supplied, else legacy risk-pct.
+        if vol_cfg is not None:
+            rv = _realized_vol_at(ks, idx, tf)
+            notional = vol_target_notional(equity, rv, vol_cfg)
+            if notional <= 0:
+                continue
+            qty = qty_from_notional(notional, sig.entry)
+        else:
+            risk_pct = s.risk_per_trade_pct / 100.0
+            risk_usd = equity * risk_pct
+            risk_per_unit = abs(sig.entry - sig.stop)
+            if risk_per_unit <= 0:
+                continue
+            qty = min(risk_usd / risk_per_unit, s.max_notional_usd / sig.entry)
+            notional = qty * sig.entry
+        entry_px = adjust_entry_price(
+            sig.entry, sig.side, notional, adv5m, impact_k, half_spread,
+        )
         open_trade = SimTrade(
             symbol=symbol, strategy="indicator",
             side=sig.side, qty=qty,
@@ -309,6 +495,8 @@ async def backtest_mean_reversion(
     bars: int = 5000,
     cfg: Optional[MeanReversionConfig] = None,
     settings: Optional[Settings] = None,
+    costs: Optional[Costs] = None,
+    vol_cfg: Optional[VolTargetConfig] = None,
 ) -> tuple[BacktestStats, list[SimTrade]]:
     """Walk-forward replay of the mean-reversion strategy.
 
@@ -319,6 +507,9 @@ async def backtest_mean_reversion(
     s = settings or get_settings()
     cfg = cfg or MeanReversionConfig(allowed_symbols=[symbol], htf_timeframe=htf)
     ind = IndicatorEngine()
+    costs = costs or Costs()
+    impact_k = impact_k_for_symbol(symbol)
+    half_spread = costs.half_spread_bps_default
 
     raw = await binance.fetch_klines_paginated(symbol, tf, total=bars, market="spot")
     ks = [Kline(
@@ -346,54 +537,34 @@ async def backtest_mean_reversion(
     open_trade: Optional[SimTrade] = None
     bars_held = 0
     equity = s.account_equity_usd
-    fee_bps = s.spot_taker_fee_bps + s.slippage_bps  # one-way
-    stop_slip = s.paper_stop_slippage_bps / 10_000
-    tp_slip = s.paper_tp_slippage_bps / 10_000
 
-    for k in ks[warmup_n:]:
+    for idx, k in enumerate(ks[warmup_n:], start=warmup_n):
+        adv5m = _adv_5m_usd(ks, idx)
         if open_trade is not None:
             hit_stop = (k.low <= open_trade.stop) if open_trade.side == "long" else (k.high >= open_trade.stop)
             hit_tp = (k.high >= open_trade.tp) if open_trade.side == "long" else (k.low <= open_trade.tp)
             if hit_stop:
-                exit_px = open_trade.stop * (1 - stop_slip) if open_trade.side == "long" else open_trade.stop * (1 + stop_slip)
-                open_trade.exit_price = exit_px
-                open_trade.exit_reason = "stop"
-                open_trade.exit_ts_ms = k.close_time
-                gross = (exit_px - open_trade.entry_price) * open_trade.qty
-                if open_trade.side == "short":
-                    gross = -gross
-                exit_fee = open_trade.qty * exit_px * (fee_bps / 10_000)
-                open_trade.pnl_usd = gross - exit_fee
+                _close_trade_with_costs(
+                    open_trade, open_trade.stop, "stop", k.close_time,
+                    adv5m, impact_k, half_spread, costs, venue="spot",
+                )
                 trades.append(open_trade)
                 open_trade = None
                 bars_held = 0
             elif hit_tp:
-                exit_px = open_trade.tp * (1 - tp_slip) if open_trade.side == "long" else open_trade.tp * (1 + tp_slip)
-                open_trade.exit_price = exit_px
-                open_trade.exit_reason = "tp"
-                open_trade.exit_ts_ms = k.close_time
-                gross = (exit_px - open_trade.entry_price) * open_trade.qty
-                if open_trade.side == "short":
-                    gross = -gross
-                exit_fee = open_trade.qty * exit_px * (fee_bps / 10_000)
-                open_trade.pnl_usd = gross - exit_fee
+                _close_trade_with_costs(
+                    open_trade, open_trade.tp, "tp", k.close_time,
+                    adv5m, impact_k, half_spread, costs, venue="spot",
+                )
                 trades.append(open_trade)
                 open_trade = None
                 bars_held = 0
             elif bars_held >= cfg.time_stop_bars:
                 # Time-stop: failed revert thesis. Exit at this bar's close.
-                # Apply same adverse-slippage assumption as stops, since we're
-                # crossing the spread to exit at market, but the move was
-                # smaller (no gap), so use tp_slip instead of stop_slip.
-                exit_px = k.close * (1 - tp_slip) if open_trade.side == "long" else k.close * (1 + tp_slip)
-                open_trade.exit_price = exit_px
-                open_trade.exit_reason = "time_stop"
-                open_trade.exit_ts_ms = k.close_time
-                gross = (exit_px - open_trade.entry_price) * open_trade.qty
-                if open_trade.side == "short":
-                    gross = -gross
-                exit_fee = open_trade.qty * exit_px * (fee_bps / 10_000)
-                open_trade.pnl_usd = gross - exit_fee
+                _close_trade_with_costs(
+                    open_trade, k.close, "time_stop", k.close_time,
+                    adv5m, impact_k, half_spread, costs, venue="spot",
+                )
                 trades.append(open_trade)
                 open_trade = None
                 bars_held = 0
@@ -408,14 +579,23 @@ async def backtest_mean_reversion(
         if not sig:
             continue
 
-        risk_pct = s.risk_per_trade_pct / 100.0
-        risk_usd = equity * risk_pct
-        risk_per_unit = abs(sig.entry - sig.stop)
-        if risk_per_unit <= 0:
-            continue
-        qty = min(risk_usd / risk_per_unit, s.max_notional_usd / sig.entry)
-        entry_slip = sig.entry * (s.slippage_bps / 10_000)
-        entry_px = sig.entry + entry_slip if sig.side == "long" else sig.entry - entry_slip
+        if vol_cfg is not None:
+            rv = _realized_vol_at(ks, idx, tf)
+            notional = vol_target_notional(equity, rv, vol_cfg)
+            if notional <= 0:
+                continue
+            qty = qty_from_notional(notional, sig.entry)
+        else:
+            risk_pct = s.risk_per_trade_pct / 100.0
+            risk_usd = equity * risk_pct
+            risk_per_unit = abs(sig.entry - sig.stop)
+            if risk_per_unit <= 0:
+                continue
+            qty = min(risk_usd / risk_per_unit, s.max_notional_usd / sig.entry)
+            notional = qty * sig.entry
+        entry_px = adjust_entry_price(
+            sig.entry, sig.side, notional, adv5m, impact_k, half_spread,
+        )
         open_trade = SimTrade(
             symbol=symbol, strategy="mean_reversion",
             side=sig.side, qty=qty,
