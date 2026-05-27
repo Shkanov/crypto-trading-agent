@@ -221,6 +221,10 @@ async def amain() -> None:
     ap.add_argument("--days", type=int, default=365)
     ap.add_argument("--top-n-universe", type=int, default=20,
                     help="candidate USDT perp universe before PIT filter")
+    ap.add_argument("--skip-top", type=int, default=0,
+                    help="drop the leading N highest-volume symbols (e.g. "
+                         "--skip-top 30 --top-n-universe 100 → mid-cap "
+                         "ranks 31..100 by 24h volume)")
     ap.add_argument("--max-symbols", type=int, default=12,
                     help="cap on PIT-survivors actually validated")
     ap.add_argument("--concurrency", type=int, default=3,
@@ -256,7 +260,13 @@ async def amain() -> None:
     await b.start()
     try:
         candidates = await build_universe(b, top_n_universe=args.top_n_universe)
-        print(f"\ncandidate universe ({len(candidates)} symbols)")
+        if args.skip_top:
+            n_before = len(candidates)
+            candidates = candidates[args.skip_top:]
+            print(f"\ncandidate universe ({len(candidates)} symbols after "
+                  f"skipping top-{args.skip_top} of {n_before} by 24h volume)")
+        else:
+            print(f"\ncandidate universe ({len(candidates)} symbols)")
 
         now_ms = int(time.time() * 1000)
         start_ms = now_ms - args.days * 86_400_000
