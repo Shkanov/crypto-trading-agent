@@ -1249,7 +1249,9 @@ async def backtest_funding(
     borrow_8h = p.spot_borrow_bps_per_8h / 10_000
 
     trades: list[SimTrade] = []
-    recent_rates: list[float] = []
+    recent_rates: list[float] = []           # 21-period EMA-like (legacy avg_bps)
+    z_window: list[float] = []               # rolling window for z-score
+    z_max = max(p.z_window_cycles, 22)
 
     for row in funding_rows:
         rate = float(row["fundingRate"])
@@ -1259,6 +1261,21 @@ async def backtest_funding(
         if len(recent_rates) > 21:
             recent_rates.pop(0)
         avg_bps = (sum(recent_rates) / len(recent_rates)) * 10_000
+
+        # Rolling-z computation: use the window EXCLUDING the current rate so
+        # z is a no-look-ahead prediction of "how extreme is this print vs my
+        # recent history."
+        z_score: Optional[float] = None
+        if p.use_rolling_z and len(z_window) >= p.z_min_window:
+            arr = np.asarray(z_window, dtype=float)
+            mu = float(arr.mean())
+            sd = float(arr.std(ddof=1))
+            if sd > 0:
+                z_score = (rate - mu) / sd
+        # Append AFTER computing z so the current bar isn't used to score itself.
+        z_window.append(rate)
+        if len(z_window) > z_max:
+            z_window.pop(0)
 
         spot_px = lookup_px(spot_by_t, t)
         perp_px = lookup_px(perp_by_t, t) or spot_px
@@ -1281,13 +1298,27 @@ async def backtest_funding(
 
             # Exit logic — direction-aware
             exit_reason: Optional[str] = None
-            if direction == 1 and bps <= p.exit_threshold_bps:
-                exit_reason = "funding_flip"
-            elif direction == -1 and bps >= -p.exit_threshold_bps:
-                exit_reason = "funding_flip"
-            elif abs(basis_bps) > p.basis_exit_alert_bps:
-                exit_reason = "basis_breakout"
+            if p.use_rolling_z and z_score is not None:
+                # Z-based exits: take off when funding has reverted to median
+                # (direction=1: long-spot/short-perp wants z to drop below
+                # exit_sigma; direction=-1: short-spot/long-perp wants z to
+                # rise above -exit_sigma). Adverse-flip stop on the regime.
+                if direction == 1 and z_score <= p.z_exit_sigma:
+                    exit_reason = "z_revert"
+                elif direction == -1 and z_score >= -p.z_exit_sigma:
+                    exit_reason = "z_revert"
+                elif direction == 1 and z_score <= -p.z_stop_sigma:
+                    exit_reason = "z_stop"
+                elif direction == -1 and z_score >= p.z_stop_sigma:
+                    exit_reason = "z_stop"
             else:
+                if direction == 1 and bps <= p.exit_threshold_bps:
+                    exit_reason = "funding_flip"
+                elif direction == -1 and bps >= -p.exit_threshold_bps:
+                    exit_reason = "funding_flip"
+            if exit_reason is None and abs(basis_bps) > p.basis_exit_alert_bps:
+                exit_reason = "basis_breakout"
+            if exit_reason is None:
                 move_pct = ((perp_px - entry_perp_px) / entry_perp_px) * 100.0
                 adverse_pct = move_pct if direction == 1 else -move_pct
                 if adverse_pct >= p.perp_adverse_move_pct:
@@ -1323,11 +1354,51 @@ async def backtest_funding(
                 accrued_funding_usd = 0.0
         else:
             new_direction = 0
-            if bps >= p.entry_threshold_bps and avg_bps >= p.entry_avg_threshold_bps:
-                new_direction = 1
-            elif bps <= -p.entry_threshold_bps and avg_bps <= -p.entry_avg_threshold_bps \
-                    and p.allow_negative_direction:
-                new_direction = -1
+            if p.use_rolling_z:
+                # Per-symbol z-based entry: only fire once the rolling window
+                # has enough cycles AND the print is in the symbol's own top
+                # decile (or bottom for negative direction).
+                if z_score is not None:
+                    if z_score >= p.z_entry_sigma:
+                        new_direction = 1
+                    elif z_score <= -p.z_entry_sigma and p.allow_negative_direction:
+                        new_direction = -1
+            else:
+                if bps >= p.entry_threshold_bps and avg_bps >= p.entry_avg_threshold_bps:
+                    new_direction = 1
+                elif bps <= -p.entry_threshold_bps and avg_bps <= -p.entry_avg_threshold_bps \
+                        and p.allow_negative_direction:
+                    new_direction = -1
+            # Cost-gated entry: extrapolate `rate` over `expected_hold_cycles`,
+            # subtract round-trip cost in APR terms, require net edge > floor.
+            # 1095 = 365 * 3 funding cycles per day on Binance perps (8h).
+            if new_direction != 0 and p.min_edge_apr > 0:
+                # Extrapolate current rate to APR. `direction * rate` is the
+                # per-cycle funding income on the side we'd take (long-spot
+                # gets positive when rate>0; short-spot+long-perp gets the
+                # opposite sign on rate when rate<0 → still positive income).
+                expected_funding_apr = abs(new_direction * rate) * 1095.0
+                # Per-leg one-way exec cost in bps (fees + half-spread).
+                # Use maker fees when configured; basis trades post limits.
+                if p.cost_gate_use_maker_fees:
+                    spot_fee_bps = max(0.0, getattr(s, "spot_maker_fee_bps", 10.0))
+                    perp_fee_bps = -2.0   # rebate; absorbed by venue floor
+                else:
+                    spot_fee_bps = s.spot_taker_fee_bps
+                    perp_fee_bps = s.perps_taker_fee_bps
+                per_leg_bps = (spot_fee_bps + perp_fee_bps) / 2.0 \
+                              + p.cost_gate_half_spread_bps
+                rt_bps = 4.0 * per_leg_bps   # 2 legs × entry+exit
+                # Borrow cost is per-cycle while in trade — annualise over the
+                # full year if we'd be in trade most of the time.
+                borrow_apr = 0.0
+                if new_direction == -1:
+                    borrow_apr = p.spot_borrow_bps_per_8h * 1095.0 / 10_000.0
+                trades_per_year = 1095.0 / max(1, p.expected_hold_cycles)
+                rt_apr = (rt_bps / 10_000.0) * trades_per_year
+                net_edge_apr = expected_funding_apr - rt_apr - borrow_apr
+                if net_edge_apr < p.min_edge_apr:
+                    new_direction = 0
             if new_direction != 0 and abs(basis_bps) <= p.basis_entry_block_bps:
                 if new_direction == 1:
                     spot_entry = spot_px * (1 + slip_one_way)   # BUY spot
@@ -1390,6 +1461,31 @@ class FundingBacktestParams:
     basis_exit_alert_bps: float = 150.0
     allow_negative_direction: bool = True
     spot_borrow_bps_per_8h: float = 1.5
+
+    # Rolling-z thresholds (Fan-Jiao-Lu-Tong SSRN 4666425 cross-section carry).
+    # When `use_rolling_z=True`, absolute thresholds above are IGNORED and the
+    # strategy enters when funding is in the symbol's own top-decile of recent
+    # history (z ≥ +1.5σ), exits near median (z ≤ +0.3σ), stops if z flips
+    # adversely (z ≤ -2σ for long-direction, ≥ +2σ for short-direction).
+    use_rolling_z: bool = False
+    z_window_cycles: int = 180         # 180 funding cycles = 60d on 8h cycle
+    z_entry_sigma: float = 1.5         # top decile of own distribution
+    z_exit_sigma: float = 0.3          # near median
+    z_stop_sigma: float = 2.0          # adverse-direction flip
+    z_min_window: int = 60             # need at least N cycles to compute z
+
+    # Cost-gated entry. Only enter when expected-funding APR (extrapolating
+    # the current rate over `expected_hold_cycles`) NET of round-trip cost
+    # exceeds `min_edge_apr`. Lifted from Quantjourney funding-rate-strategy
+    # writeup + practitioner consensus on cash-and-carry. Set to 0 to disable.
+    # Defaults assume realistic basis-trade execution: maker fills on entry/exit
+    # and ~1-week holds (z-exit usually fires sooner; this is the gate's
+    # break-even denominator).
+    min_edge_apr: float = 0.0
+    expected_hold_cycles: int = 21          # 21 × 8h = 7 days
+    cost_gate_half_spread_bps: float = 1.5
+    cost_gate_use_maker_fees: bool = True   # basis trades typically post limits
+    cost_gate_adv_5m_usd: float = 1_000_000.0   # default ADV proxy if unknown
 
 
 # ─────────────────────────────  Cascade-breakout backtest (v2)  ─────────────
