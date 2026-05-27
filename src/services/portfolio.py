@@ -36,9 +36,15 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from src.services.storage import Storage
+
+
+DAY_MS = 86_400_000
 
 
 # ---------------------------------------------------------------------------
@@ -260,3 +266,44 @@ def allocate(
         )
 
     return AllocationResult(weights=w, method_used=method, turnover=turnover)
+
+
+# ---------------------------------------------------------------------------
+# Strategy returns builder — feeds `allocate()` from Storage
+
+async def build_strategy_returns(
+    storage: "Storage",
+    strategy_names: list[str],
+    reference_equity_usd: float,
+    now_ms: int,
+    lookback_days: int = 90,
+) -> dict[str, np.ndarray]:
+    """Build a {strategy: daily_return_pct_array} dict for the allocator.
+
+    Returns are computed as `daily_pnl_usd / reference_equity_usd * 100`. Same
+    denominator across strategies ⇒ correlation/inverse-vol relationships are
+    preserved while putting magnitudes on a portfolio-equity scale. We don't
+    try to track a separate per-strategy equity base; that would require
+    persisting the historical slice schedule and adds little for HRP (which
+    is correlation-driven).
+
+    Each output array has `lookback_days` entries. Strategies absent from
+    storage rows entirely produce all-zero arrays (which inverse-vol clamps
+    to its `min_vol` floor and HRP detects and falls back to equal-weight).
+    """
+    today_ms = (now_ms // DAY_MS) * DAY_MS
+    start_ms = today_ms - lookback_days * DAY_MS
+    per_strat = await storage.realized_pnl_by_day_per_strategy(
+        start_ms, today_ms + DAY_MS,
+    )
+    denom = reference_equity_usd if reference_equity_usd > 0 else 1.0
+    out: dict[str, np.ndarray] = {}
+    days = [start_ms + i * DAY_MS for i in range(lookback_days)]
+    for name in strategy_names:
+        day_map = per_strat.get(name, {})
+        series = np.array(
+            [day_map.get(d, 0.0) / denom * 100.0 for d in days],
+            dtype=float,
+        )
+        out[name] = series
+    return out

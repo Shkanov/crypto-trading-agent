@@ -50,6 +50,19 @@ class Settings(BaseSettings):
     # whole subsystem so it can be turned off without removing code.
     risk_circuits_enabled: bool = True
 
+    # Multi-strategy allocator (sprint #17). Default is equal-weight per
+    # DeMiguel-Garlappi-Uppal (2009) — for ≤5 strategies, EW typically beats
+    # fancier methods OOS because parameter-estimation error dominates.
+    # Promote to "inverse_vol" once we have ≥6 months of clean per-strategy
+    # returns, then to "hrp" once the basket exceeds ~4 strategies AND
+    # cross-strategy correlation has been measured to be non-degenerate.
+    allocator_enabled: bool = True
+    allocator_method: Literal["equal", "inverse_vol", "hrp"] = "equal"
+    allocator_fallback: Literal["equal", "inverse_vol"] = "inverse_vol"
+    allocator_lookback_days: int = 90
+    allocator_rebalance_days: int = 30
+    allocator_hrp_turnover_threshold: float = 0.5
+
     # Approval
     auto_approve_max_notional_usd: float = 50.0
     twofa_threshold_notional_usd: float = 500.0

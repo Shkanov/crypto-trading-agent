@@ -93,6 +93,7 @@ from src.services.performance import (
     build_report,
     format_report_markdown,
 )
+from src.services.portfolio import allocate, build_strategy_returns
 from src.services.risk_circuits import CircuitConfig, CircuitState, evaluate_circuits
 from src.services.reconciliation import format_report as format_recon_report
 from src.services.reconciliation import reconcile_on_boot
@@ -168,6 +169,15 @@ class Orchestrator:
         self.circuit_cfg = CircuitConfig()
         self.circuit_cooloff_until_ms: int = 0
         self.circuit_state: Optional[CircuitState] = None
+
+        # Sprint #17 multi-strategy allocator. `allocator_weights` is the
+        # latest persisted allocation (used by equity_available_usd) and
+        # `allocator_last_rebalance_ms` gates when the next rebalance fires.
+        # Empty dict ⇒ falls back to equal-weight in equity_available_usd.
+        self.allocator_weights: dict[str, float] = {}
+        self.allocator_prev_weights: dict[str, float] = {}
+        self.allocator_last_rebalance_ms: int = 0
+        self.allocator_method_used: str = self.s.allocator_method
 
         # In-memory pending-approval map
         self.pending: dict[str, Proposal] = {}
@@ -1135,6 +1145,75 @@ class Orchestrator:
                  cur_pnl=cur_pnl, new_pnl=new_pnl)
         return False
 
+    async def _rebalance_allocator(self) -> None:
+        """Sprint #17: monthly rebalance of multi-strategy weights.
+
+        Fires from `_housekeeping` once `allocator_rebalance_days` have
+        elapsed since the previous rebalance. Builds the 90d strategy
+        returns matrix, runs `allocate(method)`, persists the result so
+        a restart honours the same weights until the next rebalance window.
+
+        On first ever rebalance (no history yet, no prev_weights) we fall
+        through to equal-weight regardless of the configured method —
+        the lookback window is empty so HRP/inverse-vol would degenerate.
+        """
+        if not self.strategies:
+            return
+        strategy_names = [s.name for s in self.strategies]
+        live_equity = max(self.equity + self.pnl_today, 1.0)
+        try:
+            returns = await build_strategy_returns(
+                self.storage,
+                strategy_names=strategy_names,
+                reference_equity_usd=live_equity,
+                now_ms=now_ms(),
+                lookback_days=self.s.allocator_lookback_days,
+            )
+        except Exception:
+            log.exception("allocator.build_returns_failed")
+            return
+        result = allocate(
+            returns,
+            method=self.s.allocator_method,
+            fallback=self.s.allocator_fallback,
+            turnover_threshold=self.s.allocator_hrp_turnover_threshold,
+            prev_weights=self.allocator_weights or None,
+        )
+        self.allocator_prev_weights = dict(self.allocator_weights)
+        self.allocator_weights = dict(result.weights)
+        self.allocator_method_used = result.method_used
+        self.allocator_last_rebalance_ms = now_ms()
+        try:
+            await self.storage.save_allocator_state(
+                last_rebalance_ms=self.allocator_last_rebalance_ms,
+                method_used=self.allocator_method_used,
+                weights=self.allocator_weights,
+                prev_weights=self.allocator_prev_weights,
+            )
+        except Exception:
+            log.exception("allocator.persist_failed")
+        await self.storage.audit("allocator_rebalance", {
+            "method_used": result.method_used,
+            "weights": self.allocator_weights,
+            "prev_weights": self.allocator_prev_weights,
+            "turnover": result.turnover,
+            "reason": result.reason,
+        })
+        log.info("allocator.rebalanced",
+                 method=result.method_used,
+                 weights=self.allocator_weights,
+                 turnover=result.turnover,
+                 reason=result.reason)
+        if self.telegram:
+            lines = [f"*Allocator rebalanced* (`{result.method_used}`,"
+                     f" turnover `{result.turnover:.2f}`):"]
+            for name in strategy_names:
+                w = self.allocator_weights.get(name, 0.0)
+                lines.append(f"  {name}: `{w * 100:.1f}%`")
+            if result.reason:
+                lines.append(f"_{result.reason}_")
+            await self.telegram.send_info("\n".join(lines))
+
     async def _evaluate_risk_circuits(self) -> None:
         """Run the trailing-DD / vol / daily-loss circuits and act on the
         result. Called once per housekeeping cycle.
@@ -1260,6 +1339,15 @@ class Orchestrator:
                     await self._evaluate_risk_circuits()
                 except Exception:
                     log.exception("housekeeping.risk_circuits_failed")
+            # Sprint #17: monthly allocator rebalance. Cheap gate (timestamp
+            # comparison) before the expensive returns-pull + HRP run.
+            if self.s.allocator_enabled and self.strategies:
+                rebalance_ms = self.s.allocator_rebalance_days * 86_400_000
+                if (now_ms() - self.allocator_last_rebalance_ms) >= rebalance_ms:
+                    try:
+                        await self._rebalance_allocator()
+                    except Exception:
+                        log.exception("housekeeping.allocator_failed")
             # J1: refresh correlation matrix if stale.
             if self.correlation and self.correlation.is_stale():
                 try:
@@ -1361,9 +1449,25 @@ class Orchestrator:
     def equity_available_usd(self, strategy_name: Optional[str] = None) -> float:
         """Per-strategy equity slice. R10: uses LIVE equity (start + pnl_today)
         and tightens further by the notional ramp's current cap so a losing
-        run and a drawdown-halve both shrink the per-strategy slice."""
+        run and a drawdown-halve both shrink the per-strategy slice.
+
+        Sprint #17: when an allocator has been wired and produced weights,
+        slice = live_equity * weight[strategy_name]. Otherwise fall back to
+        even-split. `strategy_name=None` always returns the even-split
+        (used for backwards-compat callers that don't tag by strategy)."""
         live_equity = max(0.0, self.equity + self.pnl_today)
-        share = live_equity / max(1, len(self.strategies)) if self.strategies else live_equity
+        n = max(1, len(self.strategies))
+        if (strategy_name is not None and self.s.allocator_enabled
+                and self.allocator_weights):
+            w = self.allocator_weights.get(strategy_name)
+            if w is None:
+                # Unknown strategy (probably registered after last rebalance):
+                # use 1/N until next rebalance picks it up.
+                share = live_equity / n
+            else:
+                share = live_equity * float(w)
+        else:
+            share = live_equity / n if self.strategies else live_equity
         if self.notional_ramp:
             # Don't let any single strategy's share exceed N× the current
             # max_notional cap; this caps over-allocation when ramp halves.
@@ -1502,6 +1606,14 @@ class Orchestrator:
             self.circuit_cooloff_until_ms = await self.storage.load_circuit_state()
         except Exception:
             log.exception("startup.circuit_load_failed")
+        # Sprint #17: restore allocator weights + last rebalance ms.
+        try:
+            alloc = await self.storage.load_allocator_state()
+            if alloc is not None:
+                (self.allocator_last_rebalance_ms, self.allocator_method_used,
+                 self.allocator_weights, self.allocator_prev_weights) = alloc
+        except Exception:
+            log.exception("startup.allocator_load_failed")
         # Rebuild OPEN trades + AWAITING_USER proposals so a process restart
         # doesn't lose state.
         await self.position_manager.rehydrate()

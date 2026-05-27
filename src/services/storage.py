@@ -125,6 +125,20 @@ class CircuitStateRow(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class AllocatorStateRow(Base):
+    """Persists multi-strategy allocator state (sprint #17). Without
+    persistence, an orchestrator restart would reset to equal-weight on the
+    next rebalance check, throwing away the HRP/inverse-vol history."""
+    __tablename__ = "allocator_state"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    last_rebalance_ms: Mapped[int] = mapped_column(Integer, default=0)
+    method_used: Mapped[str] = mapped_column(String(16), default="equal")
+    # JSON-encoded {strategy_name: weight}; current and previous.
+    weights_json: Mapped[str] = mapped_column(Text, default="{}")
+    prev_weights_json: Mapped[str] = mapped_column(Text, default="{}")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class ProposedConfigRow(Base):
     """LLM-proposed configs awaiting user promotion. Advisory-only by default."""
     __tablename__ = "proposed_configs"
@@ -470,6 +484,46 @@ class Storage:
             row = await s.get(CircuitStateRow, 1)
             return int(row.cooloff_until_ms) if row else 0
 
+    # ----- Allocator state (sprint #17) -----
+    async def save_allocator_state(
+        self, last_rebalance_ms: int, method_used: str,
+        weights: dict[str, float], prev_weights: dict[str, float],
+    ) -> None:
+        async with self.session() as s, s.begin():
+            row = await s.get(AllocatorStateRow, 1)
+            w_json = json.dumps(weights)
+            p_json = json.dumps(prev_weights)
+            if row is None:
+                s.add(AllocatorStateRow(
+                    id=1, last_rebalance_ms=last_rebalance_ms,
+                    method_used=method_used,
+                    weights_json=w_json, prev_weights_json=p_json,
+                ))
+            else:
+                row.last_rebalance_ms = last_rebalance_ms
+                row.method_used = method_used
+                row.weights_json = w_json
+                row.prev_weights_json = p_json
+                row.updated_at = datetime.utcnow()
+
+    async def load_allocator_state(
+        self,
+    ) -> Optional[tuple[int, str, dict[str, float], dict[str, float]]]:
+        """Returns (last_rebalance_ms, method_used, weights, prev_weights) or
+        None if never persisted."""
+        async with self.session() as s:
+            row = await s.get(AllocatorStateRow, 1)
+            if row is None:
+                return None
+            try:
+                w = json.loads(row.weights_json or "{}")
+                p = json.loads(row.prev_weights_json or "{}")
+            except json.JSONDecodeError:
+                w, p = {}, {}
+            return (int(row.last_rebalance_ms), str(row.method_used or "equal"),
+                    {k: float(v) for k, v in w.items()},
+                    {k: float(v) for k, v in p.items()})
+
     # ----- Audit -----
     async def audit(self, kind: str, payload: dict) -> None:
         try:
@@ -519,6 +573,34 @@ class Storage:
                     continue
                 day_ms = (int(r.exit_ts_ms) // DAY_MS) * DAY_MS
                 out[day_ms] = out.get(day_ms, 0.0) + float(r.realized_pnl_usd)
+            return out
+
+    async def realized_pnl_by_day_per_strategy(
+        self, since_ms: int, until_ms: int,
+    ) -> dict[str, dict[int, float]]:
+        """Sprint #17: per-strategy daily PnL for the multi-strategy allocator.
+        Returns {strategy_name: {utc_midnight_ms: pnl_usd}}. Strategies with
+        zero closes in the window are absent from the outer dict; days with
+        no closes are absent from the inner dict — callers should treat both
+        as zero."""
+        DAY_MS = 86_400_000
+        async with self.session() as s:
+            result = await s.execute(
+                select(TradeRow).where(
+                    TradeRow.status == TradeStatus.CLOSED.value,
+                    TradeRow.exit_ts_ms.isnot(None),
+                    TradeRow.exit_ts_ms >= since_ms,
+                    TradeRow.exit_ts_ms < until_ms,
+                )
+            )
+            out: dict[str, dict[int, float]] = {}
+            for r in result.scalars():
+                if r.realized_pnl_usd is None or r.exit_ts_ms is None:
+                    continue
+                day_ms = (int(r.exit_ts_ms) // DAY_MS) * DAY_MS
+                strat = r.strategy or "indicator"
+                strat_map = out.setdefault(strat, {})
+                strat_map[day_ms] = strat_map.get(day_ms, 0.0) + float(r.realized_pnl_usd)
             return out
 
     async def consecutive_losses(self, limit: int = 10) -> int:
