@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from src.services.portfolio import (
+    _active_day_std,
     _single_linkage_leaf_order,
     _turnover_l1,
     allocate,
@@ -228,3 +229,111 @@ def test_allocate_no_prev_weights_means_zero_turnover() -> None:
     returns = {"a": rng.normal(0, 1, 100), "b": rng.normal(0, 1, 100)}
     r = allocate(returns, method="hrp")
     assert r.turnover == 0.0
+
+
+# ---------------------------------------------------------------------------
+# Active-day volatility — the fix for zero-padding deflating thin-sleeve risk
+
+def test_active_day_std_ignores_idle_days() -> None:
+    # 10 active days; padding to 100 days must not change the estimate.
+    active = np.array([1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0])
+    padded = np.concatenate([active, np.zeros(90)])
+    assert math.isclose(_active_day_std(padded), float(active.std(ddof=1)),
+                        rel_tol=1e-9)
+
+
+def test_active_day_std_too_few_active_returns_floor() -> None:
+    assert _active_day_std(np.zeros(50)) == 1e-12          # never traded
+    assert _active_day_std(np.array([0.0, 0.0, 3.0, 0.0])) == 1e-12  # 1 active
+
+
+def test_inverse_vol_ignores_idle_padding() -> None:
+    """Two sleeves with an identical active-day return distribution — one
+    trading daily, the other only 1 day in 10 (zero-padded) — must receive
+    ~equal weight. The old std-of-padded-series logic handed the thin sleeve
+    several times the weight purely for being idle."""
+    rng = np.random.default_rng(3)
+    base = rng.normal(0, 1.0, 40)
+    daily = base.copy()
+    thin = np.zeros(400)
+    thin[::10] = base                                   # same 40 values, scattered
+    w = inverse_vol({"daily": daily, "thin": thin})
+    assert math.isclose(sum(w.values()), 1.0)
+    assert abs(w["daily"] - w["thin"]) < 0.05
+
+
+def test_hrp_does_not_concentrate_on_idle_volatile_sleeve() -> None:
+    """A sleeve that trades rarely but with HIGH active-day volatility should
+    get the SMALLER weight. The zero-padding bug inverted this — its deflated
+    padded variance won it the lion's share (the live 71%-on-a-20-day-sleeve
+    pathology)."""
+    rng = np.random.default_rng(5)
+    daily = rng.normal(0, 1.0, 300)                     # active daily, vol 1
+    thin = np.zeros(300)
+    idx = np.arange(0, 300, 15)                         # ~20 active days
+    thin[idx] = rng.normal(0, 3.0, len(idx))           # higher active-day vol
+    w = hrp({"daily": daily, "thin": thin})
+    assert math.isclose(sum(w.values()), 1.0, abs_tol=1e-9)
+    assert w["thin"] < w["daily"]
+
+
+# ---------------------------------------------------------------------------
+# Evidence floor + weight cap
+
+def test_allocate_evidence_floor_zeros_thin_sleeve() -> None:
+    rng = np.random.default_rng(0)
+    daily = rng.normal(0, 1, 100)
+    thin = np.zeros(100)
+    thin[:5] = rng.normal(0, 1, 5)                      # 5 active days
+    r = allocate({"daily": daily, "thin": thin}, method="equal",
+                  min_active_days=30)
+    assert r.weights["thin"] == 0.0
+    assert math.isclose(r.weights["daily"], 1.0)
+    assert math.isclose(sum(r.weights.values()), 1.0)
+    assert "evidence floor" in r.reason
+
+
+def test_allocate_evidence_floor_keeps_book_when_all_thin() -> None:
+    """If no sleeve clears the floor, leave weights untouched rather than
+    blank the whole book."""
+    rng = np.random.default_rng(0)
+    a = np.zeros(100); a[:5] = rng.normal(0, 1, 5)
+    b = np.zeros(100); b[:4] = rng.normal(0, 1, 4)
+    r = allocate({"a": a, "b": b}, method="equal", min_active_days=30)
+    assert math.isclose(sum(r.weights.values()), 1.0)
+    assert r.weights["a"] > 0.0 and r.weights["b"] > 0.0
+
+
+def test_allocate_weight_cap_redistributes() -> None:
+    rng = np.random.default_rng(0)
+    returns = {
+        "big": rng.normal(0, 0.1, 200),                 # low vol → huge ivol weight
+        "m1":  rng.normal(0, 1.0, 200),
+        "m2":  rng.normal(0, 1.0, 200),
+    }
+    r = allocate(returns, method="inverse_vol", max_weight=0.5)
+    assert all(v <= 0.5 + 1e-9 for v in r.weights.values())
+    assert math.isclose(sum(r.weights.values()), 1.0)
+    assert "capped" in r.reason
+
+
+def test_allocate_cap_infeasible_single_survivor_holds_all() -> None:
+    """When the floor leaves a single survivor, it holds 100% — the cap is
+    raised to its feasibility floor rather than producing weights that can't
+    sum to 1."""
+    rng = np.random.default_rng(0)
+    daily = rng.normal(0, 1, 100)
+    thin = np.zeros(100); thin[:3] = rng.normal(0, 1, 3)
+    r = allocate({"daily": daily, "thin": thin}, method="equal",
+                  min_active_days=30, max_weight=0.35)
+    assert math.isclose(r.weights["daily"], 1.0)
+    assert r.weights["thin"] == 0.0
+
+
+def test_allocate_defaults_are_noops() -> None:
+    """Default min_active_days=0 / max_weight=1.0 preserve raw weights."""
+    rng = np.random.default_rng(1)
+    returns = {f"S{i}": rng.normal(0, 1, 80) for i in range(3)}
+    r = allocate(returns, method="equal")
+    assert all(math.isclose(v, 1.0 / 3) for v in r.weights.values())
+    assert r.reason == ""

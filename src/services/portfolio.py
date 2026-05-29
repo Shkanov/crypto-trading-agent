@@ -59,25 +59,45 @@ def equal_weight(strategies: list[str]) -> dict[str, float]:
 
 
 # ---------------------------------------------------------------------------
+# Active-day volatility
+#
+# The return series fed to the allocator are zero-padded on every day a
+# strategy didn't trade (see `build_strategy_returns`). A sleeve that trades
+# 20 of 357 days is 94% zeros, so the std of the *padded* series collapses
+# toward zero — which makes both inverse-vol (w∝1/σ) and HRP (inverse-variance
+# bisection) read "rarely active" as "low risk" and pile capital onto the
+# thinnest sleeves. `_active_day_std` measures volatility *conditional on the
+# sleeve being active* (std over the non-zero entries), so idle days no longer
+# masquerade as low risk.
+
+def _active_day_std(series: np.ndarray, min_vol: float = 1e-12) -> float:
+    """Std (ddof=1) over the non-zero entries of `series`, floored at
+    `min_vol`. Fewer than 2 active days → `min_vol` (insufficient evidence to
+    estimate vol; the evidence floor in `allocate` is the intended guard for
+    these). Treats exact-zero days as "did not trade"."""
+    arr = np.asarray(series, dtype=float)
+    active = arr[arr != 0.0]
+    if active.size < 2:
+        return min_vol
+    return max(float(active.std(ddof=1)), min_vol)
+
+
+# ---------------------------------------------------------------------------
 # Inverse vol
 
 def inverse_vol(
     strategy_returns: dict[str, np.ndarray],
     min_vol: float = 1e-12,
 ) -> dict[str, float]:
-    """w_i ∝ 1 / σ_i. Zero-variance strategies are clamped to `min_vol`
-    so they don't claim infinite weight; in practice this maps them to
-    the largest weight in the basket — equivalent to "treat constant
-    return as zero risk" (caller's responsibility to scrub these)."""
+    """w_i ∝ 1 / σ_i, where σ_i is the **active-day** volatility (see
+    `_active_day_std`) rather than the std of the zero-padded series. This
+    stops idle sleeves from claiming the largest weight just for being
+    inactive. Sleeves with <2 active days fall to the `min_vol` floor and
+    would otherwise dominate — `allocate`'s evidence floor scrubs those."""
     if not strategy_returns:
         return {}
     syms = list(strategy_returns.keys())
-    vols = np.array([
-        max(float(np.asarray(strategy_returns[s], dtype=float).std(ddof=1)
-                   if len(strategy_returns[s]) > 1 else min_vol),
-            min_vol)
-        for s in syms
-    ])
+    vols = np.array([_active_day_std(strategy_returns[s], min_vol) for s in syms])
     inv = 1.0 / vols
     inv = inv / inv.sum()
     return {syms[i]: float(inv[i]) for i in range(len(syms))}
@@ -161,13 +181,45 @@ def hrp(
         return equal_weight(syms)
     # Right-align to the shortest series (most recent window).
     M = np.column_stack([s[-min_len:] for s in series_list])
-    cov = np.cov(M.T, ddof=1)
+
+    # Per-sleeve risk = volatility *conditional on the sleeve being active*
+    # (std over non-zero days), so idle days don't deflate it. Sleeves with no
+    # usable risk estimate — never traded in-window or constant — are "dead":
+    # exclude them and run HRP on the survivors, rather than letting one
+    # zero-variance column collapse the whole basket to equal-weight. With a
+    # 90-day lookback a sleeve that trades ~15 days a year is routinely idle for
+    # a full window, so this path matters in practice.
+    MIN_VOL = 1e-12
+    active_var = np.array(
+        [_active_day_std(M[:, i], MIN_VOL) ** 2 for i in range(n)], dtype=float,
+    )
+    live_idx = [i for i in range(n) if active_var[i] > MIN_VOL * MIN_VOL]
+    if len(live_idx) < n:
+        if len(live_idx) <= 1:
+            # 0 or 1 sleeve carries risk → nothing to diversify across.
+            return equal_weight(syms)
+        live = [syms[i] for i in live_idx]
+        sub = hrp({s: strategy_returns[s] for s in live})
+        return {s: float(sub.get(s, 0.0)) for s in syms}
+
+    # Drop all-quiet days (every sleeve zero): they carry no cross-sectional
+    # information and only deflate variance / inflate spurious co-movement
+    # among intermittent sleeves. Correlations come from this reduced basis.
+    active_rows = M[~np.all(M == 0.0, axis=1)]
+    basis = active_rows if active_rows.shape[0] >= 2 else M
+    cov = np.cov(basis.T, ddof=1)
     if cov.ndim == 0:                                   # n=1 numerical edge
         return {syms[0]: 1.0}
-    # Correlation; clamp anything outside [-1, 1] (numerical noise).
+    cov = np.array(cov, dtype=float, copy=True)
+    # Override the diagonal with active-day variances so the inverse-variance
+    # bisection in `_cluster_variance` sees each sleeve's true risk rather than
+    # zero-padding-deflated variance.
+    np.fill_diagonal(cov, active_var)
+    # Correlation; clamp anything outside [-1, 1] (numerical noise + the
+    # diagonal override can push a ratio slightly past 1).
     std = np.sqrt(np.diag(cov))
     if np.any(std == 0):
-        # A constant-return strategy has zero variance → equal-weight.
+        # Defensive: a constant active basis → equal-weight.
         return equal_weight(syms)
     corr = cov / np.outer(std, std)
     corr = np.clip(corr, -1.0, 1.0)
@@ -224,19 +276,97 @@ def _turnover_l1(new: dict[str, float], prev: dict[str, float]) -> float:
     return 0.5 * sum(abs(new.get(k, 0.0) - prev.get(k, 0.0)) for k in keys)
 
 
+def _active_day_count(series: np.ndarray) -> int:
+    """Number of days the sleeve actually traded (non-zero return entries)."""
+    return int(np.count_nonzero(np.asarray(series, dtype=float)))
+
+
+def _apply_evidence_floor(
+    weights: dict[str, float],
+    strategy_returns: dict[str, np.ndarray],
+    min_active_days: int,
+) -> tuple[dict[str, float], list[str]]:
+    """Zero out sleeves with fewer than `min_active_days` active days in the
+    window and renormalize the survivors to sum 1. A floored sleeve earns its
+    way back once it trades enough. If *no* sleeve clears the floor (or the
+    survivors carry no weight) the input is returned unchanged — we never blank
+    the whole book. Returns `(weights, floored_names)`."""
+    if min_active_days <= 0 or not weights:
+        return dict(weights), []
+    floored = [
+        s for s in weights
+        if _active_day_count(strategy_returns.get(s, np.empty(0))) < min_active_days
+    ]
+    if not floored:
+        return dict(weights), []
+    kept_total = sum(w for s, w in weights.items() if s not in floored)
+    if kept_total <= 0:
+        return dict(weights), []          # nothing survives → leave as-is
+    out = {
+        s: (weights[s] / kept_total if s not in floored else 0.0)
+        for s in weights
+    }
+    return out, floored
+
+
+def _apply_weight_cap(
+    weights: dict[str, float], max_weight: float,
+) -> tuple[dict[str, float], bool]:
+    """Iteratively cap any sleeve above `max_weight`, redistributing the excess
+    pro-rata to the headroom of the uncapped sleeves until all are at or below
+    the cap. The cap is raised to 1/k when it would be infeasible for k nonzero
+    sleeves to sum to 1 (e.g. a single survivor must hold 100%). Returns
+    `(weights, capped_any)`."""
+    nonzero = {s: w for s, w in weights.items() if w > 0.0}
+    k = len(nonzero)
+    if k == 0 or max_weight <= 0.0 or max_weight >= 1.0:
+        return dict(weights), False
+    cap = max(max_weight, 1.0 / k)        # feasibility floor
+    if all(w <= cap + 1e-12 for w in nonzero.values()):
+        return dict(weights), False
+    w = dict(weights)
+    capped_any = False
+    for _ in range(k + 1):
+        over = [s for s in nonzero if w[s] > cap + 1e-12]
+        if not over:
+            break
+        capped_any = True
+        excess = sum(w[s] - cap for s in over)
+        for s in over:
+            w[s] = cap
+        recipients = {s: w[s] for s in nonzero if w[s] < cap - 1e-12}
+        room = sum(cap - rw for rw in recipients.values())
+        if room <= 0:
+            break
+        for s in recipients:
+            w[s] += excess * (cap - recipients[s]) / room
+    return w, capped_any
+
+
 def allocate(
     strategy_returns: dict[str, np.ndarray],
     method: str = "equal",
     fallback: str = "inverse_vol",
     turnover_threshold: float = 0.5,
     prev_weights: Optional[dict[str, float]] = None,
+    min_active_days: int = 0,
+    max_weight: float = 1.0,
 ) -> AllocationResult:
     """Compute weights with the requested method, falling back if HRP
-    turnover exceeds `turnover_threshold`.
+    turnover exceeds `turnover_threshold`, then apply two structural
+    constraints to whatever weights result (including the fallback):
+
+      * **evidence floor** — sleeves with fewer than `min_active_days` active
+        days in the window are zeroed and the rest renormalized, so a
+        thin-track-record sleeve can't dominate the book on a lucky window;
+      * **weight cap** — no sleeve exceeds `max_weight` (excess redistributed
+        to the others), bounding single-sleeve drawdown contribution.
 
     `method` ∈ {"equal", "inverse_vol", "hrp"}.
     `fallback` is the method used when the turnover guard fires (only
-    triggers when `method="hrp"`).
+    triggers when `method="hrp"`). The defaults `min_active_days=0` and
+    `max_weight=1.0` are no-ops, preserving the pre-constraint behaviour for
+    callers that don't opt in.
     """
     if method not in ("equal", "inverse_vol", "hrp"):
         raise ValueError(f"unknown allocation method: {method!r}")
@@ -251,21 +381,39 @@ def allocate(
     else:
         w = hrp(strategy_returns)
 
-    turnover = _turnover_l1(w, prev_weights) if prev_weights else 0.0
+    method_used = method
+    reasons: list[str] = []
 
-    if method == "hrp" and prev_weights and turnover > turnover_threshold:
-        w_fb = (equal_weight(syms) if fallback == "equal"
-                else inverse_vol(strategy_returns))
-        turnover_fb = _turnover_l1(w_fb, prev_weights)
-        return AllocationResult(
-            weights=w_fb,
-            method_used=fallback,
-            turnover=turnover_fb,
-            reason=(f"hrp turnover {turnover:.2f} > {turnover_threshold:.2f}; "
-                    f"fell back to {fallback}"),
+    # Turnover guard fires on the *raw* HRP turnover, before constraints.
+    raw_turnover = _turnover_l1(w, prev_weights) if prev_weights else 0.0
+    if method == "hrp" and prev_weights and raw_turnover > turnover_threshold:
+        w = (equal_weight(syms) if fallback == "equal"
+             else inverse_vol(strategy_returns))
+        method_used = fallback
+        reasons.append(
+            f"hrp turnover {raw_turnover:.2f} > {turnover_threshold:.2f}; "
+            f"fell back to {fallback}"
         )
 
-    return AllocationResult(weights=w, method_used=method, turnover=turnover)
+    # Structural constraints — applied to the chosen weights (fallback too).
+    w, floored = _apply_evidence_floor(w, strategy_returns, min_active_days)
+    if floored:
+        reasons.append(
+            f"evidence floor (<{min_active_days} active days) zeroed "
+            f"{', '.join(sorted(floored))}"
+        )
+    w, capped = _apply_weight_cap(w, max_weight)
+    if capped:
+        reasons.append(f"capped single-sleeve weight at {max_weight:.0%}")
+
+    # Report turnover against the final, constrained weights.
+    turnover = _turnover_l1(w, prev_weights) if prev_weights else 0.0
+    return AllocationResult(
+        weights=w,
+        method_used=method_used,
+        turnover=turnover,
+        reason="; ".join(reasons),
+    )
 
 
 # ---------------------------------------------------------------------------

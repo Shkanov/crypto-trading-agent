@@ -62,6 +62,13 @@ class Settings(BaseSettings):
     allocator_lookback_days: int = 90
     allocator_rebalance_days: int = 30
     allocator_hrp_turnover_threshold: float = 0.5
+    # Structural constraints applied to every allocator method (min-drawdown
+    # discipline): sleeves with fewer than `min_active_days` active days in the
+    # lookback window are zeroed (no betting on thin track records), and no
+    # single sleeve exceeds `max_weight` (bounds single-sleeve DD contribution).
+    # Defaults sized to the 90d lookback; 0 / 1.0 would disable each.
+    allocator_min_active_days: int = 30
+    allocator_max_weight: float = 0.35
 
     # Approval
     auto_approve_max_notional_usd: float = 50.0
