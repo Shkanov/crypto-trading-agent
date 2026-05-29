@@ -1,0 +1,2516 @@
+{
+  "0GUSDT": {
+    "listed_ms": 1758499200000,
+    "first_kline_open_ms": 1758499200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "1000CATUSDT": {
+    "listed_ms": 1734393600000,
+    "first_kline_open_ms": 1734393600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "1000CHEEMSUSDT": {
+    "listed_ms": 1739059200000,
+    "first_kline_open_ms": 1739059200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "1000SATSUSDT": {
+    "listed_ms": 1702339200000,
+    "first_kline_open_ms": 1702339200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "1INCHUSDT": {
+    "listed_ms": 1608854400000,
+    "first_kline_open_ms": 1608854400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "1MBABYDOGEUSDT": {
+    "listed_ms": 1726444800000,
+    "first_kline_open_ms": 1726444800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "2ZUSDT": {
+    "listed_ms": 1759363200000,
+    "first_kline_open_ms": 1759363200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "AAVEUSDT": {
+    "listed_ms": 1602720000000,
+    "first_kline_open_ms": 1602720000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ACEUSDT": {
+    "listed_ms": 1702857600000,
+    "first_kline_open_ms": 1702857600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ACHUSDT": {
+    "listed_ms": 1641772800000,
+    "first_kline_open_ms": 1641772800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ACMUSDT": {
+    "listed_ms": 1614124800000,
+    "first_kline_open_ms": 1614124800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ACTUSDT": {
+    "listed_ms": 1731283200000,
+    "first_kline_open_ms": 1731283200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ACXUSDT": {
+    "listed_ms": 1733443200000,
+    "first_kline_open_ms": 1733443200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ADAUSDT": {
+    "listed_ms": 1523923200000,
+    "first_kline_open_ms": 1523923200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ADXUSDT": {
+    "listed_ms": 1635465600000,
+    "first_kline_open_ms": 1635465600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "AEURUSDT": {
+    "listed_ms": 1701648000000,
+    "first_kline_open_ms": 1701648000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "AEVOUSDT": {
+    "listed_ms": 1710288000000,
+    "first_kline_open_ms": 1710288000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "AGLDUSDT": {
+    "listed_ms": 1633392000000,
+    "first_kline_open_ms": 1633392000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "AIGENSYNUSDT": {
+    "listed_ms": 1778716800000,
+    "first_kline_open_ms": 1778716800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "AIUSDT": {
+    "listed_ms": 1704326400000,
+    "first_kline_open_ms": 1704326400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "AIXBTUSDT": {
+    "listed_ms": 1736467200000,
+    "first_kline_open_ms": 1736467200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ALCXUSDT": {
+    "listed_ms": 1638230400000,
+    "first_kline_open_ms": 1638230400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ALGOUSDT": {
+    "listed_ms": 1561161600000,
+    "first_kline_open_ms": 1561161600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ALICEUSDT": {
+    "listed_ms": 1615766400000,
+    "first_kline_open_ms": 1615766400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ALLOUSDT": {
+    "listed_ms": 1762819200000,
+    "first_kline_open_ms": 1762819200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ALPINEUSDT": {
+    "listed_ms": 1645401600000,
+    "first_kline_open_ms": 1645401600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ALTUSDT": {
+    "listed_ms": 1706140800000,
+    "first_kline_open_ms": 1706140800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "AMPUSDT": {
+    "listed_ms": 1637625600000,
+    "first_kline_open_ms": 1637625600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ANIMEUSDT": {
+    "listed_ms": 1737590400000,
+    "first_kline_open_ms": 1737590400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ANKRUSDT": {
+    "listed_ms": 1563840000000,
+    "first_kline_open_ms": 1563840000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "APEUSDT": {
+    "listed_ms": 1647475200000,
+    "first_kline_open_ms": 1647475200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "API3USDT": {
+    "listed_ms": 1642723200000,
+    "first_kline_open_ms": 1642723200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "APTUSDT": {
+    "listed_ms": 1666137600000,
+    "first_kline_open_ms": 1666137600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ARBUSDT": {
+    "listed_ms": 1679529600000,
+    "first_kline_open_ms": 1679529600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ARDRUSDT": {
+    "listed_ms": 1589500800000,
+    "first_kline_open_ms": 1589500800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ARKMUSDT": {
+    "listed_ms": 1689638400000,
+    "first_kline_open_ms": 1689638400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ARKUSDT": {
+    "listed_ms": 1695340800000,
+    "first_kline_open_ms": 1695340800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ARPAUSDT": {
+    "listed_ms": 1572998400000,
+    "first_kline_open_ms": 1572998400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ARUSDT": {
+    "listed_ms": 1620950400000,
+    "first_kline_open_ms": 1620950400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ASRUSDT": {
+    "listed_ms": 1609286400000,
+    "first_kline_open_ms": 1609286400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ASTERUSDT": {
+    "listed_ms": 1759708800000,
+    "first_kline_open_ms": 1759708800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ASTRUSDT": {
+    "listed_ms": 1646006400000,
+    "first_kline_open_ms": 1646006400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ATMUSDT": {
+    "listed_ms": 1609286400000,
+    "first_kline_open_ms": 1609286400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ATOMUSDT": {
+    "listed_ms": 1556496000000,
+    "first_kline_open_ms": 1556496000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ATUSDT": {
+    "listed_ms": 1764201600000,
+    "first_kline_open_ms": 1764201600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "AUCTIONUSDT": {
+    "listed_ms": 1635465600000,
+    "first_kline_open_ms": 1635465600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "AUDIOUSDT": {
+    "listed_ms": 1603411200000,
+    "first_kline_open_ms": 1603411200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "AUSDT": {
+    "listed_ms": 1748390400000,
+    "first_kline_open_ms": 1748390400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "AVAUSDT": {
+    "listed_ms": 1606176000000,
+    "first_kline_open_ms": 1606176000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "AVAXUSDT": {
+    "listed_ms": 1600732800000,
+    "first_kline_open_ms": 1600732800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "AVNTUSDT": {
+    "listed_ms": 1757894400000,
+    "first_kline_open_ms": 1757894400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "AWEUSDT": {
+    "listed_ms": 1747785600000,
+    "first_kline_open_ms": 1747785600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "AXLUSDT": {
+    "listed_ms": 1709251200000,
+    "first_kline_open_ms": 1709251200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "AXSUSDT": {
+    "listed_ms": 1604448000000,
+    "first_kline_open_ms": 1604448000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BABYUSDT": {
+    "listed_ms": 1744243200000,
+    "first_kline_open_ms": 1744243200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BANANAS31USDT": {
+    "listed_ms": 1743033600000,
+    "first_kline_open_ms": 1743033600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BANANAUSDT": {
+    "listed_ms": 1721433600000,
+    "first_kline_open_ms": 1721433600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BANDUSDT": {
+    "listed_ms": 1568764800000,
+    "first_kline_open_ms": 1568764800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BANKUSDT": {
+    "listed_ms": 1762992000000,
+    "first_kline_open_ms": 1762992000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BARDUSDT": {
+    "listed_ms": 1758153600000,
+    "first_kline_open_ms": 1758153600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BARUSDT": {
+    "listed_ms": 1618963200000,
+    "first_kline_open_ms": 1618963200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BATUSDT": {
+    "listed_ms": 1551657600000,
+    "first_kline_open_ms": 1551657600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BBUSDT": {
+    "listed_ms": 1715558400000,
+    "first_kline_open_ms": 1715558400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BCHUSDT": {
+    "listed_ms": 1574899200000,
+    "first_kline_open_ms": 1574899200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BEAMXUSDT": {
+    "listed_ms": 1699920000000,
+    "first_kline_open_ms": 1699920000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BELUSDT": {
+    "listed_ms": 1600128000000,
+    "first_kline_open_ms": 1600128000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BERAUSDT": {
+    "listed_ms": 1738800000000,
+    "first_kline_open_ms": 1738800000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BFUSDUSDT": {
+    "listed_ms": 1755043200000,
+    "first_kline_open_ms": 1755043200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BICOUSDT": {
+    "listed_ms": 1639008000000,
+    "first_kline_open_ms": 1639008000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BIGTIMEUSDT": {
+    "listed_ms": 1744329600000,
+    "first_kline_open_ms": 1744329600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BIOUSDT": {
+    "listed_ms": 1735862400000,
+    "first_kline_open_ms": 1735862400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BLURUSDT": {
+    "listed_ms": 1700784000000,
+    "first_kline_open_ms": 1700784000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BMTUSDT": {
+    "listed_ms": 1742256000000,
+    "first_kline_open_ms": 1742256000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BNBUSDT": {
+    "listed_ms": 1509926400000,
+    "first_kline_open_ms": 1509926400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BNSOLUSDT": {
+    "listed_ms": 1729123200000,
+    "first_kline_open_ms": 1729123200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BNTUSDT": {
+    "listed_ms": 1580947200000,
+    "first_kline_open_ms": 1580947200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BOMEUSDT": {
+    "listed_ms": 1710547200000,
+    "first_kline_open_ms": 1710547200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BONKUSDT": {
+    "listed_ms": 1702598400000,
+    "first_kline_open_ms": 1702598400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BREVUSDT": {
+    "listed_ms": 1767657600000,
+    "first_kline_open_ms": 1767657600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BROCCOLI714USDT": {
+    "listed_ms": 1743033600000,
+    "first_kline_open_ms": 1743033600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BTCUSDT": {
+    "listed_ms": 1502928000000,
+    "first_kline_open_ms": 1502928000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "BTTCUSDT": {
+    "listed_ms": 1643068800000,
+    "first_kline_open_ms": 1643068800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "C98USDT": {
+    "listed_ms": 1626998400000,
+    "first_kline_open_ms": 1626998400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "CAKEUSDT": {
+    "listed_ms": 1613692800000,
+    "first_kline_open_ms": 1613692800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "CATIUSDT": {
+    "listed_ms": 1726790400000,
+    "first_kline_open_ms": 1726790400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "CELOUSDT": {
+    "listed_ms": 1609804800000,
+    "first_kline_open_ms": 1609804800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "CELRUSDT": {
+    "listed_ms": 1553472000000,
+    "first_kline_open_ms": 1553472000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "CETUSUSDT": {
+    "listed_ms": 1730851200000,
+    "first_kline_open_ms": 1730851200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "CFGUSDT": {
+    "listed_ms": 1773619200000,
+    "first_kline_open_ms": 1773619200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "CFXUSDT": {
+    "listed_ms": 1616976000000,
+    "first_kline_open_ms": 1616976000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "CGPTUSDT": {
+    "listed_ms": 1736467200000,
+    "first_kline_open_ms": 1736467200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "CHIPUSDT": {
+    "listed_ms": 1776729600000,
+    "first_kline_open_ms": 1776729600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "CHRUSDT": {
+    "listed_ms": 1588809600000,
+    "first_kline_open_ms": 1588809600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "CHZUSDT": {
+    "listed_ms": 1567728000000,
+    "first_kline_open_ms": 1567728000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "CITYUSDT": {
+    "listed_ms": 1636502400000,
+    "first_kline_open_ms": 1636502400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "CKBUSDT": {
+    "listed_ms": 1611619200000,
+    "first_kline_open_ms": 1611619200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "COMPUSDT": {
+    "listed_ms": 1593043200000,
+    "first_kline_open_ms": 1593043200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "COOKIEUSDT": {
+    "listed_ms": 1736467200000,
+    "first_kline_open_ms": 1736467200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "COSUSDT": {
+    "listed_ms": 1564790400000,
+    "first_kline_open_ms": 1564790400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "COTIUSDT": {
+    "listed_ms": 1582675200000,
+    "first_kline_open_ms": 1582675200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "COWUSDT": {
+    "listed_ms": 1730851200000,
+    "first_kline_open_ms": 1730851200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "CRVUSDT": {
+    "listed_ms": 1597449600000,
+    "first_kline_open_ms": 1597449600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "CTKUSDT": {
+    "listed_ms": 1603756800000,
+    "first_kline_open_ms": 1603756800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "CTSIUSDT": {
+    "listed_ms": 1587600000000,
+    "first_kline_open_ms": 1587600000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "CUSDT": {
+    "listed_ms": 1752796800000,
+    "first_kline_open_ms": 1752796800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "CVCUSDT": {
+    "listed_ms": 1566864000000,
+    "first_kline_open_ms": 1566864000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "CVXUSDT": {
+    "listed_ms": 1640217600000,
+    "first_kline_open_ms": 1640217600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "CYBERUSDT": {
+    "listed_ms": 1692057600000,
+    "first_kline_open_ms": 1692057600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "DASHUSDT": {
+    "listed_ms": 1553731200000,
+    "first_kline_open_ms": 1553731200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "DCRUSDT": {
+    "listed_ms": 1596067200000,
+    "first_kline_open_ms": 1596067200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "DEXEUSDT": {
+    "listed_ms": 1626998400000,
+    "first_kline_open_ms": 1626998400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "DGBUSDT": {
+    "listed_ms": 1595203200000,
+    "first_kline_open_ms": 1595203200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "DIAUSDT": {
+    "listed_ms": 1599177600000,
+    "first_kline_open_ms": 1599177600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "DODOUSDT": {
+    "listed_ms": 1613692800000,
+    "first_kline_open_ms": 1613692800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "DOGEUSDT": {
+    "listed_ms": 1562284800000,
+    "first_kline_open_ms": 1562284800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "DOGSUSDT": {
+    "listed_ms": 1724630400000,
+    "first_kline_open_ms": 1724630400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "DOLOUSDT": {
+    "listed_ms": 1756252800000,
+    "first_kline_open_ms": 1756252800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "DOTUSDT": {
+    "listed_ms": 1597708800000,
+    "first_kline_open_ms": 1597708800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "DUSDT": {
+    "listed_ms": 1736380800000,
+    "first_kline_open_ms": 1736380800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "DUSKUSDT": {
+    "listed_ms": 1563753600000,
+    "first_kline_open_ms": 1563753600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "DYDXUSDT": {
+    "listed_ms": 1631145600000,
+    "first_kline_open_ms": 1631145600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "DYMUSDT": {
+    "listed_ms": 1707177600000,
+    "first_kline_open_ms": 1707177600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "EDENUSDT": {
+    "listed_ms": 1759190400000,
+    "first_kline_open_ms": 1759190400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "EDUUSDT": {
+    "listed_ms": 1682640000000,
+    "first_kline_open_ms": 1682640000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "EGLDUSDT": {
+    "listed_ms": 1599091200000,
+    "first_kline_open_ms": 1599091200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "EIGENUSDT": {
+    "listed_ms": 1727740800000,
+    "first_kline_open_ms": 1727740800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ENAUSDT": {
+    "listed_ms": 1712016000000,
+    "first_kline_open_ms": 1712016000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ENJUSDT": {
+    "listed_ms": 1555545600000,
+    "first_kline_open_ms": 1555545600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ENSOUSDT": {
+    "listed_ms": 1760400000000,
+    "first_kline_open_ms": 1760400000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ENSUSDT": {
+    "listed_ms": 1636502400000,
+    "first_kline_open_ms": 1636502400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "EPICUSDT": {
+    "listed_ms": 1741824000000,
+    "first_kline_open_ms": 1741824000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ERAUSDT": {
+    "listed_ms": 1752710400000,
+    "first_kline_open_ms": 1752710400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ESPUSDT": {
+    "listed_ms": 1770854400000,
+    "first_kline_open_ms": 1770854400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ETCUSDT": {
+    "listed_ms": 1528761600000,
+    "first_kline_open_ms": 1528761600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ETHFIUSDT": {
+    "listed_ms": 1710720000000,
+    "first_kline_open_ms": 1710720000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ETHUSDT": {
+    "listed_ms": 1502928000000,
+    "first_kline_open_ms": 1502928000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "EULUSDT": {
+    "listed_ms": 1760313600000,
+    "first_kline_open_ms": 1760313600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "FETUSDT": {
+    "listed_ms": 1551312000000,
+    "first_kline_open_ms": 1551312000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "FFUSDT": {
+    "listed_ms": 1759104000000,
+    "first_kline_open_ms": 1759104000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "FIDAUSDT": {
+    "listed_ms": 1632960000000,
+    "first_kline_open_ms": 1632960000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "FILUSDT": {
+    "listed_ms": 1602720000000,
+    "first_kline_open_ms": 1602720000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "FLOKIUSDT": {
+    "listed_ms": 1683244800000,
+    "first_kline_open_ms": 1683244800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "FLOWUSDT": {
+    "listed_ms": 1627603200000,
+    "first_kline_open_ms": 1627603200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "FLUXUSDT": {
+    "listed_ms": 1639094400000,
+    "first_kline_open_ms": 1639094400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "FOGOUSDT": {
+    "listed_ms": 1768435200000,
+    "first_kline_open_ms": 1768435200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "FORMUSDT": {
+    "listed_ms": 1742342400000,
+    "first_kline_open_ms": 1742342400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "FRAXUSDT": {
+    "listed_ms": 1768435200000,
+    "first_kline_open_ms": 1768435200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "FTTUSDT": {
+    "listed_ms": 1576800000000,
+    "first_kline_open_ms": 1576800000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "FUSDT": {
+    "listed_ms": 1761350400000,
+    "first_kline_open_ms": 1761350400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "GALAUSDT": {
+    "listed_ms": 1631491200000,
+    "first_kline_open_ms": 1631491200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "GASUSDT": {
+    "listed_ms": 1679011200000,
+    "first_kline_open_ms": 1679011200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "GENIUSUSDT": {
+    "listed_ms": 1779408000000,
+    "first_kline_open_ms": 1779408000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "GIGGLEUSDT": {
+    "listed_ms": 1761350400000,
+    "first_kline_open_ms": 1761350400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "GLMRUSDT": {
+    "listed_ms": 1641859200000,
+    "first_kline_open_ms": 1641859200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "GLMUSDT": {
+    "listed_ms": 1679011200000,
+    "first_kline_open_ms": 1679011200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "GMTUSDT": {
+    "listed_ms": 1646784000000,
+    "first_kline_open_ms": 1646784000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "GMXUSDT": {
+    "listed_ms": 1664928000000,
+    "first_kline_open_ms": 1664928000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "GNOUSDT": {
+    "listed_ms": 1630281600000,
+    "first_kline_open_ms": 1630281600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "GNSUSDT": {
+    "listed_ms": 1676592000000,
+    "first_kline_open_ms": 1676592000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "GPSUSDT": {
+    "listed_ms": 1741046400000,
+    "first_kline_open_ms": 1741046400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "GRTUSDT": {
+    "listed_ms": 1608163200000,
+    "first_kline_open_ms": 1608163200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "GTCUSDT": {
+    "listed_ms": 1623283200000,
+    "first_kline_open_ms": 1623283200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "GUNUSDT": {
+    "listed_ms": 1743379200000,
+    "first_kline_open_ms": 1743379200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "GUSDT": {
+    "listed_ms": 1721347200000,
+    "first_kline_open_ms": 1721347200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "HAEDALUSDT": {
+    "listed_ms": 1747785600000,
+    "first_kline_open_ms": 1747785600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "HBARUSDT": {
+    "listed_ms": 1569715200000,
+    "first_kline_open_ms": 1569715200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "HEIUSDT": {
+    "listed_ms": 1739404800000,
+    "first_kline_open_ms": 1739404800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "HEMIUSDT": {
+    "listed_ms": 1758585600000,
+    "first_kline_open_ms": 1758585600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "HFTUSDT": {
+    "listed_ms": 1667779200000,
+    "first_kline_open_ms": 1667779200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "HIGHUSDT": {
+    "listed_ms": 1639699200000,
+    "first_kline_open_ms": 1639699200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "HIVEUSDT": {
+    "listed_ms": 1587945600000,
+    "first_kline_open_ms": 1587945600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "HMSTRUSDT": {
+    "listed_ms": 1727308800000,
+    "first_kline_open_ms": 1727308800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "HOLOUSDT": {
+    "listed_ms": 1757548800000,
+    "first_kline_open_ms": 1757548800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "HOMEUSDT": {
+    "listed_ms": 1749686400000,
+    "first_kline_open_ms": 1749686400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "HOTUSDT": {
+    "listed_ms": 1550448000000,
+    "first_kline_open_ms": 1550448000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "HUMAUSDT": {
+    "listed_ms": 1748217600000,
+    "first_kline_open_ms": 1748217600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "HYPERUSDT": {
+    "listed_ms": 1745280000000,
+    "first_kline_open_ms": 1745280000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ICPUSDT": {
+    "listed_ms": 1620691200000,
+    "first_kline_open_ms": 1620691200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ICXUSDT": {
+    "listed_ms": 1528848000000,
+    "first_kline_open_ms": 1528848000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "IDUSDT": {
+    "listed_ms": 1679443200000,
+    "first_kline_open_ms": 1679443200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ILVUSDT": {
+    "listed_ms": 1632268800000,
+    "first_kline_open_ms": 1632268800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "IMXUSDT": {
+    "listed_ms": 1641772800000,
+    "first_kline_open_ms": 1641772800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "INITUSDT": {
+    "listed_ms": 1745452800000,
+    "first_kline_open_ms": 1745452800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "INJUSDT": {
+    "listed_ms": 1603238400000,
+    "first_kline_open_ms": 1603238400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "IOSTUSDT": {
+    "listed_ms": 1553212800000,
+    "first_kline_open_ms": 1553212800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "IOTAUSDT": {
+    "listed_ms": 1527724800000,
+    "first_kline_open_ms": 1527724800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "IOTXUSDT": {
+    "listed_ms": 1573689600000,
+    "first_kline_open_ms": 1573689600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "IOUSDT": {
+    "listed_ms": 1718064000000,
+    "first_kline_open_ms": 1718064000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "IQUSDT": {
+    "listed_ms": 1695340800000,
+    "first_kline_open_ms": 1695340800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "JASMYUSDT": {
+    "listed_ms": 1637539200000,
+    "first_kline_open_ms": 1637539200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "JOEUSDT": {
+    "listed_ms": 1640649600000,
+    "first_kline_open_ms": 1640649600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "JSTUSDT": {
+    "listed_ms": 1597104000000,
+    "first_kline_open_ms": 1597104000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "JTOUSDT": {
+    "listed_ms": 1701907200000,
+    "first_kline_open_ms": 1701907200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "JUVUSDT": {
+    "listed_ms": 1608508800000,
+    "first_kline_open_ms": 1608508800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "KAIAUSDT": {
+    "listed_ms": 1730332800000,
+    "first_kline_open_ms": 1730332800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "KAITOUSDT": {
+    "listed_ms": 1740009600000,
+    "first_kline_open_ms": 1740009600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "KATUSDT": {
+    "listed_ms": 1773792000000,
+    "first_kline_open_ms": 1773792000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "KAVAUSDT": {
+    "listed_ms": 1571961600000,
+    "first_kline_open_ms": 1571961600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "KERNELUSDT": {
+    "listed_ms": 1744588800000,
+    "first_kline_open_ms": 1744588800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "KGSTUSDT": {
+    "listed_ms": 1766534400000,
+    "first_kline_open_ms": 1766534400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "KITEUSDT": {
+    "listed_ms": 1762128000000,
+    "first_kline_open_ms": 1762128000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "KMNOUSDT": {
+    "listed_ms": 1746489600000,
+    "first_kline_open_ms": 1746489600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "KNCUSDT": {
+    "listed_ms": 1591920000000,
+    "first_kline_open_ms": 1591920000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "KSMUSDT": {
+    "listed_ms": 1599177600000,
+    "first_kline_open_ms": 1599177600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "LAUSDT": {
+    "listed_ms": 1752019200000,
+    "first_kline_open_ms": 1752019200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "LAYERUSDT": {
+    "listed_ms": 1739232000000,
+    "first_kline_open_ms": 1739232000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "LAZIOUSDT": {
+    "listed_ms": 1634774400000,
+    "first_kline_open_ms": 1634774400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "LDOUSDT": {
+    "listed_ms": 1652054400000,
+    "first_kline_open_ms": 1652054400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "LINEAUSDT": {
+    "listed_ms": 1757462400000,
+    "first_kline_open_ms": 1757462400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "LINKUSDT": {
+    "listed_ms": 1547596800000,
+    "first_kline_open_ms": 1547596800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "LISTAUSDT": {
+    "listed_ms": 1718841600000,
+    "first_kline_open_ms": 1718841600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "LPTUSDT": {
+    "listed_ms": 1622160000000,
+    "first_kline_open_ms": 1622160000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "LQTYUSDT": {
+    "listed_ms": 1677542400000,
+    "first_kline_open_ms": 1677542400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "LSKUSDT": {
+    "listed_ms": 1580947200000,
+    "first_kline_open_ms": 1580947200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "LTCUSDT": {
+    "listed_ms": 1513123200000,
+    "first_kline_open_ms": 1513123200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "LUMIAUSDT": {
+    "listed_ms": 1729209600000,
+    "first_kline_open_ms": 1729209600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "LUNAUSDT": {
+    "listed_ms": 1597968000000,
+    "first_kline_open_ms": 1597968000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "LUNCUSDT": {
+    "listed_ms": 1662681600000,
+    "first_kline_open_ms": 1662681600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "MAGICUSDT": {
+    "listed_ms": 1670803200000,
+    "first_kline_open_ms": 1670803200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "MANAUSDT": {
+    "listed_ms": 1596672000000,
+    "first_kline_open_ms": 1596672000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "MANTAUSDT": {
+    "listed_ms": 1705536000000,
+    "first_kline_open_ms": 1705536000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "MANTRAUSDT": {
+    "listed_ms": 1772582400000,
+    "first_kline_open_ms": 1772582400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "MASKUSDT": {
+    "listed_ms": 1621900800000,
+    "first_kline_open_ms": 1621900800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "MAVUSDT": {
+    "listed_ms": 1687910400000,
+    "first_kline_open_ms": 1687910400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "MBLUSDT": {
+    "listed_ms": 1582243200000,
+    "first_kline_open_ms": 1582243200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "MBOXUSDT": {
+    "listed_ms": 1629331200000,
+    "first_kline_open_ms": 1629331200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "MEGAUSDT": {
+    "listed_ms": 1777507200000,
+    "first_kline_open_ms": 1777507200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "MEMEUSDT": {
+    "listed_ms": 1698969600000,
+    "first_kline_open_ms": 1698969600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "METISUSDT": {
+    "listed_ms": 1710115200000,
+    "first_kline_open_ms": 1710115200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "METUSDT": {
+    "listed_ms": 1762992000000,
+    "first_kline_open_ms": 1762992000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "MEUSDT": {
+    "listed_ms": 1733788800000,
+    "first_kline_open_ms": 1733788800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "MINAUSDT": {
+    "listed_ms": 1628553600000,
+    "first_kline_open_ms": 1628553600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "MIRAUSDT": {
+    "listed_ms": 1758844800000,
+    "first_kline_open_ms": 1758844800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "MITOUSDT": {
+    "listed_ms": 1756425600000,
+    "first_kline_open_ms": 1756425600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "MMTUSDT": {
+    "listed_ms": 1762214400000,
+    "first_kline_open_ms": 1762214400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "MORPHOUSDT": {
+    "listed_ms": 1759449600000,
+    "first_kline_open_ms": 1759449600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "MOVEUSDT": {
+    "listed_ms": 1733702400000,
+    "first_kline_open_ms": 1733702400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "MOVRUSDT": {
+    "listed_ms": 1636329600000,
+    "first_kline_open_ms": 1636329600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "MTLUSDT": {
+    "listed_ms": 1566518400000,
+    "first_kline_open_ms": 1566518400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "MUBARAKUSDT": {
+    "listed_ms": 1743033600000,
+    "first_kline_open_ms": 1743033600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "NEARUSDT": {
+    "listed_ms": 1602633600000,
+    "first_kline_open_ms": 1602633600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "NEIROUSDT": {
+    "listed_ms": 1726444800000,
+    "first_kline_open_ms": 1726444800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "NEOUSDT": {
+    "listed_ms": 1511136000000,
+    "first_kline_open_ms": 1511136000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "NEWTUSDT": {
+    "listed_ms": 1750723200000,
+    "first_kline_open_ms": 1750723200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "NEXOUSDT": {
+    "listed_ms": 1651190400000,
+    "first_kline_open_ms": 1651190400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "NFPUSDT": {
+    "listed_ms": 1703635200000,
+    "first_kline_open_ms": 1703635200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "NIGHTUSDT": {
+    "listed_ms": 1773187200000,
+    "first_kline_open_ms": 1773187200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "NILUSDT": {
+    "listed_ms": 1742774400000,
+    "first_kline_open_ms": 1742774400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "NMRUSDT": {
+    "listed_ms": 1597795200000,
+    "first_kline_open_ms": 1597795200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "NOMUSDT": {
+    "listed_ms": 1759276800000,
+    "first_kline_open_ms": 1759276800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "NOTUSDT": {
+    "listed_ms": 1715817600000,
+    "first_kline_open_ms": 1715817600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "NXPCUSDT": {
+    "listed_ms": 1747267200000,
+    "first_kline_open_ms": 1747267200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "OGNUSDT": {
+    "listed_ms": 1578528000000,
+    "first_kline_open_ms": 1578528000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "OGUSDT": {
+    "listed_ms": 1609286400000,
+    "first_kline_open_ms": 1609286400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ONDOUSDT": {
+    "listed_ms": 1744329600000,
+    "first_kline_open_ms": 1744329600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ONEUSDT": {
+    "listed_ms": 1559347200000,
+    "first_kline_open_ms": 1559347200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ONGUSDT": {
+    "listed_ms": 1550275200000,
+    "first_kline_open_ms": 1550275200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ONTUSDT": {
+    "listed_ms": 1528416000000,
+    "first_kline_open_ms": 1528416000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "OPENUSDT": {
+    "listed_ms": 1757289600000,
+    "first_kline_open_ms": 1757289600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "OPGUSDT": {
+    "listed_ms": 1779408000000,
+    "first_kline_open_ms": 1779408000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "OPNUSDT": {
+    "listed_ms": 1772668800000,
+    "first_kline_open_ms": 1772668800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "OPUSDT": {
+    "listed_ms": 1654041600000,
+    "first_kline_open_ms": 1654041600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ORCAUSDT": {
+    "listed_ms": 1733443200000,
+    "first_kline_open_ms": 1733443200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ORDIUSDT": {
+    "listed_ms": 1699315200000,
+    "first_kline_open_ms": 1699315200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "OSMOUSDT": {
+    "listed_ms": 1666915200000,
+    "first_kline_open_ms": 1666915200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "PARTIUSDT": {
+    "listed_ms": 1742860800000,
+    "first_kline_open_ms": 1742860800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "PAXGUSDT": {
+    "listed_ms": 1598572800000,
+    "first_kline_open_ms": 1598572800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "PENDLEUSDT": {
+    "listed_ms": 1688342400000,
+    "first_kline_open_ms": 1688342400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "PENGUUSDT": {
+    "listed_ms": 1734393600000,
+    "first_kline_open_ms": 1734393600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "PEOPLEUSDT": {
+    "listed_ms": 1640217600000,
+    "first_kline_open_ms": 1640217600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "PEPEUSDT": {
+    "listed_ms": 1683244800000,
+    "first_kline_open_ms": 1683244800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "PHAUSDT": {
+    "listed_ms": 1624579200000,
+    "first_kline_open_ms": 1624579200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "PIVXUSDT": {
+    "listed_ms": 1700092800000,
+    "first_kline_open_ms": 1700092800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "PIXELUSDT": {
+    "listed_ms": 1708300800000,
+    "first_kline_open_ms": 1708300800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "PLUMEUSDT": {
+    "listed_ms": 1755475200000,
+    "first_kline_open_ms": 1755475200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "PNUTUSDT": {
+    "listed_ms": 1731283200000,
+    "first_kline_open_ms": 1731283200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "POLUSDT": {
+    "listed_ms": 1726185600000,
+    "first_kline_open_ms": 1726185600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "POLYXUSDT": {
+    "listed_ms": 1665964800000,
+    "first_kline_open_ms": 1665964800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "PONDUSDT": {
+    "listed_ms": 1615248000000,
+    "first_kline_open_ms": 1615248000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "PORTALUSDT": {
+    "listed_ms": 1709164800000,
+    "first_kline_open_ms": 1709164800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "PORTOUSDT": {
+    "listed_ms": 1637020800000,
+    "first_kline_open_ms": 1637020800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "POWRUSDT": {
+    "listed_ms": 1637107200000,
+    "first_kline_open_ms": 1637107200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "PROMUSDT": {
+    "listed_ms": 1679011200000,
+    "first_kline_open_ms": 1679011200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "PROVEUSDT": {
+    "listed_ms": 1754352000000,
+    "first_kline_open_ms": 1754352000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "PSGUSDT": {
+    "listed_ms": 1608508800000,
+    "first_kline_open_ms": 1608508800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "PUMPUSDT": {
+    "listed_ms": 1757548800000,
+    "first_kline_open_ms": 1757548800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "PUNDIXUSDT": {
+    "listed_ms": 1617926400000,
+    "first_kline_open_ms": 1617926400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "PYRUSDT": {
+    "listed_ms": 1637884800000,
+    "first_kline_open_ms": 1637884800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "PYTHUSDT": {
+    "listed_ms": 1706832000000,
+    "first_kline_open_ms": 1706832000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "QIUSDT": {
+    "listed_ms": 1636934400000,
+    "first_kline_open_ms": 1636934400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "QKCUSDT": {
+    "listed_ms": 1679011200000,
+    "first_kline_open_ms": 1679011200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "QNTUSDT": {
+    "listed_ms": 1627516800000,
+    "first_kline_open_ms": 1627516800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "QTUMUSDT": {
+    "listed_ms": 1521417600000,
+    "first_kline_open_ms": 1521417600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "QUICKUSDT": {
+    "listed_ms": 1628812800000,
+    "first_kline_open_ms": 1628812800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "RADUSDT": {
+    "listed_ms": 1633564800000,
+    "first_kline_open_ms": 1633564800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "RAREUSDT": {
+    "listed_ms": 1633910400000,
+    "first_kline_open_ms": 1633910400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "RAYUSDT": {
+    "listed_ms": 1628553600000,
+    "first_kline_open_ms": 1628553600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "REDUSDT": {
+    "listed_ms": 1740700800000,
+    "first_kline_open_ms": 1740700800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "RENDERUSDT": {
+    "listed_ms": 1721952000000,
+    "first_kline_open_ms": 1721952000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "REQUSDT": {
+    "listed_ms": 1629417600000,
+    "first_kline_open_ms": 1629417600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "RESOLVUSDT": {
+    "listed_ms": 1749600000000,
+    "first_kline_open_ms": 1749600000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "REZUSDT": {
+    "listed_ms": 1714435200000,
+    "first_kline_open_ms": 1714435200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "RIFUSDT": {
+    "listed_ms": 1609977600000,
+    "first_kline_open_ms": 1609977600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "RLCUSDT": {
+    "listed_ms": 1573689600000,
+    "first_kline_open_ms": 1573689600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "RLUSDUSDT": {
+    "listed_ms": 1769040000000,
+    "first_kline_open_ms": 1769040000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ROBOUSDT": {
+    "listed_ms": 1772582400000,
+    "first_kline_open_ms": 1772582400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "RONINUSDT": {
+    "listed_ms": 1707091200000,
+    "first_kline_open_ms": 1707091200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ROSEUSDT": {
+    "listed_ms": 1605744000000,
+    "first_kline_open_ms": 1605744000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "RPLUSDT": {
+    "listed_ms": 1674000000000,
+    "first_kline_open_ms": 1674000000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "RSRUSDT": {
+    "listed_ms": 1598486400000,
+    "first_kline_open_ms": 1598486400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "RUNEUSDT": {
+    "listed_ms": 1599177600000,
+    "first_kline_open_ms": 1599177600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "RVNUSDT": {
+    "listed_ms": 1569369600000,
+    "first_kline_open_ms": 1569369600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SAGAUSDT": {
+    "listed_ms": 1712620800000,
+    "first_kline_open_ms": 1712620800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SAHARAUSDT": {
+    "listed_ms": 1750896000000,
+    "first_kline_open_ms": 1750896000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SANDUSDT": {
+    "listed_ms": 1597363200000,
+    "first_kline_open_ms": 1597363200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SANTOSUSDT": {
+    "listed_ms": 1638316800000,
+    "first_kline_open_ms": 1638316800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SAPIENUSDT": {
+    "listed_ms": 1762387200000,
+    "first_kline_open_ms": 1762387200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SCRTUSDT": {
+    "listed_ms": 1642723200000,
+    "first_kline_open_ms": 1642723200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SCRUSDT": {
+    "listed_ms": 1728604800000,
+    "first_kline_open_ms": 1728604800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SCUSDT": {
+    "listed_ms": 1593993600000,
+    "first_kline_open_ms": 1593993600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SEIUSDT": {
+    "listed_ms": 1692057600000,
+    "first_kline_open_ms": 1692057600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SENTUSDT": {
+    "listed_ms": 1769040000000,
+    "first_kline_open_ms": 1769040000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SFPUSDT": {
+    "listed_ms": 1612742400000,
+    "first_kline_open_ms": 1612742400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SHELLUSDT": {
+    "listed_ms": 1740614400000,
+    "first_kline_open_ms": 1740614400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SHIBUSDT": {
+    "listed_ms": 1620604800000,
+    "first_kline_open_ms": 1620604800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SIGNUSDT": {
+    "listed_ms": 1745798400000,
+    "first_kline_open_ms": 1745798400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SKLUSDT": {
+    "listed_ms": 1606780800000,
+    "first_kline_open_ms": 1606780800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SKYUSDT": {
+    "listed_ms": 1758067200000,
+    "first_kline_open_ms": 1758067200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SLPUSDT": {
+    "listed_ms": 1619740800000,
+    "first_kline_open_ms": 1619740800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SNXUSDT": {
+    "listed_ms": 1594252800000,
+    "first_kline_open_ms": 1594252800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SOLUSDT": {
+    "listed_ms": 1597104000000,
+    "first_kline_open_ms": 1597104000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SOLVUSDT": {
+    "listed_ms": 1737072000000,
+    "first_kline_open_ms": 1737072000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SOMIUSDT": {
+    "listed_ms": 1756771200000,
+    "first_kline_open_ms": 1756771200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SOPHUSDT": {
+    "listed_ms": 1748390400000,
+    "first_kline_open_ms": 1748390400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SPELLUSDT": {
+    "listed_ms": 1640304000000,
+    "first_kline_open_ms": 1640304000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SPKUSDT": {
+    "listed_ms": 1750118400000,
+    "first_kline_open_ms": 1750118400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SSVUSDT": {
+    "listed_ms": 1677196800000,
+    "first_kline_open_ms": 1677196800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "STEEMUSDT": {
+    "listed_ms": 1650585600000,
+    "first_kline_open_ms": 1650585600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "STGUSDT": {
+    "listed_ms": 1660867200000,
+    "first_kline_open_ms": 1660867200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "STORJUSDT": {
+    "listed_ms": 1596067200000,
+    "first_kline_open_ms": 1596067200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "STOUSDT": {
+    "listed_ms": 1746144000000,
+    "first_kline_open_ms": 1746144000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "STRAXUSDT": {
+    "listed_ms": 1605657600000,
+    "first_kline_open_ms": 1605657600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "STRKUSDT": {
+    "listed_ms": 1708387200000,
+    "first_kline_open_ms": 1708387200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "STXUSDT": {
+    "listed_ms": 1571961600000,
+    "first_kline_open_ms": 1571961600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SUIUSDT": {
+    "listed_ms": 1683072000000,
+    "first_kline_open_ms": 1683072000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SUNUSDT": {
+    "listed_ms": 1600646400000,
+    "first_kline_open_ms": 1600646400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SUPERUSDT": {
+    "listed_ms": 1616630400000,
+    "first_kline_open_ms": 1616630400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SUSDT": {
+    "listed_ms": 1736985600000,
+    "first_kline_open_ms": 1736985600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SUSHIUSDT": {
+    "listed_ms": 1598918400000,
+    "first_kline_open_ms": 1598918400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SXTUSDT": {
+    "listed_ms": 1746662400000,
+    "first_kline_open_ms": 1746662400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "SYNUSDT": {
+    "listed_ms": 1677024000000,
+    "first_kline_open_ms": 1677024000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "TAOUSDT": {
+    "listed_ms": 1712793600000,
+    "first_kline_open_ms": 1712793600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "TFUELUSDT": {
+    "listed_ms": 1558656000000,
+    "first_kline_open_ms": 1558656000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "THETAUSDT": {
+    "listed_ms": 1554854400000,
+    "first_kline_open_ms": 1554854400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "THEUSDT": {
+    "listed_ms": 1732665600000,
+    "first_kline_open_ms": 1732665600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "TIAUSDT": {
+    "listed_ms": 1698710400000,
+    "first_kline_open_ms": 1698710400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "TKOUSDT": {
+    "listed_ms": 1617753600000,
+    "first_kline_open_ms": 1617753600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "TLMUSDT": {
+    "listed_ms": 1618272000000,
+    "first_kline_open_ms": 1618272000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "TNSRUSDT": {
+    "listed_ms": 1712534400000,
+    "first_kline_open_ms": 1712534400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "TONUSDT": {
+    "listed_ms": 1723075200000,
+    "first_kline_open_ms": 1723075200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "TOWNSUSDT": {
+    "listed_ms": 1754352000000,
+    "first_kline_open_ms": 1754352000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "TRBUSDT": {
+    "listed_ms": 1598659200000,
+    "first_kline_open_ms": 1598659200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "TREEUSDT": {
+    "listed_ms": 1753747200000,
+    "first_kline_open_ms": 1753747200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "TRUMPUSDT": {
+    "listed_ms": 1737244800000,
+    "first_kline_open_ms": 1737244800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "TRXUSDT": {
+    "listed_ms": 1528675200000,
+    "first_kline_open_ms": 1528675200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "TSTUSDT": {
+    "listed_ms": 1739059200000,
+    "first_kline_open_ms": 1739059200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "TURBOUSDT": {
+    "listed_ms": 1726444800000,
+    "first_kline_open_ms": 1726444800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "TURTLEUSDT": {
+    "listed_ms": 1761091200000,
+    "first_kline_open_ms": 1761091200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "TUSDT": {
+    "listed_ms": 1645747200000,
+    "first_kline_open_ms": 1645747200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "TUTUSDT": {
+    "listed_ms": 1743033600000,
+    "first_kline_open_ms": 1743033600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "TWTUSDT": {
+    "listed_ms": 1611705600000,
+    "first_kline_open_ms": 1611705600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "UMAUSDT": {
+    "listed_ms": 1599609600000,
+    "first_kline_open_ms": 1599609600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "UNIUSDT": {
+    "listed_ms": 1600300800000,
+    "first_kline_open_ms": 1600300800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "USDEUSDT": {
+    "listed_ms": 1757376000000,
+    "first_kline_open_ms": 1757376000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "USUALUSDT": {
+    "listed_ms": 1731974400000,
+    "first_kline_open_ms": 1731974400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "UUSDT": {
+    "listed_ms": 1768262400000,
+    "first_kline_open_ms": 1768262400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "VANAUSDT": {
+    "listed_ms": 1734307200000,
+    "first_kline_open_ms": 1734307200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "VANRYUSDT": {
+    "listed_ms": 1701388800000,
+    "first_kline_open_ms": 1701388800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "VELODROMEUSDT": {
+    "listed_ms": 1734048000000,
+    "first_kline_open_ms": 1734048000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "VETUSDT": {
+    "listed_ms": 1532476800000,
+    "first_kline_open_ms": 1532476800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "VICUSDT": {
+    "listed_ms": 1700784000000,
+    "first_kline_open_ms": 1700784000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "VIRTUALUSDT": {
+    "listed_ms": 1744329600000,
+    "first_kline_open_ms": 1744329600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "VTHOUSDT": {
+    "listed_ms": 1594944000000,
+    "first_kline_open_ms": 1594944000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "WALUSDT": {
+    "listed_ms": 1760054400000,
+    "first_kline_open_ms": 1760054400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "WAXPUSDT": {
+    "listed_ms": 1629676800000,
+    "first_kline_open_ms": 1629676800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "WBETHUSDT": {
+    "listed_ms": 1689724800000,
+    "first_kline_open_ms": 1689724800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "WBTCUSDT": {
+    "listed_ms": 1682640000000,
+    "first_kline_open_ms": 1682640000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "WCTUSDT": {
+    "listed_ms": 1744675200000,
+    "first_kline_open_ms": 1744675200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "WIFUSDT": {
+    "listed_ms": 1709596800000,
+    "first_kline_open_ms": 1709596800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "WINUSDT": {
+    "listed_ms": 1564617600000,
+    "first_kline_open_ms": 1564617600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "WLDUSDT": {
+    "listed_ms": 1690156800000,
+    "first_kline_open_ms": 1690156800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "WLFIUSDT": {
+    "listed_ms": 1756684800000,
+    "first_kline_open_ms": 1756684800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "WOOUSDT": {
+    "listed_ms": 1644278400000,
+    "first_kline_open_ms": 1644278400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "WUSDT": {
+    "listed_ms": 1712102400000,
+    "first_kline_open_ms": 1712102400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "XAIUSDT": {
+    "listed_ms": 1704758400000,
+    "first_kline_open_ms": 1704758400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "XAUTUSDT": {
+    "listed_ms": 1774483200000,
+    "first_kline_open_ms": 1774483200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "XECUSDT": {
+    "listed_ms": 1630627200000,
+    "first_kline_open_ms": 1630627200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "XLMUSDT": {
+    "listed_ms": 1527724800000,
+    "first_kline_open_ms": 1527724800000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "XNOUSDT": {
+    "listed_ms": 1643328000000,
+    "first_kline_open_ms": 1643328000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "XPLUSDT": {
+    "listed_ms": 1758758400000,
+    "first_kline_open_ms": 1758758400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "XRPUSDT": {
+    "listed_ms": 1525392000000,
+    "first_kline_open_ms": 1525392000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "XTZUSDT": {
+    "listed_ms": 1569283200000,
+    "first_kline_open_ms": 1569283200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "XUSDUSDT": {
+    "listed_ms": 1742342400000,
+    "first_kline_open_ms": 1742342400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "XVGUSDT": {
+    "listed_ms": 1622937600000,
+    "first_kline_open_ms": 1622937600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "XVSUSDT": {
+    "listed_ms": 1601942400000,
+    "first_kline_open_ms": 1601942400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "YBUSDT": {
+    "listed_ms": 1760486400000,
+    "first_kline_open_ms": 1760486400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "YFIUSDT": {
+    "listed_ms": 1597017600000,
+    "first_kline_open_ms": 1597017600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "YGGUSDT": {
+    "listed_ms": 1632441600000,
+    "first_kline_open_ms": 1632441600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ZAMAUSDT": {
+    "listed_ms": 1769990400000,
+    "first_kline_open_ms": 1769990400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ZBTUSDT": {
+    "listed_ms": 1760659200000,
+    "first_kline_open_ms": 1760659200000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ZECUSDT": {
+    "listed_ms": 1553126400000,
+    "first_kline_open_ms": 1553126400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ZENUSDT": {
+    "listed_ms": 1593993600000,
+    "first_kline_open_ms": 1593993600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ZILUSDT": {
+    "listed_ms": 1550534400000,
+    "first_kline_open_ms": 1550534400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ZKCUSDT": {
+    "listed_ms": 1757894400000,
+    "first_kline_open_ms": 1757894400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ZKPUSDT": {
+    "listed_ms": 1767744000000,
+    "first_kline_open_ms": 1767744000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ZKUSDT": {
+    "listed_ms": 1718582400000,
+    "first_kline_open_ms": 1718582400000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ZROUSDT": {
+    "listed_ms": 1718841600000,
+    "first_kline_open_ms": 1718841600000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "ZRXUSDT": {
+    "listed_ms": 1551312000000,
+    "first_kline_open_ms": 1551312000000,
+    "delisted_ms": null,
+    "source": "klines"
+  },
+  "\u5e01\u5b89\u4eba\u751fUSDT": {
+    "listed_ms": 1767744000000,
+    "first_kline_open_ms": 1767744000000,
+    "delisted_ms": null,
+    "source": "klines"
+  }
+}

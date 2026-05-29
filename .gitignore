@@ -5,7 +5,9 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-data/
+# data/ — track research outputs (JSON/MD/scripts); ignore bulky/regenerable artifacts
+data/*.jsonl
+data/research/**/scanner_cache/
 logs/
 *.db
 *.db-journal

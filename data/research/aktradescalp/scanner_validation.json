@@ -1,0 +1,419 @@
+{
+  "params": {
+    "u": {
+      "min_vol_24h_usd": 50000000,
+      "max_vol_24h_usd": 2000000000,
+      "min_listing_age_days": 2.0,
+      "max_listing_age_days": 9999.0,
+      "excluded_symbols": [
+        "ADAUSDT",
+        "AVAXUSDT",
+        "BNBUSDT",
+        "BTCUSDT",
+        "DOGEUSDT",
+        "ETHUSDT",
+        "LINKUSDT",
+        "SOLUSDT",
+        "TRXUSDT",
+        "XRPUSDT"
+      ]
+    },
+    "s": {
+      "vol_z_min": 2.0,
+      "oi_z_min": 2.0,
+      "funding_short_bias": 0.001,
+      "funding_long_bias": -0.0005,
+      "rank_topn": 10,
+      "score_min": 2.0,
+      "friday_multiplier": 1.2,
+      "session_start_utc": 7,
+      "session_end_utc": 12
+    },
+    "comparison_top_n": 50,
+    "history_buffer_days": 32
+  },
+  "n_calls_total": 36,
+  "n_out_of_session": 11,
+  "n_no_history": 1,
+  "n_eligible": 24,
+  "recall": {
+    "@1": 6,
+    "@3": 14,
+    "@5": 17,
+    "@10": 17
+  },
+  "per_call": [
+    {
+      "msg_id": 17,
+      "ts_iso": "2026-04-03T11:52:14+00:00",
+      "symbol": "ONTUSDT",
+      "side": "short",
+      "outcome": "HIT",
+      "rank": 4,
+      "score": 2.4,
+      "scanner_side_hint": "long",
+      "n_candidates": 5
+    },
+    {
+      "msg_id": 42,
+      "ts_iso": "2026-04-15T12:05:25+00:00",
+      "symbol": "BLESSUSDT",
+      "side": "short",
+      "outcome": "HIT",
+      "rank": 2,
+      "score": 2.0,
+      "scanner_side_hint": null,
+      "n_candidates": 4
+    },
+    {
+      "msg_id": 43,
+      "ts_iso": "2026-04-15T12:06:31+00:00",
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "outcome": "MISS",
+      "rank": null,
+      "score": null,
+      "scanner_side_hint": null,
+      "n_candidates": 4
+    },
+    {
+      "msg_id": 44,
+      "ts_iso": "2026-04-15T12:11:35+00:00",
+      "symbol": "BLESSUSDT",
+      "side": "short",
+      "outcome": "HIT",
+      "rank": 2,
+      "score": 2.0,
+      "scanner_side_hint": null,
+      "n_candidates": 4
+    },
+    {
+      "msg_id": 45,
+      "ts_iso": "2026-04-16T08:53:38+00:00",
+      "symbol": "PLAYUSDT",
+      "side": "short",
+      "outcome": "HIT",
+      "rank": 4,
+      "score": 2.0,
+      "scanner_side_hint": "short",
+      "n_candidates": 5
+    },
+    {
+      "msg_id": 47,
+      "ts_iso": "2026-04-16T09:23:00+00:00",
+      "symbol": "PLAYUSDT",
+      "side": "short",
+      "outcome": "HIT",
+      "rank": 1,
+      "score": 3.0,
+      "scanner_side_hint": "short",
+      "n_candidates": 4
+    },
+    {
+      "msg_id": 48,
+      "ts_iso": "2026-04-17T09:40:22+00:00",
+      "symbol": "PRLUSDT",
+      "side": "short",
+      "outcome": "MISS",
+      "rank": null,
+      "score": null,
+      "scanner_side_hint": null,
+      "n_candidates": 5
+    },
+    {
+      "msg_id": 49,
+      "ts_iso": "2026-04-17T09:43:43+00:00",
+      "symbol": "PNUTUSDT",
+      "side": "long",
+      "outcome": "HIT",
+      "rank": 3,
+      "score": 2.4,
+      "scanner_side_hint": null,
+      "n_candidates": 5
+    },
+    {
+      "msg_id": 50,
+      "ts_iso": "2026-04-17T09:48:18+00:00",
+      "symbol": "PIPPINUSDT",
+      "side": "short",
+      "outcome": "MISS",
+      "rank": null,
+      "score": null,
+      "scanner_side_hint": null,
+      "n_candidates": 5
+    },
+    {
+      "msg_id": 52,
+      "ts_iso": "2026-04-17T10:56:11+00:00",
+      "symbol": "PRLUSDT",
+      "side": "short",
+      "outcome": "MISS",
+      "rank": null,
+      "score": null,
+      "scanner_side_hint": null,
+      "n_candidates": 4
+    },
+    {
+      "msg_id": 54,
+      "ts_iso": "2026-04-17T14:54:35+00:00",
+      "symbol": "PIPPINUSDT",
+      "side": "short",
+      "outcome": "OUT_OF_SESSION",
+      "rank": null,
+      "score": null
+    },
+    {
+      "msg_id": 66,
+      "ts_iso": "2026-04-24T08:10:35+00:00",
+      "symbol": "LABUSDT",
+      "side": "short",
+      "outcome": "HIT",
+      "rank": 2,
+      "score": 2.4,
+      "scanner_side_hint": null,
+      "n_candidates": 3
+    },
+    {
+      "msg_id": 69,
+      "ts_iso": "2026-04-24T08:31:41+00:00",
+      "symbol": "LABUSDT",
+      "side": "short",
+      "outcome": "HIT",
+      "rank": 2,
+      "score": 2.4,
+      "scanner_side_hint": null,
+      "n_candidates": 3
+    },
+    {
+      "msg_id": 70,
+      "ts_iso": "2026-04-25T07:55:11+00:00",
+      "symbol": "API3USDT",
+      "side": "short",
+      "outcome": "HIT",
+      "rank": 1,
+      "score": 3.0,
+      "scanner_side_hint": null,
+      "n_candidates": 4
+    },
+    {
+      "msg_id": 71,
+      "ts_iso": "2026-04-25T07:58:10+00:00",
+      "symbol": "KATUSDT",
+      "side": "short",
+      "outcome": "HIT",
+      "rank": 2,
+      "score": 3.0,
+      "scanner_side_hint": null,
+      "n_candidates": 4
+    },
+    {
+      "msg_id": 72,
+      "ts_iso": "2026-04-25T08:04:52+00:00",
+      "symbol": "API3USDT",
+      "side": "short",
+      "outcome": "HIT",
+      "rank": 1,
+      "score": 3.0,
+      "scanner_side_hint": null,
+      "n_candidates": 4
+    },
+    {
+      "msg_id": 73,
+      "ts_iso": "2026-04-25T08:19:42+00:00",
+      "symbol": "AXSUSDT",
+      "side": "long",
+      "outcome": "HIT",
+      "rank": 2,
+      "score": 3.0,
+      "scanner_side_hint": null,
+      "n_candidates": 4
+    },
+    {
+      "msg_id": 74,
+      "ts_iso": "2026-04-25T08:23:21+00:00",
+      "symbol": "KATUSDT",
+      "side": "short",
+      "outcome": "HIT",
+      "rank": 3,
+      "score": 3.0,
+      "scanner_side_hint": null,
+      "n_candidates": 4
+    },
+    {
+      "msg_id": 78,
+      "ts_iso": "2026-04-26T17:48:18+00:00",
+      "symbol": "AGTUSDT",
+      "side": "long",
+      "outcome": "OUT_OF_SESSION",
+      "rank": null,
+      "score": null
+    },
+    {
+      "msg_id": 79,
+      "ts_iso": "2026-04-26T20:21:56+00:00",
+      "symbol": "AGTUSDT",
+      "side": "long",
+      "outcome": "OUT_OF_SESSION",
+      "rank": null,
+      "score": null
+    },
+    {
+      "msg_id": 83,
+      "ts_iso": "2026-04-27T11:09:49+00:00",
+      "symbol": "NAORISUSDT",
+      "side": "long",
+      "outcome": "HIT",
+      "rank": 1,
+      "score": 2.0,
+      "scanner_side_hint": null,
+      "n_candidates": 1
+    },
+    {
+      "msg_id": 84,
+      "ts_iso": "2026-04-27T14:03:49+00:00",
+      "symbol": "NAORISUSDT",
+      "side": "long",
+      "outcome": "OUT_OF_SESSION",
+      "rank": null,
+      "score": null
+    },
+    {
+      "msg_id": 89,
+      "ts_iso": "2026-04-28T16:36:15+00:00",
+      "symbol": "ZKJUSDT",
+      "side": "short",
+      "outcome": "OUT_OF_SESSION",
+      "rank": null,
+      "score": null
+    },
+    {
+      "msg_id": 90,
+      "ts_iso": "2026-04-28T17:57:53+00:00",
+      "symbol": "ZKJUSDT",
+      "side": "short",
+      "outcome": "OUT_OF_SESSION",
+      "rank": null,
+      "score": null
+    },
+    {
+      "msg_id": 118,
+      "ts_iso": "2026-05-07T15:08:56+00:00",
+      "symbol": "BILLUSDT",
+      "side": "long",
+      "outcome": "OUT_OF_SESSION",
+      "rank": null,
+      "score": null
+    },
+    {
+      "msg_id": 122,
+      "ts_iso": "2026-05-12T12:05:46+00:00",
+      "symbol": "BILLUSDT",
+      "side": "long",
+      "outcome": "NO_HISTORY",
+      "rank": null,
+      "score": null
+    },
+    {
+      "msg_id": 131,
+      "ts_iso": "2026-05-15T10:00:29+00:00",
+      "symbol": "RIVERUSDT",
+      "side": "long",
+      "outcome": "MISS",
+      "rank": null,
+      "score": null,
+      "scanner_side_hint": null,
+      "n_candidates": 4
+    },
+    {
+      "msg_id": 132,
+      "ts_iso": "2026-05-17T07:10:40+00:00",
+      "symbol": "GUAUSDT",
+      "side": "long",
+      "outcome": "MISS",
+      "rank": null,
+      "score": null,
+      "scanner_side_hint": null,
+      "n_candidates": 0
+    },
+    {
+      "msg_id": 134,
+      "ts_iso": "2026-05-17T08:38:34+00:00",
+      "symbol": "GUAUSDT",
+      "side": "long",
+      "outcome": "MISS",
+      "rank": null,
+      "score": null,
+      "scanner_side_hint": null,
+      "n_candidates": 1
+    },
+    {
+      "msg_id": 144,
+      "ts_iso": "2026-05-20T14:08:04+00:00",
+      "symbol": "EDENUSDT",
+      "side": "short",
+      "outcome": "OUT_OF_SESSION",
+      "rank": null,
+      "score": null
+    },
+    {
+      "msg_id": 145,
+      "ts_iso": "2026-05-20T14:24:03+00:00",
+      "symbol": "EDENUSDT",
+      "side": "short",
+      "outcome": "OUT_OF_SESSION",
+      "rank": null,
+      "score": null
+    },
+    {
+      "msg_id": 149,
+      "ts_iso": "2026-05-21T10:15:52+00:00",
+      "symbol": "PROVEUSDT",
+      "side": "long",
+      "outcome": "HIT",
+      "rank": 1,
+      "score": 3.0,
+      "scanner_side_hint": null,
+      "n_candidates": 5
+    },
+    {
+      "msg_id": 154,
+      "ts_iso": "2026-05-22T05:39:41+00:00",
+      "symbol": "EDENUSDT",
+      "side": "long",
+      "outcome": "OUT_OF_SESSION",
+      "rank": null,
+      "score": null
+    },
+    {
+      "msg_id": 155,
+      "ts_iso": "2026-05-22T06:09:09+00:00",
+      "symbol": "EDENUSDT",
+      "side": "long",
+      "outcome": "OUT_OF_SESSION",
+      "rank": null,
+      "score": null
+    },
+    {
+      "msg_id": 156,
+      "ts_iso": "2026-05-22T08:55:00+00:00",
+      "symbol": "FIDAUSDT",
+      "side": "long",
+      "outcome": "HIT",
+      "rank": 1,
+      "score": 3.5999999999999996,
+      "scanner_side_hint": null,
+      "n_candidates": 8
+    },
+    {
+      "msg_id": 158,
+      "ts_iso": "2026-05-22T09:56:44+00:00",
+      "symbol": "GRASSUSDT",
+      "side": "long",
+      "outcome": "HIT",
+      "rank": 5,
+      "score": 2.4,
+      "scanner_side_hint": null,
+      "n_candidates": 8
+    }
+  ]
+}

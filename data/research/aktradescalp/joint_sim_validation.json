@@ -1,0 +1,16 @@
+{
+  "rank_cutoff": 5,
+  "approved_bars_total": 1324,
+  "joint": {
+    "trades": 15,
+    "wins": 7,
+    "losses": 8,
+    "win_rate": 0.4666666666666667,
+    "total_pnl_usd": 5.128638739470144,
+    "avg_pnl_usd": 0.34190924929800964,
+    "sharpe": 0.728116672886934,
+    "deflated_sharpe": 0.40055620392137037,
+    "max_drawdown_pct": 1.7200578332836072,
+    "annualized_pct": 2.9292176272377155
+  }
+}

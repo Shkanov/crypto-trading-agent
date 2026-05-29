@@ -1,0 +1,1081 @@
+{
+  "generated_at": "2026-05-27T12:04:21.828603+00:00",
+  "days": 365,
+  "params": {
+    "top_n": 3,
+    "rebalance_period_hours": 168,
+    "book_pct_per_side": 0.25,
+    "min_universe_size": 10,
+    "funding_cycle_hours": 8
+  },
+  "universe": [
+    "HYPEUSDT",
+    "ZECUSDT",
+    "XAUUSDT",
+    "WLDUSDT",
+    "MUUSDT",
+    "XAGUSDT",
+    "NEARUSDT",
+    "CLUSDT",
+    "DOGEUSDT",
+    "SNDKUSDT",
+    "BSBUSDT",
+    "FILUSDT",
+    "SUIUSDT",
+    "DRIFTUSDT",
+    "TONUSDT",
+    "ESPORTSUSDT",
+    "PLAYUSDT",
+    "BZUSDT",
+    "1000PEPEUSDT",
+    "TAOUSDT",
+    "CRCLUSDT",
+    "PHAUSDT",
+    "ONDOUSDT",
+    "ADAUSDT",
+    "FETUSDT",
+    "INJUSDT",
+    "LINKUSDT",
+    "LABUSDT",
+    "UBUSDT",
+    "RENDERUSDT"
+  ],
+  "stats": {
+    "weeks": 51,
+    "total_pnl_usd": 1588.617374161203,
+    "long_price_pnl": 1486.3921184520837,
+    "short_price_pnl": 278.28841748376726,
+    "long_funding_pnl": -72.23067252936491,
+    "short_funding_pnl": -66.69767449453073,
+    "fee_pnl": -37.13481475075168,
+    "win_weeks": 37,
+    "win_rate": 0.7254901960784313,
+    "sharpe": 2.8921941772347877,
+    "deflated_sharpe": 2.0489028715169977,
+    "max_drawdown_pct": 8.431117146047574,
+    "annualized_pct": 158.86173741612032,
+    "ending_equity_usd": 2588.6173741612033
+  },
+  "weekly": [
+    {
+      "rebalance_ts_ms": 1748952250052,
+      "universe_n": 18,
+      "longs": [
+        "FILUSDT",
+        "LINKUSDT",
+        "NEARUSDT"
+      ],
+      "shorts": [
+        "ZECUSDT",
+        "TAOUSDT",
+        "SUIUSDT"
+      ],
+      "long_price_pnl": 2.2283999165094137,
+      "short_price_pnl": -6.134062374328148,
+      "long_funding_pnl": -0.2138908333333333,
+      "short_funding_pnl": -0.5720741666666666,
+      "fee_pnl": -0.49999999999999994,
+      "total_pnl_usd": -5.1916274578187345
+    },
+    {
+      "rebalance_ts_ms": 1749557050052,
+      "universe_n": 18,
+      "longs": [
+        "NEARUSDT",
+        "SUIUSDT",
+        "HYPEUSDT"
+      ],
+      "shorts": [
+        "ZECUSDT",
+        "INJUSDT",
+        "WLDUSDT"
+      ],
+      "long_price_pnl": -12.637494182300552,
+      "short_price_pnl": 40.99612461081826,
+      "long_funding_pnl": -0.6115858042505509,
+      "short_funding_pnl": -0.3224132485060353,
+      "fee_pnl": -0.4974041862710906,
+      "total_pnl_usd": 26.92722718949004
+    },
+    {
+      "rebalance_ts_ms": 1750161850052,
+      "universe_n": 18,
+      "longs": [
+        "NEARUSDT",
+        "SUIUSDT",
+        "HYPEUSDT"
+      ],
+      "shorts": [
+        "ZECUSDT",
+        "DRIFTUSDT",
+        "PHAUSDT"
+      ],
+      "long_price_pnl": -18.71908801570742,
+      "short_price_pnl": 11.38912568500708,
+      "long_funding_pnl": -0.3058420771920131,
+      "short_funding_pnl": 0.29308570822936303,
+      "fee_pnl": -0.5108677998658356,
+      "total_pnl_usd": -7.853586499528827
+    },
+    {
+      "rebalance_ts_ms": 1750766650052,
+      "universe_n": 18,
+      "longs": [
+        "FETUSDT",
+        "FILUSDT",
+        "NEARUSDT"
+      ],
+      "shorts": [
+        "INJUSDT",
+        "1000PEPEUSDT",
+        "WLDUSDT"
+      ],
+      "long_price_pnl": -4.995021332128395,
+      "short_price_pnl": 15.494911587435984,
+      "long_funding_pnl": 0.10884699333389204,
+      "short_funding_pnl": -0.0772823115569424,
+      "fee_pnl": -0.5069410066160712,
+      "total_pnl_usd": 10.024513930468467
+    },
+    {
+      "rebalance_ts_ms": 1751371450052,
+      "universe_n": 18,
+      "longs": [
+        "SUIUSDT",
+        "DOGEUSDT",
+        "ZECUSDT"
+      ],
+      "shorts": [
+        "FETUSDT",
+        "NEARUSDT",
+        "ADAUSDT"
+      ],
+      "long_price_pnl": 9.084474314409778,
+      "short_price_pnl": -2.5884480519564916,
+      "long_funding_pnl": -0.1707987010514344,
+      "short_funding_pnl": -0.4710772085060955,
+      "fee_pnl": -0.5119532635813056,
+      "total_pnl_usd": 5.3421970893144515
+    },
+    {
+      "rebalance_ts_ms": 1751976250052,
+      "universe_n": 18,
+      "longs": [
+        "TONUSDT",
+        "1000PEPEUSDT",
+        "ZECUSDT"
+      ],
+      "shorts": [
+        "FETUSDT",
+        "HYPEUSDT",
+        "INJUSDT"
+      ],
+      "long_price_pnl": 31.868964115740976,
+      "short_price_pnl": -38.41467374761675,
+      "long_funding_pnl": -0.5320555469784394,
+      "short_funding_pnl": 0.5099824503795866,
+      "fee_pnl": -0.5146243621259626,
+      "total_pnl_usd": -7.082407090600594
+    },
+    {
+      "rebalance_ts_ms": 1752581050052,
+      "universe_n": 18,
+      "longs": [
+        "WLDUSDT",
+        "ZECUSDT",
+        "HYPEUSDT"
+      ],
+      "shorts": [
+        "DRIFTUSDT",
+        "ONDOUSDT",
+        "PHAUSDT"
+      ],
+      "long_price_pnl": 10.266851967607003,
+      "short_price_pnl": -66.13748281941079,
+      "long_funding_pnl": -0.6831631544642429,
+      "short_funding_pnl": 0.38704242418787116,
+      "fee_pnl": -0.5110831585806626,
+      "total_pnl_usd": -56.67783474066083
+    },
+    {
+      "rebalance_ts_ms": 1753185850052,
+      "universe_n": 18,
+      "longs": [
+        "SUIUSDT",
+        "WLDUSDT",
+        "ZECUSDT"
+      ],
+      "shorts": [
+        "DRIFTUSDT",
+        "HYPEUSDT",
+        "ONDOUSDT"
+      ],
+      "long_price_pnl": -5.047619319687672,
+      "short_price_pnl": 8.91605181103111,
+      "long_funding_pnl": -0.5034885658288752,
+      "short_funding_pnl": 0.5530277798618798,
+      "fee_pnl": -0.48274424121033205,
+      "total_pnl_usd": 3.4352274641661102
+    },
+    {
+      "rebalance_ts_ms": 1753790650052,
+      "universe_n": 19,
+      "longs": [
+        "WLDUSDT",
+        "ZECUSDT",
+        "ESPORTSUSDT"
+      ],
+      "shorts": [
+        "FETUSDT",
+        "NEARUSDT",
+        "1000PEPEUSDT"
+      ],
+      "long_price_pnl": -23.748521673651553,
+      "short_price_pnl": 31.857552367437727,
+      "long_funding_pnl": -0.23974967533747749,
+      "short_funding_pnl": -0.007501084387358456,
+      "fee_pnl": -0.40371821245201267,
+      "total_pnl_usd": 7.458061721609331
+    },
+    {
+      "rebalance_ts_ms": 1754395450052,
+      "universe_n": 20,
+      "longs": [
+        "WLDUSDT",
+        "ZECUSDT",
+        "PLAYUSDT"
+      ],
+      "shorts": [
+        "ESPORTSUSDT",
+        "SUIUSDT",
+        "1000PEPEUSDT"
+      ],
+      "long_price_pnl": 49.14950951122054,
+      "short_price_pnl": -20.654477539786857,
+      "long_funding_pnl": -2.938013302259935,
+      "short_funding_pnl": 0.7161841659880867,
+      "fee_pnl": -0.48819088580321984,
+      "total_pnl_usd": 25.78501194935861
+    },
+    {
+      "rebalance_ts_ms": 1755000250052,
+      "universe_n": 20,
+      "longs": [
+        "LINKUSDT",
+        "ZECUSDT",
+        "PLAYUSDT"
+      ],
+      "shorts": [
+        "RENDERUSDT",
+        "TONUSDT",
+        "FETUSDT"
+      ],
+      "long_price_pnl": 4.697649800899897,
+      "short_price_pnl": 11.002652805043766,
+      "long_funding_pnl": -2.110245893353718,
+      "short_funding_pnl": 0.2393967661168229,
+      "fee_pnl": -0.5010833917778991,
+      "total_pnl_usd": 13.328370086928869
+    },
+    {
+      "rebalance_ts_ms": 1755605050052,
+      "universe_n": 20,
+      "longs": [
+        "FETUSDT",
+        "ZECUSDT",
+        "PLAYUSDT"
+      ],
+      "shorts": [
+        "NEARUSDT",
+        "LINKUSDT",
+        "WLDUSDT"
+      ],
+      "long_price_pnl": -2.528543757446565,
+      "short_price_pnl": 9.92358654287618,
+      "long_funding_pnl": -1.5376864565327355,
+      "short_funding_pnl": 0.271061043886085,
+      "fee_pnl": -0.5077475768213634,
+      "total_pnl_usd": 5.6206697959616
+    },
+    {
+      "rebalance_ts_ms": 1756209850052,
+      "universe_n": 20,
+      "longs": [
+        "PHAUSDT",
+        "PLAYUSDT",
+        "ZECUSDT"
+      ],
+      "shorts": [
+        "NEARUSDT",
+        "FETUSDT",
+        "1000PEPEUSDT"
+      ],
+      "long_price_pnl": 1.792164245880354,
+      "short_price_pnl": 9.202454017504335,
+      "long_funding_pnl": -2.2197483781329286,
+      "short_funding_pnl": 0.3335891792890382,
+      "fee_pnl": -0.5105579117193443,
+      "total_pnl_usd": 8.597901152821454
+    },
+    {
+      "rebalance_ts_ms": 1756814650052,
+      "universe_n": 20,
+      "longs": [
+        "SUIUSDT",
+        "WLDUSDT",
+        "ZECUSDT"
+      ],
+      "shorts": [
+        "FETUSDT",
+        "DRIFTUSDT",
+        "ESPORTSUSDT"
+      ],
+      "long_price_pnl": 130.29586225392683,
+      "short_price_pnl": -21.966513413871823,
+      "long_funding_pnl": -0.4537879736693147,
+      "short_funding_pnl": 0.34802178654266824,
+      "fee_pnl": -0.5148568622957551,
+      "total_pnl_usd": 107.70872579063261
+    },
+    {
+      "rebalance_ts_ms": 1757419450052,
+      "universe_n": 20,
+      "longs": [
+        "ZECUSDT",
+        "HYPEUSDT",
+        "PLAYUSDT"
+      ],
+      "shorts": [
+        "DRIFTUSDT",
+        "ESPORTSUSDT",
+        "ONDOUSDT"
+      ],
+      "long_price_pnl": -10.512360005162938,
+      "short_price_pnl": -34.08267497998745,
+      "long_funding_pnl": -2.6702821377161827,
+      "short_funding_pnl": 1.3011458814462737,
+      "fee_pnl": -0.5687112251910714,
+      "total_pnl_usd": -46.53288246661138
+    },
+    {
+      "rebalance_ts_ms": 1758024250052,
+      "universe_n": 21,
+      "longs": [
+        "FILUSDT",
+        "WLDUSDT",
+        "ZECUSDT"
+      ],
+      "shorts": [
+        "1000PEPEUSDT",
+        "NEARUSDT",
+        "RENDERUSDT"
+      ],
+      "long_price_pnl": -20.931133186334698,
+      "short_price_pnl": -1.5404685402821916,
+      "long_funding_pnl": -0.3488501204758681,
+      "short_funding_pnl": 0.27854774227155166,
+      "fee_pnl": -0.5454447839577655,
+      "total_pnl_usd": -23.087348888778976
+    },
+    {
+      "rebalance_ts_ms": 1758629050052,
+      "universe_n": 21,
+      "longs": [
+        "FILUSDT",
+        "HYPEUSDT",
+        "DRIFTUSDT"
+      ],
+      "shorts": [
+        "INJUSDT",
+        "TONUSDT",
+        "TAOUSDT"
+      ],
+      "long_price_pnl": -10.585984033303923,
+      "short_price_pnl": 13.117680542579082,
+      "long_funding_pnl": -0.646330894989885,
+      "short_funding_pnl": 0.2321944823625498,
+      "fee_pnl": -0.5339011095133762,
+      "total_pnl_usd": 1.5836589871344486
+    },
+    {
+      "rebalance_ts_ms": 1759233850052,
+      "universe_n": 21,
+      "longs": [
+        "LINKUSDT",
+        "ZECUSDT",
+        "ESPORTSUSDT"
+      ],
+      "shorts": [
+        "FILUSDT",
+        "ONDOUSDT",
+        "DOGEUSDT"
+      ],
+      "long_price_pnl": 116.25284473301267,
+      "short_price_pnl": -25.763146039873874,
+      "long_funding_pnl": -0.7532504601358281,
+      "short_funding_pnl": 0.41283552705236265,
+      "fee_pnl": -0.5346929390069434,
+      "total_pnl_usd": 89.61459082104837
+    },
+    {
+      "rebalance_ts_ms": 1759838650052,
+      "universe_n": 21,
+      "longs": [
+        "ZECUSDT",
+        "DRIFTUSDT",
+        "PLAYUSDT"
+      ],
+      "shorts": [
+        "RENDERUSDT",
+        "ESPORTSUSDT",
+        "HYPEUSDT"
+      ],
+      "long_price_pnl": -21.435609334885072,
+      "short_price_pnl": 38.472732402246486,
+      "long_funding_pnl": -1.702644126247822,
+      "short_funding_pnl": 1.0890789363838476,
+      "fee_pnl": -0.5795002344174676,
+      "total_pnl_usd": 15.844057643079974
+    },
+    {
+      "rebalance_ts_ms": 1760443450052,
+      "universe_n": 21,
+      "longs": [
+        "NEARUSDT",
+        "ZECUSDT",
+        "ESPORTSUSDT"
+      ],
+      "shorts": [
+        "FILUSDT",
+        "PHAUSDT",
+        "ONDOUSDT"
+      ],
+      "long_price_pnl": 7.163878092109651,
+      "short_price_pnl": 19.651035031586822,
+      "long_funding_pnl": -1.039451527098267,
+      "short_funding_pnl": -0.5027120567315211,
+      "fee_pnl": -0.5874222632390076,
+      "total_pnl_usd": 24.685327276627678
+    },
+    {
+      "rebalance_ts_ms": 1761048250052,
+      "universe_n": 22,
+      "longs": [
+        "ZECUSDT",
+        "UBUSDT",
+        "LABUSDT"
+      ],
+      "shorts": [
+        "WLDUSDT",
+        "ONDOUSDT",
+        "LINKUSDT"
+      ],
+      "long_price_pnl": 116.59566371620633,
+      "short_price_pnl": -4.809100701095933,
+      "long_funding_pnl": -2.355757679396954,
+      "short_funding_pnl": 0.09593639848687342,
+      "fee_pnl": -0.5997649268773213,
+      "total_pnl_usd": 108.92697680732297
+    },
+    {
+      "rebalance_ts_ms": 1761653050052,
+      "universe_n": 22,
+      "longs": [
+        "ZECUSDT",
+        "UBUSDT",
+        "ESPORTSUSDT"
+      ],
+      "shorts": [
+        "RENDERUSDT",
+        "WLDUSDT",
+        "TONUSDT"
+      ],
+      "long_price_pnl": 26.734303094631723,
+      "short_price_pnl": 62.72167762281101,
+      "long_funding_pnl": 0.7006906269535473,
+      "short_funding_pnl": -0.7901236513224564,
+      "fee_pnl": -0.6542284152809829,
+      "total_pnl_usd": 88.71231927779283
+    },
+    {
+      "rebalance_ts_ms": 1762257850052,
+      "universe_n": 22,
+      "longs": [
+        "SUIUSDT",
+        "UBUSDT",
+        "ESPORTSUSDT"
+      ],
+      "shorts": [
+        "ZECUSDT",
+        "FILUSDT",
+        "PHAUSDT"
+      ],
+      "long_price_pnl": -17.350206076746854,
+      "short_price_pnl": -91.79735435537988,
+      "long_funding_pnl": -2.0656086360442187,
+      "short_funding_pnl": -5.885214108336275,
+      "fee_pnl": -0.6985845749198792,
+      "total_pnl_usd": -117.7969677514271
+    },
+    {
+      "rebalance_ts_ms": 1762862650052,
+      "universe_n": 22,
+      "longs": [
+        "NEARUSDT",
+        "FILUSDT",
+        "ZECUSDT"
+      ],
+      "shorts": [
+        "WLDUSDT",
+        "PHAUSDT",
+        "1000PEPEUSDT"
+      ],
+      "long_price_pnl": -6.096506058410522,
+      "short_price_pnl": 53.45772402048826,
+      "long_funding_pnl": 0.20639151884494483,
+      "short_funding_pnl": -0.9425102881140186,
+      "fee_pnl": -0.6396860910441657,
+      "total_pnl_usd": 45.98541310176451
+    },
+    {
+      "rebalance_ts_ms": 1763467450052,
+      "universe_n": 22,
+      "longs": [
+        "ZECUSDT",
+        "ESPORTSUSDT",
+        "PLAYUSDT"
+      ],
+      "shorts": [
+        "FILUSDT",
+        "WLDUSDT",
+        "TONUSDT"
+      ],
+      "long_price_pnl": 16.62312669791801,
+      "short_price_pnl": 45.03697623000528,
+      "long_funding_pnl": -1.3681776901613638,
+      "short_funding_pnl": -0.46300263123303365,
+      "fee_pnl": -0.6626787975950481,
+      "total_pnl_usd": 59.16624380893384
+    },
+    {
+      "rebalance_ts_ms": 1764072250052,
+      "universe_n": 22,
+      "longs": [
+        "TONUSDT",
+        "ESPORTSUSDT",
+        "UBUSDT"
+      ],
+      "shorts": [
+        "PHAUSDT",
+        "ZECUSDT",
+        "FETUSDT"
+      ],
+      "long_price_pnl": 4.14390140019084,
+      "short_price_pnl": 78.41823649070162,
+      "long_funding_pnl": -2.921099547306533,
+      "short_funding_pnl": -1.9047448262645252,
+      "fee_pnl": -0.692261919499515,
+      "total_pnl_usd": 77.04403159782188
+    },
+    {
+      "rebalance_ts_ms": 1764677050052,
+      "universe_n": 22,
+      "longs": [
+        "LINKUSDT",
+        "ZECUSDT",
+        "LABUSDT"
+      ],
+      "shorts": [
+        "PHAUSDT",
+        "FETUSDT",
+        "WLDUSDT"
+      ],
+      "long_price_pnl": 118.60001964586664,
+      "short_price_pnl": -26.402083767299906,
+      "long_funding_pnl": -0.15224421724072112,
+      "short_funding_pnl": -2.7337104552982243,
+      "fee_pnl": -0.7307839352984259,
+      "total_pnl_usd": 88.58119727072936
+    },
+    {
+      "rebalance_ts_ms": 1765281850052,
+      "universe_n": 22,
+      "longs": [
+        "SUIUSDT",
+        "ZECUSDT",
+        "UBUSDT"
+      ],
+      "shorts": [
+        "PHAUSDT",
+        "FETUSDT",
+        "ONDOUSDT"
+      ],
+      "long_price_pnl": -20.463515936311737,
+      "short_price_pnl": 56.155545138518036,
+      "long_funding_pnl": -0.434579124013117,
+      "short_funding_pnl": -1.3685775239664721,
+      "fee_pnl": -0.7750745339337907,
+      "total_pnl_usd": 33.11379802029292
+    },
+    {
+      "rebalance_ts_ms": 1765886650052,
+      "universe_n": 23,
+      "longs": [
+        "PLAYUSDT",
+        "ZECUSDT",
+        "UBUSDT"
+      ],
+      "shorts": [
+        "FETUSDT",
+        "WLDUSDT",
+        "1000PEPEUSDT"
+      ],
+      "long_price_pnl": 10.444768732838195,
+      "short_price_pnl": 15.123538550805627,
+      "long_funding_pnl": -1.7393870977073562,
+      "short_funding_pnl": -0.3566009340553691,
+      "fee_pnl": -0.7916314329439371,
+      "total_pnl_usd": 22.680687818937166
+    },
+    {
+      "rebalance_ts_ms": 1766491450052,
+      "universe_n": 23,
+      "longs": [
+        "DOGEUSDT",
+        "1000PEPEUSDT",
+        "ZECUSDT"
+      ],
+      "shorts": [
+        "FETUSDT",
+        "WLDUSDT",
+        "FILUSDT"
+      ],
+      "long_price_pnl": 34.102650755209936,
+      "short_price_pnl": -5.472557985100408,
+      "long_funding_pnl": -0.1763473233462502,
+      "short_funding_pnl": -0.6824590960106574,
+      "fee_pnl": -0.8029717768534057,
+      "total_pnl_usd": 26.968314573899214
+    },
+    {
+      "rebalance_ts_ms": 1767096250052,
+      "universe_n": 23,
+      "longs": [
+        "NEARUSDT",
+        "LABUSDT",
+        "PLAYUSDT"
+      ],
+      "shorts": [
+        "FETUSDT",
+        "ZECUSDT",
+        "FILUSDT"
+      ],
+      "long_price_pnl": 27.80238400048403,
+      "short_price_pnl": -76.73284093208159,
+      "long_funding_pnl": -2.31135681283376,
+      "short_funding_pnl": -1.5810220113864206,
+      "fee_pnl": -0.8164559341403554,
+      "total_pnl_usd": -53.639291689958085
+    },
+    {
+      "rebalance_ts_ms": 1767701050052,
+      "universe_n": 23,
+      "longs": [
+        "NEARUSDT",
+        "1000PEPEUSDT",
+        "PLAYUSDT"
+      ],
+      "shorts": [
+        "RENDERUSDT",
+        "TAOUSDT",
+        "ZECUSDT"
+      ],
+      "long_price_pnl": 33.19292373513262,
+      "short_price_pnl": 23.252194202586548,
+      "long_funding_pnl": -2.2379450543513792,
+      "short_funding_pnl": -0.062237816182961064,
+      "fee_pnl": -0.7896362882953762,
+      "total_pnl_usd": 53.35529877888945
+    },
+    {
+      "rebalance_ts_ms": 1768305850052,
+      "universe_n": 24,
+      "longs": [
+        "ZECUSDT",
+        "LABUSDT",
+        "PLAYUSDT"
+      ],
+      "shorts": [
+        "FETUSDT",
+        "DRIFTUSDT",
+        "TONUSDT"
+      ],
+      "long_price_pnl": 42.72267727109018,
+      "short_price_pnl": 34.99125532653281,
+      "long_funding_pnl": -2.797060252303384,
+      "short_funding_pnl": -0.9583525628419798,
+      "fee_pnl": -0.8163139376848211,
+      "total_pnl_usd": 73.1422058447928
+    },
+    {
+      "rebalance_ts_ms": 1768910650052,
+      "universe_n": 24,
+      "longs": [
+        "WLDUSDT",
+        "XAGUSDT",
+        "PLAYUSDT"
+      ],
+      "shorts": [
+        "FETUSDT",
+        "PHAUSDT",
+        "ONDOUSDT"
+      ],
+      "long_price_pnl": 4.3941758850452395,
+      "short_price_pnl": 20.83701727274967,
+      "long_funding_pnl": -4.69834752514582,
+      "short_funding_pnl": -1.3412242712578273,
+      "fee_pnl": -0.8528850406072175,
+      "total_pnl_usd": 18.338736320784044
+    },
+    {
+      "rebalance_ts_ms": 1769515450052,
+      "universe_n": 24,
+      "longs": [
+        "LINKUSDT",
+        "ADAUSDT",
+        "PLAYUSDT"
+      ],
+      "shorts": [
+        "FETUSDT",
+        "DRIFTUSDT",
+        "PHAUSDT"
+      ],
+      "long_price_pnl": 3.2928068825119254,
+      "short_price_pnl": 89.56445761156789,
+      "long_funding_pnl": -1.6308963110725236,
+      "short_funding_pnl": -3.2830422633211724,
+      "fee_pnl": -0.8620544087676095,
+      "total_pnl_usd": 87.0812715109185
+    },
+    {
+      "rebalance_ts_ms": 1770120250052,
+      "universe_n": 24,
+      "longs": [
+        "ZECUSDT",
+        "NEARUSDT",
+        "PLAYUSDT"
+      ],
+      "shorts": [
+        "DRIFTUSDT",
+        "FETUSDT",
+        "TONUSDT"
+      ],
+      "long_price_pnl": -78.51225298268191,
+      "short_price_pnl": 61.82771367546909,
+      "long_funding_pnl": -0.3705151565161683,
+      "short_funding_pnl": -1.000434994885821,
+      "fee_pnl": -0.9055950445230686,
+      "total_pnl_usd": -18.961084503137883
+    },
+    {
+      "rebalance_ts_ms": 1770725050052,
+      "universe_n": 25,
+      "longs": [
+        "PLAYUSDT",
+        "UBUSDT",
+        "NEARUSDT"
+      ],
+      "shorts": [
+        "ADAUSDT",
+        "WLDUSDT",
+        "TONUSDT"
+      ],
+      "long_price_pnl": -68.19831437698443,
+      "short_price_pnl": -30.256072239566166,
+      "long_funding_pnl": 6.979171239936859,
+      "short_funding_pnl": 0.060723705722257756,
+      "fee_pnl": -0.8961145022714997,
+      "total_pnl_usd": -92.31060617316298
+    },
+    {
+      "rebalance_ts_ms": 1771329850052,
+      "universe_n": 25,
+      "longs": [
+        "PLAYUSDT",
+        "CRCLUSDT",
+        "LINKUSDT"
+      ],
+      "shorts": [
+        "FETUSDT",
+        "DRIFTUSDT",
+        "TAOUSDT"
+      ],
+      "long_price_pnl": -45.669400104138454,
+      "short_price_pnl": 52.34312585211366,
+      "long_funding_pnl": -1.7464154163612478,
+      "short_funding_pnl": -1.8268371391894587,
+      "fee_pnl": -0.8499591991849184,
+      "total_pnl_usd": 2.2505139932395792
+    },
+    {
+      "rebalance_ts_ms": 1771934650052,
+      "universe_n": 25,
+      "longs": [
+        "RENDERUSDT",
+        "UBUSDT",
+        "CRCLUSDT"
+      ],
+      "shorts": [
+        "INJUSDT",
+        "FETUSDT",
+        "TONUSDT"
+      ],
+      "long_price_pnl": 51.13541711096839,
+      "short_price_pnl": 18.004173765153467,
+      "long_funding_pnl": -0.5592816395351362,
+      "short_funding_pnl": -1.4708455756470276,
+      "fee_pnl": -0.8510844561815379,
+      "total_pnl_usd": 66.25837920475816
+    },
+    {
+      "rebalance_ts_ms": 1772539450052,
+      "universe_n": 25,
+      "longs": [
+        "ZECUSDT",
+        "XAGUSDT",
+        "CRCLUSDT"
+      ],
+      "shorts": [
+        "PHAUSDT",
+        "RENDERUSDT",
+        "1000PEPEUSDT"
+      ],
+      "long_price_pnl": 37.97970603563513,
+      "short_price_pnl": 1.807042561606635,
+      "long_funding_pnl": 1.409810868489612,
+      "short_funding_pnl": -11.290018567547326,
+      "fee_pnl": -0.8842136457839168,
+      "total_pnl_usd": 29.02232725240013
+    },
+    {
+      "rebalance_ts_ms": 1773144250052,
+      "universe_n": 25,
+      "longs": [
+        "LINKUSDT",
+        "PLAYUSDT",
+        "CRCLUSDT"
+      ],
+      "shorts": [
+        "PHAUSDT",
+        "FILUSDT",
+        "FETUSDT"
+      ],
+      "long_price_pnl": 103.57900670381036,
+      "short_price_pnl": -82.60258944739115,
+      "long_funding_pnl": -3.3196692583826657,
+      "short_funding_pnl": -3.890672568166702,
+      "fee_pnl": -0.8987248094101171,
+      "total_pnl_usd": 12.867350620459746
+    },
+    {
+      "rebalance_ts_ms": 1773749050052,
+      "universe_n": 25,
+      "longs": [
+        "NEARUSDT",
+        "WLDUSDT",
+        "ZECUSDT"
+      ],
+      "shorts": [
+        "PHAUSDT",
+        "FETUSDT",
+        "ADAUSDT"
+      ],
+      "long_price_pnl": -61.2218734328457,
+      "short_price_pnl": -24.761514044080805,
+      "long_funding_pnl": 0.08066621556080274,
+      "short_funding_pnl": -8.362591786011611,
+      "fee_pnl": -0.9051584847203469,
+      "total_pnl_usd": -95.17047153209766
+    },
+    {
+      "rebalance_ts_ms": 1774353850052,
+      "universe_n": 25,
+      "longs": [
+        "INJUSDT",
+        "NEARUSDT",
+        "PLAYUSDT"
+      ],
+      "shorts": [
+        "PHAUSDT",
+        "FETUSDT",
+        "1000PEPEUSDT"
+      ],
+      "long_price_pnl": 12.587531381617168,
+      "short_price_pnl": 18.67787029177087,
+      "long_funding_pnl": -1.5199985586653044,
+      "short_funding_pnl": -3.593270503914712,
+      "fee_pnl": -0.8575732489542981,
+      "total_pnl_usd": 25.29455936185372
+    },
+    {
+      "rebalance_ts_ms": 1774958650052,
+      "universe_n": 28,
+      "longs": [
+        "SUIUSDT",
+        "ADAUSDT",
+        "CRCLUSDT"
+      ],
+      "shorts": [
+        "FETUSDT",
+        "NEARUSDT",
+        "INJUSDT"
+      ],
+      "long_price_pnl": -0.47194739992870316,
+      "short_price_pnl": -6.422524264847546,
+      "long_funding_pnl": -0.6470988858282486,
+      "short_funding_pnl": -1.4709352099196686,
+      "fee_pnl": -0.870220528635225,
+      "total_pnl_usd": -9.88272628915939
+    },
+    {
+      "rebalance_ts_ms": 1775563450052,
+      "universe_n": 30,
+      "longs": [
+        "LABUSDT",
+        "PLAYUSDT",
+        "CRCLUSDT"
+      ],
+      "shorts": [
+        "FETUSDT",
+        "CLUSDT",
+        "BZUSDT"
+      ],
+      "long_price_pnl": 136.86361920114626,
+      "short_price_pnl": 47.06005851791819,
+      "long_funding_pnl": -1.4544938974953838,
+      "short_funding_pnl": -9.071007033963049,
+      "fee_pnl": -0.8652791654906454,
+      "total_pnl_usd": 172.53289762211537
+    },
+    {
+      "rebalance_ts_ms": 1776168250052,
+      "universe_n": 30,
+      "longs": [
+        "FILUSDT",
+        "BSBUSDT",
+        "PLAYUSDT"
+      ],
+      "shorts": [
+        "BZUSDT",
+        "CLUSDT",
+        "FETUSDT"
+      ],
+      "long_price_pnl": 60.7052483931669,
+      "short_price_pnl": 33.70247108844346,
+      "long_funding_pnl": -4.2448481572186125,
+      "short_funding_pnl": 7.9340761429716,
+      "fee_pnl": -0.951545614301703,
+      "total_pnl_usd": 97.14540185306164
+    },
+    {
+      "rebalance_ts_ms": 1776773050052,
+      "universe_n": 30,
+      "longs": [
+        "NEARUSDT",
+        "MUUSDT",
+        "BSBUSDT"
+      ],
+      "shorts": [
+        "PHAUSDT",
+        "WLDUSDT",
+        "FETUSDT"
+      ],
+      "long_price_pnl": 283.47749087990724,
+      "short_price_pnl": 19.327039642344772,
+      "long_funding_pnl": -4.350127958827596,
+      "short_funding_pnl": -2.7501520130363373,
+      "fee_pnl": -1.0001183152282338,
+      "total_pnl_usd": 294.7041322351599
+    },
+    {
+      "rebalance_ts_ms": 1777377850052,
+      "universe_n": 30,
+      "longs": [
+        "CRCLUSDT",
+        "BSBUSDT",
+        "PLAYUSDT"
+      ],
+      "shorts": [
+        "FETUSDT",
+        "WLDUSDT",
+        "PHAUSDT"
+      ],
+      "long_price_pnl": 27.471964949105526,
+      "short_price_pnl": -9.451542461498299,
+      "long_funding_pnl": -5.761854224272073,
+      "short_funding_pnl": -1.8655554335413878,
+      "fee_pnl": -1.1474703813458136,
+      "total_pnl_usd": 9.24554244844795
+    },
+    {
+      "rebalance_ts_ms": 1777982650052,
+      "universe_n": 30,
+      "longs": [
+        "UBUSDT",
+        "MUUSDT",
+        "LABUSDT"
+      ],
+      "shorts": [
+        "BSBUSDT",
+        "BZUSDT",
+        "NEARUSDT"
+      ],
+      "long_price_pnl": 314.74972987034016,
+      "short_price_pnl": 1.3268567525769228,
+      "long_funding_pnl": -7.867154499310949,
+      "short_funding_pnl": -3.5477345323163756,
+      "fee_pnl": -1.1520931525700375,
+      "total_pnl_usd": 303.50960443871975
+    },
+    {
+      "rebalance_ts_ms": 1778587450052,
+      "universe_n": 30,
+      "longs": [
+        "DOGEUSDT",
+        "XAGUSDT",
+        "ESPORTSUSDT"
+      ],
+      "shorts": [
+        "CLUSDT",
+        "BZUSDT",
+        "INJUSDT"
+      ],
+      "long_price_pnl": 27.034610695429663,
+      "short_price_pnl": -28.087368251135437,
+      "long_funding_pnl": -1.0038064634332609,
+      "short_funding_pnl": -5.617859259682131,
+      "fee_pnl": -1.3038479547893973,
+      "total_pnl_usd": -8.978271233610563
+    },
+    {
+      "rebalance_ts_ms": 1779192250052,
+      "universe_n": 30,
+      "longs": [
+        "BSBUSDT",
+        "SNDKUSDT",
+        "MUUSDT"
+      ],
+      "shorts": [
+        "WLDUSDT",
+        "CLUSDT",
+        "TONUSDT"
+      ],
+      "long_price_pnl": 58.483183671170934,
+      "short_price_pnl": -61.29296857737192,
+      "long_funding_pnl": -4.3013129766657,
+      "short_funding_pnl": -1.6898074819418283,
+      "fee_pnl": -1.2993588191725922,
+      "total_pnl_usd": -10.100264183981114
+    }
+  ]
+}

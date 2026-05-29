@@ -1,0 +1,1771 @@
+[
+  {
+    "msg_id": 1,
+    "dt_iso": "2026-03-30T10:54:24+00:00",
+    "text": "Channel created",
+    "tickers": [],
+    "side": "",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 8,
+    "dt_iso": "2026-03-31T05:00:28+00:00",
+    "text": "Channel name was changed to « Kovalev | Scalping »",
+    "tickers": [],
+    "side": "",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 9,
+    "dt_iso": "2026-03-31T11:23:12+00:00",
+    "text": "KERNEL, 1M",
+    "tickers": [],
+    "side": "",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 12,
+    "dt_iso": "2026-04-01T10:17:53+00:00",
+    "text": "BASEDUSDT, 5m. Монета в пик е . Хорошо пробивает шорты, уровни подтверждает.",
+    "tickers": [
+      "BASEDUSDT"
+    ],
+    "side": "",
+    "tf_tags": [
+      "M5"
+    ],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 13,
+    "dt_iso": "2026-04-01T10:47:06+00:00",
+    "text": "ONTUSDT, 5m. Искать точку на пробой.",
+    "tickers": [
+      "ONTUSDT"
+    ],
+    "side": "",
+    "tf_tags": [
+      "M5"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 14,
+    "dt_iso": "2026-04-02T15:29:08+00:00",
+    "text": "ONTUSDT, 5m. Монета не очень чисто ходит, но пробивает импульсно, есть ГиП и лои.",
+    "tickers": [
+      "ONTUSDT"
+    ],
+    "side": "",
+    "tf_tags": [
+      "M5"
+    ],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 15,
+    "dt_iso": "2026-04-03T11:34:20+00:00",
+    "text": "CTSI, 5m. Монета хорошо выходит, но в данный момент уже немного &quot;перегрета&quot;. Стоит наблюдать при появлении хорошей наторговки или повышения активности на пробой.",
+    "tickers": [],
+    "side": "",
+    "tf_tags": [
+      "M5"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 16,
+    "dt_iso": "2026-04-03T11:40:03+00:00",
+    "text": "KERNEL, 15m. Каскад в шорт. Лучше &quot;на потянуть&quot;, импульс вряд ли будет сильный. В идеале если даст зайти заранее. Из минусов - слабая активность в стакане.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [
+      "M15"
+    ],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 17,
+    "dt_iso": "2026-04-03T11:52:14+00:00",
+    "text": "ONTUSDT, 15m . Активный. В шорт не пошел, появилась активность, есть каскад сверху, ждать наторговок.",
+    "tickers": [
+      "ONTUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [
+      "M15"
+    ],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 18,
+    "dt_iso": "2026-04-06T10:45:06+00:00",
+    "text": "TRUUSDT, есть дневной хай, локально искать точку на пробой.",
+    "tickers": [
+      "TRUUSDT"
+    ],
+    "side": "",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 19,
+    "dt_iso": "2026-04-09T09:04:06+00:00",
+    "text": "TNSR, есть лои + закол. Можно рассмотреть подход, но монета на пампе. JOE, есть лои, подходит.",
+    "tickers": [],
+    "side": "",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 21,
+    "dt_iso": "2026-04-09T09:44:19+00:00",
+    "text": "ARIA, 5m. Пробой лонг. Монета в топе роста. Учитывая характер движения нужна наторговка под уровнями или локальный съем ликвидности.",
+    "tickers": [],
+    "side": "long",
+    "tf_tags": [
+      "M5"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 22,
+    "dt_iso": "2026-04-10T03:56:49+00:00",
+    "text": "TNSR, 15M, каскад/наклонка в шорт. Монета очень шумная, долго стоит в проторговке в районе 0,5, ОИ при этом растет, а объем падает. Может заколоть зону и пойти дальше, но локально можно попробовать.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [
+      "M15"
+    ],
+    "setup": "trendline",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 23,
+    "dt_iso": "2026-04-10T04:04:58+00:00",
+    "text": "TNSR, 15M, каскад/наклонка в шорт. Монета очень шумная, долго стоит в проторговке в районе 0,5, ОИ при этом растет, а объем падает. Может заколоть зону и пойти дальше, но локально можно попробовать.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [
+      "M15"
+    ],
+    "setup": "trendline",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 24,
+    "dt_iso": "2026-04-10T08:11:28+00:00",
+    "text": "Вход в пробой каскада, выход на торможении ленты перед уровнем. Основной уровень скорее всего пробьет, но учитывая характер монеты - может дать ощутимый откат перед этим, поэтому вышел. UPD: хорошо, что вышел, вкатила обратно выше точки входа.",
+    "tickers": [],
+    "side": "",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 26,
+    "dt_iso": "2026-04-10T11:09:47+00:00",
+    "text": "BULLA, 15M, каскад/наклонка в шорт. ОИ упал, монета в фазе стекания, объем небольшой, но стопы участников еще должны быть, может дать движение. Идеальный вариант - небольшая наторговка перед последним уровнем с поджатием.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [
+      "M15"
+    ],
+    "setup": "trendline",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 27,
+    "dt_iso": "2026-04-10T11:26:20+00:00",
+    "text": "BULLA, 15M, каскад/наклонка в шорт. ОИ упал, монета в фазе стекания, объем небольшой, но стопы участников еще должны быть, может дать движение. Идеальный вариант - небольшая наторговка перед последним уровнем с поджатием.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [
+      "M15"
+    ],
+    "setup": "trendline",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 28,
+    "dt_iso": "2026-04-10T11:31:19+00:00",
+    "text": "BULLA, 15M, каскад/наклонка в шорт. ОИ упал, монета в фазе стекания, объем небольшой, но стопы участников еще должны быть, может дать движение. Идеальный вариант - небольшая наторговка перед последним уровнем с поджатием.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [
+      "M15"
+    ],
+    "setup": "trendline",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 30,
+    "dt_iso": "2026-04-10T11:38:47+00:00",
+    "text": "ZECUDT, 15M. Пробой лонг. Монета на объемах, часто дает хорошие движения. Есть хаи и загругление. Но сама ситуация - это вторая проторговка на пампе, то есть монета немного перегрета в моменте, поэтому я бы не тянул, но попробовать пробить стоит.",
+    "tickers": [],
+    "side": "long",
+    "tf_tags": [
+      "M15"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 32,
+    "dt_iso": "2026-04-10T12:23:28+00:00",
+    "text": "ZECUDT, 15M. Пробой лонг. Монета на объемах, часто дает хорошие движения. Есть хаи и загругление. Но сама ситуация - это вторая проторговка на пампе, то есть монета немного перегрета в моменте, поэтому я бы не тянул, но попробовать пробить стоит.",
+    "tickers": [],
+    "side": "long",
+    "tf_tags": [
+      "M15"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 33,
+    "dt_iso": "2026-04-10T13:23:19+00:00",
+    "text": "BULLA, 15M, каскад/наклонка в шорт. ОИ упал, монета в фазе стекания, объем небольшой, но стопы участников еще должны быть, может дать движение. Идеальный вариант - небольшая наторговка перед последним уровнем с поджатием.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [
+      "M15"
+    ],
+    "setup": "trendline",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 34,
+    "dt_iso": "2026-04-13T11:44:26+00:00",
+    "text": "币安人生USDT, 15m, пробой лонг. Есть хаи, объем, относительно средняя активность. Монета может импульсно пробивать, жду наторговок. RAVEUSDT, 15m, пробой лонг, круглое. Если монету столько гнали не для того, чтобы пробить 10&#036;, то я не знаю зачем ее гнали. Ждем внятной точки входа, монета любит переснимать ликвидность. TRADOORUSDT, 15m, пробой лонг. Есть понятные хаи, ждем четких формаций на вход.",
+    "tickers": [
+      "RAVEUSDT",
+      "TRADOORUSDT"
+    ],
+    "side": "long",
+    "tf_tags": [
+      "M15"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 38,
+    "dt_iso": "2026-04-13T13:02:16+00:00",
+    "text": "Отработка #RAVEUSDT",
+    "tickers": [
+      "RAVEUSDT"
+    ],
+    "side": "",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 39,
+    "dt_iso": "2026-04-14T14:35:11+00:00",
+    "text": "Китаец, 5m, пробой шорт. Наверх пока не пустили, сильно толкали по стакану по 800-1000кк. Смотреть реакцию на уровень.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [
+      "M5"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 40,
+    "dt_iso": "2026-04-14T15:08:54+00:00",
+    "text": "Китаец, 5m, пробой шорт. Наверх пока не пустили, сильно толкали по стакану по 800-1000кк. Смотреть реакцию на уровень.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [
+      "M5"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 41,
+    "dt_iso": "2026-04-14T15:24:55+00:00",
+    "text": "Получилось немного криво, так как пришлось в моменте отойти от компа, но в целом - ок.",
+    "tickers": [],
+    "side": "",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 42,
+    "dt_iso": "2026-04-15T12:05:25+00:00",
+    "text": "BLESSUSDT, 15M, каскад шорт. Есть цели сверху, но локально хороший каскад, пере которым долго торгуемся. Может дать импульс.",
+    "tickers": [
+      "BLESSUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [
+      "M15"
+    ],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 43,
+    "dt_iso": "2026-04-15T12:06:31+00:00",
+    "text": "ETHUSDT, каскад лонг.",
+    "tickers": [
+      "ETHUSDT"
+    ],
+    "side": "long",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 44,
+    "dt_iso": "2026-04-15T12:11:35+00:00",
+    "text": "BLESSUSDT, 15M, каскад шорт. Есть цели сверху, но локально хороший каскад, пере которым долго торгуемся. Может дать импульс.",
+    "tickers": [
+      "BLESSUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [
+      "M15"
+    ],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 45,
+    "dt_iso": "2026-04-16T08:53:38+00:00",
+    "text": "PLAYUSDT, 15M, пробой шорт. Тут без комментариев. Классика.",
+    "tickers": [
+      "PLAYUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [
+      "M15"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 46,
+    "dt_iso": "2026-04-16T09:19:27+00:00",
+    "text": "BRUSDT, 15M, глобальные уровни, наблюдать подход и реакцию.",
+    "tickers": [
+      "BRUSDT"
+    ],
+    "side": "",
+    "tf_tags": [
+      "M15"
+    ],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 47,
+    "dt_iso": "2026-04-16T09:23:00+00:00",
+    "text": "PLAYUSDT, 15M, пробой шорт. Тут без комментариев. Классика.",
+    "tickers": [
+      "PLAYUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [
+      "M15"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 48,
+    "dt_iso": "2026-04-17T09:40:22+00:00",
+    "text": "PRLUSDT, пробой шорт. Монетка откатилась на 61,8, попытались восстановить, резко слили, есть лои, может продолжить дамп, но вход только с хорошей наторговки.",
+    "tickers": [
+      "PRLUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 49,
+    "dt_iso": "2026-04-17T09:43:43+00:00",
+    "text": "PNUTUSDT, возврат в диапазон, лонг. Можно аккуратно попробовать вернуть в диапазон, много бы не ставил, но вчера монета активно раздавала, объем упал, но не в ноль.",
+    "tickers": [
+      "PNUTUSDT"
+    ],
+    "side": "long",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 50,
+    "dt_iso": "2026-04-17T09:48:18+00:00",
+    "text": "PIPPINUSDT, пробой шорт. Тут без комментариев, классика. ОИ упал сильно, можем дальше стекать, импульса сильного может не быть, если пойдет - потяунть.",
+    "tickers": [
+      "PIPPINUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 51,
+    "dt_iso": "2026-04-17T09:50:03+00:00",
+    "text": "Китаец, пробой, лонг. Стоим уже очень долго, импульс будет, вопрос - когда. Лучше поискать точку заранее с адекватным стопом, если пробивать, то лучше поставить лимитки на закрытие.",
+    "tickers": [],
+    "side": "long",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": true,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 52,
+    "dt_iso": "2026-04-17T10:56:11+00:00",
+    "text": "PRLUSDT, пробой шорт. Монетка откатилась на 61,8, попытались восстановить, резко слили, есть лои, может продолжить дамп, но вход только с хорошей наторговки.",
+    "tickers": [
+      "PRLUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 53,
+    "dt_iso": "2026-04-17T10:57:19+00:00",
+    "text": "Китаец, пробой, лонг. Стоим уже очень долго, импульс будет, вопрос - когда. Лучше поискать точку заранее с адекватным стопом, если пробивать, то лучше поставить лимитки на закрытие.",
+    "tickers": [],
+    "side": "long",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": true,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 54,
+    "dt_iso": "2026-04-17T14:54:35+00:00",
+    "text": "PIPPINUSDT, пробой шорт. Тут без комментариев, классика. ОИ упал сильно, можем дальше стекать, импульса сильного может не быть, если пойдет - потяунть.",
+    "tickers": [
+      "PIPPINUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 55,
+    "dt_iso": "2026-04-17T18:36:23+00:00",
+    "text": "Рынок очень слабый, движения резкие со вкатами и заколами, лучше отдохнуть день-два, депозиты будут целее. Всем отличных выходных&#33;",
+    "tickers": [],
+    "side": "",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 56,
+    "dt_iso": "2026-04-20T15:01:38+00:00",
+    "text": "За сегодня была одна сделка, которую я не успел скинуть заранее и все. Рынок пока не богат на формации.",
+    "tickers": [],
+    "side": "",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 57,
+    "dt_iso": "2026-04-21T16:26:23+00:00",
+    "text": "PIEVERSE, 1m, каскад шорт. Формации сегодня локальные ввиду отсутствия активности, но, что рынок дает, то и берем. НА инструменте что-то вроде ГиП, есть лои, при должном подходе и наторговке можно аккуратно попробовать. RAVE, 1m, пробой шорт. Rave уже давал сегодня точки на шорт, в одной я успел поучаствовать, но не успел скинуть. Сейчас смотрю за уровнями в зоне 1&#036;. Следим за подходом.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": true,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 60,
+    "dt_iso": "2026-04-21T16:37:42+00:00",
+    "text": "Друзья, я делюсь формациями не только здесь, но еще и в публичных каналах. Один из основных - торговый чат BROKE. Рекомендую вступить, там также другие трейдеры делятся своими идеями&#33; Ссылка на чат: https://t.me/+MK7210EnpMg3N2Ni",
+    "tickers": [],
+    "side": "",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 61,
+    "dt_iso": "2026-04-21T17:36:04+00:00",
+    "text": "RAVE, 1m, пробой шорт.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 62,
+    "dt_iso": "2026-04-22T11:12:44+00:00",
+    "text": "RAVE, 5M, каскад шорт Единственное, что пока смотрю. Формация не супер, но на рынке ничего больше нет. Аккуратно, на монете падает объем и открытка. CHIP пока просто смотрю, если будет что-то интересное - сообщу.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [
+      "M5"
+    ],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 63,
+    "dt_iso": "2026-04-22T12:16:26+00:00",
+    "text": "RAVE, 5M, каскад шорт Единственное, что пока смотрю. Формация не супер, но на рынке ничего больше нет. Аккуратно, на монете падает объем и открытка. CHIP пока просто смотрю, если будет что-то интересное - сообщу.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [
+      "M5"
+    ],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 64,
+    "dt_iso": "2026-04-22T19:48:39+00:00",
+    "text": "Не стал пересиживать, слишком резко пошли и вышел объем. Теперь, скорее всего, будет откатывать и наторговываться. Будем наблюдать дальше.",
+    "tickers": [],
+    "side": "",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 65,
+    "dt_iso": "2026-04-24T08:08:29+00:00",
+    "text": "MOVR, пробой шорт. Можно рассмотреть локальный пробой.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 66,
+    "dt_iso": "2026-04-24T08:10:35+00:00",
+    "text": "LABUSDT, наклонка шорт. Также локально, аккуратно.",
+    "tickers": [
+      "LABUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "trendline",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 67,
+    "dt_iso": "2026-04-24T08:11:29+00:00",
+    "text": "Итак: трейдингу можно научить любого? Реальный эксперимент, который провели в 1983 году Richard Dennis и William Eckhardt. Они поспорили о простом: трейдерами рождаются или ими становятся? Ричард утверждал, что это навык, а Уильям считал, что без врождённого «чутья» ничего не получится. Чтобы проверить это, они разместили объявление в газете и начали набирать людей. Туда попали самые разные кандидаты: бармен, охранник, игрок в покер, выпускник средней школы, выпускник по специализации &quot;геология&quot;. То есть люди вообще без какого-либо отношения к рынку. Всего 23 человека, в числе которых 19-и летний парень Куртис Фейс, который заработает на проекте более &#036;30 млн и в последствии напишет книгу об этом. Их отобрали, собрали в группу и начали обучать на протяжении всего нескольких недель. Им дали простую систему: 🟢 где входить, 🟢 где выходить, 🟢 сколько рисковать. После им выдали реальные деньги и отправили торговать. Результат? Большая часть из них начала стабильно зарабатывать. Кто-то больше, кто-то меньше. В целом проект заработал более &#036;100 млн. Куртис Фейс подробно описал весь опыт в книге &quot;Путь черепах&quot; (Way Of The Turtle), которая в последтсвии стала бестселлером. Какой можно сделать вывод? Ричард оказался прав и выиграл пари: &quot;черепашки&quot; показали, что трейдинг - это навык . Все участники проекта оказались успешными, хоть и в разной степени. И вот тут напрашивается еще один вывод. Правила были едины и все их четко знали, но далеко не все смогли им следовать одинаково. Почему? Система требовала: 🟢 закрывать убыток, 🟢 не лезть лишний раз, 🟢 не пытаться угадать, 🟢 не вмешиваться. Но психика у всех разная и у кого-то она брала верх. Стратегия продолжала работать, но люди принимали разные решения. И ведь это не только про трейдинг. Ты знаешь, что нужно делать в жизни: 🟢 правильно питаться, 🟢 ложиться спать вовремя, 🟢 не откладывать дела, 🟢 делать неприятные вещи вовремя. Но знать и делать - это разные вещи. В трейдинге это просто видно быстрее и, самое главное, - дороже. Поэтому «путь черепах» - это не только история про то, что любого можно научить торговать. Это история про систему и дисциплину. И про очень неудобную правду: Тебе не нужно больше знаний. Тебе нужно начать делать то, что ты уже знаешь.",
+    "tickers": [],
+    "side": "",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 69,
+    "dt_iso": "2026-04-24T08:31:41+00:00",
+    "text": "LABUSDT, наклонка шорт. Также локально, аккуратно.",
+    "tickers": [
+      "LABUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "trendline",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 70,
+    "dt_iso": "2026-04-25T07:55:11+00:00",
+    "text": "API3USDT, пробой шорт. При должном подходе к каскаду можно попробовать пробить. Монета на пампе, ОИ растет, поэтому без потягушек, чисто скальп.",
+    "tickers": [
+      "API3USDT"
+    ],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 71,
+    "dt_iso": "2026-04-25T07:58:10+00:00",
+    "text": "KATUSDT, каскад шорт. При должном подходе можно попробовать пробить. Фандинг отрицательный скоро&#33;",
+    "tickers": [
+      "KATUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 72,
+    "dt_iso": "2026-04-25T08:04:52+00:00",
+    "text": "API3USDT, пробой шорт. При должном подходе к каскаду можно попробовать пробить. Монета на пампе, ОИ растет, поэтому без потягушек, чисто скальп.",
+    "tickers": [
+      "API3USDT"
+    ],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 73,
+    "dt_iso": "2026-04-25T08:19:42+00:00",
+    "text": "AXSUSDT, пробой лонг. Наторговывается на H4 хае. Он заколот, но цена не ушла, стоит в наторговке, можно взять выход.",
+    "tickers": [
+      "AXSUSDT"
+    ],
+    "side": "long",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 74,
+    "dt_iso": "2026-04-25T08:23:21+00:00",
+    "text": "KATUSDT, каскад шорт. При должном подходе можно попробовать пробить. Фандинг отрицательный скоро&#33;",
+    "tickers": [
+      "KATUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 77,
+    "dt_iso": "2026-04-25T08:26:55+00:00",
+    "text": "Все, что успел взять сидя в кафе с ноутом 😃 Надеюсь, у вас получше результат. Выходные радуют последнее время.",
+    "tickers": [],
+    "side": "",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 78,
+    "dt_iso": "2026-04-26T17:48:18+00:00",
+    "text": "AGTUSDT, 5M, каскад лонг. Стоим под H4 уровнем, закололи его, но слив не пошел, есть локальные уровни. В идеале входить либо в локальный слом структуры или пробой после наторговки уровня.",
+    "tickers": [
+      "AGTUSDT"
+    ],
+    "side": "long",
+    "tf_tags": [
+      "M5"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": true,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 79,
+    "dt_iso": "2026-04-26T20:21:56+00:00",
+    "text": "AGTUSDT, 5M, каскад лонг. Стоим под H4 уровнем, закололи его, но слив не пошел, есть локальные уровни. В идеале входить либо в локальный слом структуры или пробой после наторговки уровня.",
+    "tickers": [
+      "AGTUSDT"
+    ],
+    "side": "long",
+    "tf_tags": [
+      "M5"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": true,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 81,
+    "dt_iso": "2026-04-27T11:03:27+00:00",
+    "text": "AGTUSDT, 5M, каскад шорт. Каскад достаточно широкий, поэтому входить буду с хорошей наторговки. Пока наблюдать. OPGUSDT, исторические лои. Тут пока сыро, нужны еще касания и/или наторговка, но исторический лои - обязательно наблюдать.",
+    "tickers": [
+      "AGTUSDT",
+      "OPGUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [
+      "M5"
+    ],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 83,
+    "dt_iso": "2026-04-27T11:09:49+00:00",
+    "text": "NAORISUSDT, 1M, наклонка лонг.",
+    "tickers": [
+      "NAORISUSDT"
+    ],
+    "side": "long",
+    "tf_tags": [],
+    "setup": "trendline",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 84,
+    "dt_iso": "2026-04-27T14:03:49+00:00",
+    "text": "NAORISUSDT, 1M, наклонка лонг.",
+    "tickers": [
+      "NAORISUSDT"
+    ],
+    "side": "long",
+    "tf_tags": [],
+    "setup": "trendline",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 85,
+    "dt_iso": "2026-04-27T17:10:03+00:00",
+    "text": "Еще пара сделок сегодня, PRL и ETH.",
+    "tickers": [],
+    "side": "",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 87,
+    "dt_iso": "2026-04-28T08:35:15+00:00",
+    "text": "ETHUSDT, эфир, пробой шорт. Пока рано, ждем осмысленных точек. DAMUSDT, пробой шорт. Аналогично - ждем. Инструмент ходит неприятно + его скоро делистят, поэтому рискованно, но если будет хорошая точка можно попробовать. ZKJUSDT, фандинг -2% через 25 минут .",
+    "tickers": [
+      "DAMUSDT",
+      "ETHUSDT",
+      "ZKJUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 89,
+    "dt_iso": "2026-04-28T16:36:15+00:00",
+    "text": "ZKJUSDT, наклонка шорт. Есть формация на пробой в шорт, наклонка + ГиП. Можно попробовать при наторговке.",
+    "tickers": [
+      "ZKJUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "breakout+trendline",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 90,
+    "dt_iso": "2026-04-28T17:57:53+00:00",
+    "text": "ZKJUSDT, наклонка шорт. Есть формация на пробой в шорт, наклонка + ГиП. Можно попробовать при наторговке.",
+    "tickers": [
+      "ZKJUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "breakout+trendline",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 92,
+    "dt_iso": "2026-04-29T09:54:19+00:00",
+    "text": "Друзья, рынок сегодня выходной, денег в нем нет. Возможно, это связано с вечерними новостями (заседание и пресс-конференция FOMC), в свете предстоящей смены главы ФРС. В любом случае, в таком рынке самое главное - усилить селект и пропускать сомнительные ситуации. Рынок будет&#33; А пока лучше дать себе возможность отдохнуть 😊",
+    "tickers": [],
+    "side": "",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 93,
+    "dt_iso": "2026-04-30T08:56:41+00:00",
+    "text": "NAORISUSDT, 5m, наклонка шорт. Монета запильная, но давала хорошие палки в шорт. Были попытки восстановления, но закончились съемом ликвидности сверху. Если не продавят опять вверх, подожмут к наклонке, можно попробовать, но не завышать объем. ZBTUSDT, 1h, пробой шорт. Лои в шорт глобальные, пока наблюдать и искать точку входа локально.",
+    "tickers": [
+      "NAORISUSDT",
+      "ZBTUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [
+      "M5"
+    ],
+    "setup": "breakout+trendline",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 95,
+    "dt_iso": "2026-04-30T14:35:08+00:00",
+    "text": "Немного сделок сегодня. Было много мелких неприятных стопов, но там где рынок дал - вошел на рабочий объем и забрал, что дают.",
+    "tickers": [],
+    "side": "",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 98,
+    "dt_iso": "2026-04-30T14:39:12+00:00",
+    "text": "NAORISUSDT 5m, слом структуры, есть D1 цели. Задроченная монета, но формация неплохая + когда-то уже пора ей выйти. ОИ не падает.",
+    "tickers": [
+      "NAORISUSDT"
+    ],
+    "side": "",
+    "tf_tags": [
+      "D1",
+      "M5"
+    ],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 99,
+    "dt_iso": "2026-04-30T14:55:15+00:00",
+    "text": "AIGENSY 5m, пробой шорт .",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [
+      "M5"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 100,
+    "dt_iso": "2026-04-30T18:30:50+00:00",
+    "text": "AIGENSY 5m, пробой шорт.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [
+      "M5"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 101,
+    "dt_iso": "2026-05-01T09:32:43+00:00",
+    "text": "ORCA 5m, пробой шорт. Не супер-активная монета, но пока весь рынок такой, наблюдаю. RAVE, погладываю.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [
+      "M5"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 103,
+    "dt_iso": "2026-05-01T09:37:39+00:00",
+    "text": "BIO, 5m, каскад шорт.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [
+      "M5"
+    ],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 104,
+    "dt_iso": "2026-05-01T11:20:45+00:00",
+    "text": "BIO, 5m, каскад шорт.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [
+      "M5"
+    ],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 105,
+    "dt_iso": "2026-05-02T06:10:07+00:00",
+    "text": "ORCA 5m, каскад шорт. Наторговывается уже 2 дня, объем и ОИ закономерно падают, монета пилит, но может дать импульс, так как была активной и стопы должны были скопиться. BIO 1h, пробой лонг. Есть часовые уровни, в шорт не пустили, скорее всего пойдет пробивать, точку на вход пока жду.",
+    "tickers": [],
+    "side": "both",
+    "tf_tags": [
+      "M5"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 107,
+    "dt_iso": "2026-05-02T10:43:57+00:00",
+    "text": "ORCA 5m, каскад шорт.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [
+      "M5"
+    ],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 108,
+    "dt_iso": "2026-05-02T10:57:15+00:00",
+    "text": "BUSDT 5m, пробой лонг. Ликвидность с обеих сторон, в таких случаях лучше действовать по факту пробоя в одну из сторон и входить в наторгованный уровень каскада, не стараться набраться заранее. Приоритет - лонг до 0.4.",
+    "tickers": [],
+    "side": "long",
+    "tf_tags": [
+      "M5"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 109,
+    "dt_iso": "2026-05-02T11:38:28+00:00",
+    "text": "Отработка #ORCAUSDT и #LABUSDT LAB не передерживал по озвученным выше причинам. Смотрим за BUSDT.",
+    "tickers": [
+      "LABUSDT",
+      "ORCAUSDT"
+    ],
+    "side": "",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 111,
+    "dt_iso": "2026-05-05T08:45:10+00:00",
+    "text": "4USDT, наклонка шорт Есть цели сверху, поэтому не 10/10, но формация красивая.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "trendline",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 113,
+    "dt_iso": "2026-05-05T09:32:00+00:00",
+    "text": "Всем, кто высидел эту пилу #4USDT - мое почтение. Вышел лимитками, не стал ловить импульс больше. Плюсом сделка по #LABUSDT",
+    "tickers": [
+      "LABUSDT"
+    ],
+    "side": "",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 115,
+    "dt_iso": "2026-05-05T13:14:35+00:00",
+    "text": "4USDT, 15m, каскад шорт. Только если хорошо наторгует.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [
+      "M15"
+    ],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 116,
+    "dt_iso": "2026-05-07T04:45:00+00:00",
+    "text": "Удалось забрать движение по FHE с целью до 0,5 вчера. А также шорт по ней. Не успевал скинуть сюда сегодня буду активнее.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": true,
+    "anchor": false,
+    "recap_like": true,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 118,
+    "dt_iso": "2026-05-07T15:08:56+00:00",
+    "text": "BILLUSDT, пробой лонг. Листинг, пока везут вверх, может пробить.",
+    "tickers": [
+      "BILLUSDT"
+    ],
+    "side": "long",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 119,
+    "dt_iso": "2026-05-08T05:37:12+00:00",
+    "text": "LABUSDT, 15m, пробой круглого 5.0. Сложная монета, свечи плохие, но импульсы дает. Стоит под пятеркой. Лучше поискать на выносах заранее, но пробой тоже можно попробовать.",
+    "tickers": [
+      "LABUSDT"
+    ],
+    "side": "",
+    "tf_tags": [
+      "M15"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 120,
+    "dt_iso": "2026-05-08T14:48:21+00:00",
+    "text": "Никак #LAB не выйдет, порадовал #NOT . За лабом продолжаю следить.",
+    "tickers": [],
+    "side": "",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 121,
+    "dt_iso": "2026-05-12T10:27:30+00:00",
+    "text": "BUSDT, наклонка лонг. Есть цели на дневном графике.",
+    "tickers": [],
+    "side": "long",
+    "tf_tags": [],
+    "setup": "trendline",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 122,
+    "dt_iso": "2026-05-12T12:05:46+00:00",
+    "text": "BILLUSDT, пробой лонг. Активный, наблюдаем.",
+    "tickers": [
+      "BILLUSDT"
+    ],
+    "side": "long",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 123,
+    "dt_iso": "2026-05-13T12:15:42+00:00",
+    "text": "BUSDT, наклонка лонг. Есть цели на дневном графике.",
+    "tickers": [],
+    "side": "long",
+    "tf_tags": [],
+    "setup": "trendline",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 125,
+    "dt_iso": "2026-05-14T07:21:28+00:00",
+    "text": "#RIVERUSDT пробой шорт. Объемов мало, но есть симпатичный каскад, можно присмотреться. #TRUTHUSDT есть дневные хаи, пока жду формирования формаций",
+    "tickers": [
+      "RIVERUSDT",
+      "TRUTHUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 127,
+    "dt_iso": "2026-05-14T17:11:30+00:00",
+    "text": "#QUSDT , каскад шорт.",
+    "tickers": [],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 129,
+    "dt_iso": "2026-05-15T08:36:54+00:00",
+    "text": "#QUSDT 15m, пробой шорт еще актуален. #PLAYUSDT 5m, пробой лонг. Монета не структурная, но пробои дает резкие. Пока наблюдать.",
+    "tickers": [
+      "PLAYUSDT"
+    ],
+    "side": "both",
+    "tf_tags": [
+      "M15",
+      "M5"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 131,
+    "dt_iso": "2026-05-15T10:00:29+00:00",
+    "text": "#RIVERUSDT 15m, пробой лонг",
+    "tickers": [
+      "RIVERUSDT"
+    ],
+    "side": "long",
+    "tf_tags": [
+      "M15"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 132,
+    "dt_iso": "2026-05-17T07:10:40+00:00",
+    "text": "#GUAUSDT пробой лонг. На рынке очень мало формаций, одним глазом посматриваю GUA, локальный каскадик со съемом ликвидности снизу + есть одиночный хай выше. ОИ растет.",
+    "tickers": [
+      "GUAUSDT"
+    ],
+    "side": "long",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 134,
+    "dt_iso": "2026-05-17T08:38:34+00:00",
+    "text": "#GUAUSDT пробой лонг. На рынке очень мало формаций, одним глазом посматриваю GUA, локальный каскадик со съемом ликвидности снизу + есть одиночный хай выше. ОИ растет.",
+    "tickers": [
+      "GUAUSDT"
+    ],
+    "side": "long",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 135,
+    "dt_iso": "2026-05-18T05:39:01+00:00",
+    "text": "18.05 #MAGMAUSDT мало объема, но очень любопытная дневка и в кластерах не прям пусто #EDENUSDT удержали 0,05, вернулся объем, нужно поглядывать лонги на идею дойти до 0,1 #FIDAUSDT есть цели по дневке, удержали ретест 0,02, уже был вход в слом и хороший импульс, наблюдать в лонги #BSBUSDT дал хороший импульс на пробое 0,6, участник есть, наблюдать в лонги #BTSUSDT ключ - 65к, вероятно идем туда",
+    "tickers": [
+      "BSBUSDT",
+      "BTSUSDT",
+      "EDENUSDT",
+      "FIDAUSDT",
+      "MAGMAUSDT"
+    ],
+    "side": "",
+    "tf_tags": [
+      "D1"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 140,
+    "dt_iso": "2026-05-18T17:33:48+00:00",
+    "text": "Что-то удалось пособирать сегодня. #FIDAUSDT ждал на продолжение, но отлучился от компьютера, хорошо пошла от структуры. #EDENUSDT в моменте давал 12%, вкатил, ну ок.",
+    "tickers": [
+      "EDENUSDT",
+      "FIDAUSDT"
+    ],
+    "side": "",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": true,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 144,
+    "dt_iso": "2026-05-20T14:08:04+00:00",
+    "text": "#EDENUSDT наклонка шорт",
+    "tickers": [
+      "EDENUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "trendline",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 145,
+    "dt_iso": "2026-05-20T14:24:03+00:00",
+    "text": "#EDENUSDT наклонка шорт",
+    "tickers": [
+      "EDENUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "trendline",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 146,
+    "dt_iso": "2026-05-21T07:24:11+00:00",
+    "text": "#EDENUSDT пробой шорт #BSBUSDT пробой шорт",
+    "tickers": [
+      "BSBUSDT",
+      "EDENUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 148,
+    "dt_iso": "2026-05-21T07:49:28+00:00",
+    "text": "#EDENUSDT пробой шорт #BSBUSDT пробой шорт",
+    "tickers": [
+      "BSBUSDT",
+      "EDENUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 149,
+    "dt_iso": "2026-05-21T10:15:52+00:00",
+    "text": "PROVEUSDT пробой лонг",
+    "tickers": [
+      "PROVEUSDT"
+    ],
+    "side": "long",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 150,
+    "dt_iso": "2026-05-21T10:20:38+00:00",
+    "text": "#BANANAS31 D1+M5, пробой лонг Стоим под дневкой",
+    "tickers": [],
+    "side": "long",
+    "tf_tags": [
+      "D1",
+      "M5"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": true,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 152,
+    "dt_iso": "2026-05-21T12:23:51+00:00",
+    "text": "#FIDAUSDT стоим перед дневкой",
+    "tickers": [
+      "FIDAUSDT"
+    ],
+    "side": "",
+    "tf_tags": [
+      "D1"
+    ],
+    "setup": "",
+    "scratch": false,
+    "anchor": true,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 153,
+    "dt_iso": "2026-05-21T12:50:13+00:00",
+    "text": "#FIDAUSDT стоим перед дневкой",
+    "tickers": [
+      "FIDAUSDT"
+    ],
+    "side": "",
+    "tf_tags": [
+      "D1"
+    ],
+    "setup": "",
+    "scratch": false,
+    "anchor": true,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 154,
+    "dt_iso": "2026-05-22T05:39:41+00:00",
+    "text": "EDENUSDT M15 пробой лонг",
+    "tickers": [
+      "EDENUSDT"
+    ],
+    "side": "long",
+    "tf_tags": [
+      "M15"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 155,
+    "dt_iso": "2026-05-22T06:09:09+00:00",
+    "text": "EDENUSDT M15 пробой лонг",
+    "tickers": [
+      "EDENUSDT"
+    ],
+    "side": "long",
+    "tf_tags": [
+      "M15"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 156,
+    "dt_iso": "2026-05-22T08:55:00+00:00",
+    "text": "#FIDAUSDT 1D + 5M пробой лонг Стоим под дневкой + впереди 0,05.",
+    "tickers": [
+      "FIDAUSDT"
+    ],
+    "side": "long",
+    "tf_tags": [
+      "D1",
+      "M5"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": true,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 158,
+    "dt_iso": "2026-05-22T09:56:44+00:00",
+    "text": "#GRASSUSDT D1+M5 пробой лонг Стоим под мощными дневными уровнями",
+    "tickers": [
+      "GRASSUSDT"
+    ],
+    "side": "long",
+    "tf_tags": [
+      "D1",
+      "M5"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": true,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 160,
+    "dt_iso": "2026-05-26T06:00:56+00:00",
+    "text": "#PHAUSDT D1, хаи Открытка растет, объемы держатся, пробой скорее всего будет, ждем осмысленной точки",
+    "tickers": [
+      "PHAUSDT"
+    ],
+    "side": "",
+    "tf_tags": [
+      "D1"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 161,
+    "dt_iso": "2026-05-26T06:32:32+00:00",
+    "text": "#UBUSDT пробой лонг 0,2",
+    "tickers": [
+      "UBUSDT"
+    ],
+    "side": "long",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 162,
+    "dt_iso": "2026-05-26T06:37:31+00:00",
+    "text": "#UBUSDT пробой лонг 0,2",
+    "tickers": [
+      "UBUSDT"
+    ],
+    "side": "long",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 163,
+    "dt_iso": "2026-05-26T08:03:47+00:00",
+    "text": "#PHAUSDT D1, хаи Открытка растет, объемы держатся, пробой скорее всего будет, ждем осмысленной точки",
+    "tickers": [
+      "PHAUSDT"
+    ],
+    "side": "",
+    "tf_tags": [
+      "D1"
+    ],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 164,
+    "dt_iso": "2026-05-26T15:56:52+00:00",
+    "text": "#PHAUSDT можно посмотреть в пробой 0,5",
+    "tickers": [
+      "PHAUSDT"
+    ],
+    "side": "",
+    "tf_tags": [],
+    "setup": "breakout",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 170,
+    "dt_iso": "2026-05-27T06:02:06+00:00",
+    "text": "#DRIFTUSDT наклонка шорт Пока вижу только это, закололи дневку, может скорректируемся поглубже, но на сильное движение я бы не рассчитывал, сильно упали уже и на дневке ретест наклонки сверху. Слежу за #PHAUSDT #ESPORTSUSDT #UBUSDT #BSBUSDT #MUUSDT #SNDKUSDT",
+    "tickers": [
+      "BSBUSDT",
+      "DRIFTUSDT",
+      "ESPORTSUSDT",
+      "MUUSDT",
+      "PHAUSDT",
+      "SNDKUSDT",
+      "UBUSDT"
+    ],
+    "side": "short",
+    "tf_tags": [
+      "D1"
+    ],
+    "setup": "trendline",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  },
+  {
+    "msg_id": 172,
+    "dt_iso": "2026-05-27T06:10:29+00:00",
+    "text": "Есть еще LABUSDT, красиво, но нелик, на свое усмотрение",
+    "tickers": [
+      "LABUSDT"
+    ],
+    "side": "",
+    "tf_tags": [],
+    "setup": "",
+    "scratch": false,
+    "anchor": false,
+    "recap_like": false,
+    "fire_emoji": false
+  }
+]

@@ -1,0 +1,96 @@
+{
+  "generated_at": 1780036569558,
+  "args": {
+    "carry_json": "data/research/strategy_tuning/funding_carry_20260527_124532_pit.json",
+    "pairs_json": "data/research/strategy_tuning/pairs_20260527_105505.json",
+    "meanrev_fet": "FETUSDT",
+    "meanrev_sol": "SOLUSDT",
+    "bars": 8760,
+    "lookback_days": 90,
+    "rebalance_days": 30,
+    "turnover_threshold": 0.5,
+    "reference_equity_usd": 10000.0,
+    "min_active_days": 0,
+    "max_weight": 1.0
+  },
+  "n_days": 357,
+  "first_day_ms": 1748908800000,
+  "last_day_ms": 1779667200000,
+  "strategies": {
+    "carry": {
+      "n_days_with_pnl": 357,
+      "total_pnl_usd": 203.6604687961424
+    },
+    "pairs_ETHBTC": {
+      "n_days_with_pnl": 14,
+      "total_pnl_usd": -32.047343310947326
+    },
+    "meanrev_FET": {
+      "n_days_with_pnl": 13,
+      "total_pnl_usd": -109.6715226646617
+    },
+    "meanrev_SOL": {
+      "n_days_with_pnl": 20,
+      "total_pnl_usd": 29.787261364018708
+    }
+  },
+  "results": {
+    "equal": {
+      "n_days": 357,
+      "mean_daily_pct": 0.0006423589928890149,
+      "std_daily_pct": 0.02043933799639626,
+      "sharpe_annual": 0.6004231315972527,
+      "max_drawdown_pct": 0.7885357056885108,
+      "total_return_pct": 0.22883873003172184,
+      "annualized_pct": 0.23397276328487315,
+      "calmar": 0.29671803267371333,
+      "avg_turnover": 0.0,
+      "n_rebalances": 11,
+      "final_weights": {
+        "carry": 0.25,
+        "pairs_ETHBTC": 0.25,
+        "meanrev_FET": 0.25,
+        "meanrev_SOL": 0.25
+      },
+      "fallbacks": 0
+    },
+    "inverse_vol": {
+      "n_days": 357,
+      "mean_daily_pct": -0.004732900692641543,
+      "std_daily_pct": 0.05642496081592982,
+      "sharpe_annual": -1.6025166781358917,
+      "max_drawdown_pct": 1.7631072334374318,
+      "total_return_pct": -1.6810964517920524,
+      "annualized_pct": -1.7184425486094224,
+      "calmar": -0.9746670627963285,
+      "avg_turnover": 0.3813962533920655,
+      "n_rebalances": 11,
+      "final_weights": {
+        "carry": 0.3275731572315377,
+        "pairs_ETHBTC": 0.12612387439459863,
+        "meanrev_FET": 0.16769916543600974,
+        "meanrev_SOL": 0.378603802937854
+      },
+      "fallbacks": 0
+    },
+    "hrp": {
+      "n_days": 357,
+      "mean_daily_pct": -0.0018302118182572606,
+      "std_daily_pct": 0.015707106930146084,
+      "sharpe_annual": -2.22613545874746,
+      "max_drawdown_pct": 0.7643251719415958,
+      "total_return_pct": -0.6516983000573129,
+      "annualized_pct": -0.6662534268787046,
+      "calmar": -0.8716884532093035,
+      "avg_turnover": 0.2684538041468201,
+      "n_rebalances": 11,
+      "final_weights": {
+        "carry": 0.3631955907303455,
+        "pairs_ETHBTC": 0.05478244734585974,
+        "meanrev_FET": 0.09685200725998483,
+        "meanrev_SOL": 0.4851699546638099
+      },
+      "fallbacks": 7
+    }
+  }
+}

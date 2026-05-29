@@ -1,0 +1,90 @@
+{
+  "corpus_replay": {
+    "strategy": "cascade_replay",
+    "trades": 36,
+    "wins": 18,
+    "losses": 18,
+    "total_pnl_usd": 50.55089681805468,
+    "avg_pnl_usd": 1.4041915782792966,
+    "win_rate": 0.5,
+    "sharpe": 4.142274935239466,
+    "deflated_sharpe": 3.930835561709546,
+    "max_drawdown_pct": 1.8202287944537643,
+    "annualized_pct": 37.71940852863365
+  },
+  "random_baseline": [
+    {
+      "strategy": "cascade_replay",
+      "trades": 36,
+      "wins": 14,
+      "losses": 22,
+      "total_pnl_usd": 2.807515845950708,
+      "avg_pnl_usd": 0.07798655127640856,
+      "win_rate": 0.3888888888888889,
+      "sharpe": 0.4046470600647751,
+      "deflated_sharpe": 0.19320768653485515,
+      "max_drawdown_pct": 1.3476073305717329,
+      "annualized_pct": 1.7386948611189963
+    },
+    {
+      "strategy": "cascade_replay",
+      "trades": 35,
+      "wins": 16,
+      "losses": 19,
+      "total_pnl_usd": -7.4062712882670105,
+      "avg_pnl_usd": -0.21160775109334315,
+      "win_rate": 0.45714285714285713,
+      "sharpe": -1.0437274604150302,
+      "deflated_sharpe": 0.0,
+      "max_drawdown_pct": 1.8347979631460503,
+      "annualized_pct": -4.42784074289159
+    },
+    {
+      "strategy": "cascade_replay",
+      "trades": 35,
+      "wins": 17,
+      "losses": 18,
+      "total_pnl_usd": 0.8790065529814681,
+      "avg_pnl_usd": 0.02511447294232766,
+      "win_rate": 0.4857142857142857,
+      "sharpe": 0.15215255423502777,
+      "deflated_sharpe": 0.0,
+      "max_drawdown_pct": 2.1523645688926187,
+      "annualized_pct": 0.5626669641298985
+    },
+    {
+      "strategy": "cascade_replay",
+      "trades": 35,
+      "wins": 8,
+      "losses": 27,
+      "total_pnl_usd": -44.876364263813926,
+      "avg_pnl_usd": -1.2821818361089694,
+      "win_rate": 0.22857142857142856,
+      "sharpe": -8.548165089786046,
+      "deflated_sharpe": 0.0,
+      "max_drawdown_pct": 4.651437071903819,
+      "annualized_pct": -29.22259438401858
+    },
+    {
+      "strategy": "cascade_replay",
+      "trades": 35,
+      "wins": 15,
+      "losses": 20,
+      "total_pnl_usd": -16.811064357061987,
+      "avg_pnl_usd": -0.48031612448748534,
+      "win_rate": 0.42857142857142855,
+      "sharpe": -2.597791265987239,
+      "deflated_sharpe": 0.0,
+      "max_drawdown_pct": 2.1505210135604855,
+      "annualized_pct": -10.975585896617329
+    }
+  ],
+  "detector_only": {
+    "trades": 1350,
+    "wins": 538,
+    "win_rate": 0.3985185185185185,
+    "total_pnl": -715.2347164635295,
+    "avg_pnl": -0.5298034936766886
+  },
+  "edge_vs_random_bps_on_equity": 17.78392515773509
+}

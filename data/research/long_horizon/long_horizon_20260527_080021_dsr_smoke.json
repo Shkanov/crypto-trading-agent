@@ -1,0 +1,64 @@
+{
+  "generated_at": "2026-05-27T08:00:21.419827+00:00",
+  "bars": 5000,
+  "funding_days": 30,
+  "universe": [
+    "BTCUSDT"
+  ],
+  "results": [
+    {
+      "symbol": "BTCUSDT",
+      "indicator": {
+        "strategy": "indicator",
+        "trades": 119,
+        "wins": 45,
+        "losses": 74,
+        "total_pnl_usd": -66.6166851628977,
+        "avg_pnl_usd": -0.5598040769991403,
+        "win_rate": 0.37815126050420167,
+        "sharpe": -10.290986571972123,
+        "deflated_sharpe": 0.0,
+        "max_drawdown_usd": 69.03045077940135,
+        "max_drawdown_pct": 6.887122492950414,
+        "starting_equity_usd": 1000.0,
+        "ending_equity_usd": 933.3833148371024,
+        "annualized_pct": -46.69431182452361,
+        "elapsed_s": 4.4
+      },
+      "meanrev": {
+        "strategy": "mean_reversion",
+        "trades": 11,
+        "wins": 3,
+        "losses": 8,
+        "total_pnl_usd": -7.578100623330999,
+        "avg_pnl_usd": -0.6889182384846363,
+        "win_rate": 0.2727272727272727,
+        "sharpe": -6.558777525063234,
+        "deflated_sharpe": 0.0,
+        "max_drawdown_usd": 8.877085256016585,
+        "max_drawdown_pct": 0.8877085256016585,
+        "starting_equity_usd": 1000.0,
+        "ending_equity_usd": 992.4218993766689,
+        "annualized_pct": -5.311795275885542,
+        "elapsed_s": 4.3
+      },
+      "funding": {
+        "strategy": "funding_harvest",
+        "trades": 0,
+        "wins": 0,
+        "losses": 0,
+        "total_pnl_usd": 0.0,
+        "avg_pnl_usd": 0.0,
+        "win_rate": 0.0,
+        "sharpe": 0.0,
+        "deflated_sharpe": 0.0,
+        "max_drawdown_usd": 0.0,
+        "max_drawdown_pct": 0.0,
+        "starting_equity_usd": 1000.0,
+        "ending_equity_usd": 1000.0,
+        "annualized_pct": 0.0,
+        "elapsed_s": 0.6
+      }
+    }
+  ]
+}

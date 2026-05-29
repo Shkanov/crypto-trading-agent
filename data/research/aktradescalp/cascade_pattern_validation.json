@@ -1,0 +1,252 @@
+{
+  "params": {
+    "swing_k": 2,
+    "cascade_min_pivots": 3,
+    "cascade_leg_min_atr_mult": 0.0,
+    "cascade_max_pullback": 0.9,
+    "cascade_slope_r2_min": 0.3,
+    "cascade_lookback_bars": 80,
+    "natorgovka_min_touches": 1,
+    "natorgovka_compression_bars_min": 2,
+    "natorgovka_compression_bars_max": 14,
+    "natorgovka_max_dist_atr": 0.8,
+    "natorgovka_range_contraction_min": 0.1,
+    "natorgovka_max_wick_beyond_pct": 0.5,
+    "trigger_body_pct_min": 0.5,
+    "trigger_vol_mult_min": 1.2,
+    "trigger_close_beyond_pct_atr": 0.05,
+    "htf_level_tol_atr": 1.0,
+    "htf_lookback_bars": 480
+  },
+  "calls_total": 36,
+  "detected_any_side": 8,
+  "detected_correct_side": 7,
+  "false_positive_rate": 0.015873015873015872,
+  "false_positive_n": 630,
+  "per_call": [
+    {
+      "msg_id": 17,
+      "outcome": "HIT_wrong_side",
+      "off": -1,
+      "det_side": "long",
+      "his_side": "short",
+      "confluence": 2,
+      "r2": 0.0,
+      "n_pivots": 0,
+      "max_pullback": 0,
+      "compression_bars": 2,
+      "range_contraction": 0.35166994106090443,
+      "trigger_vol_mult": 2.1557949717708267
+    },
+    {
+      "msg_id": 42,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 43,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 44,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 45,
+      "outcome": "HIT_side_match",
+      "off": 1,
+      "det_side": "short",
+      "his_side": "short",
+      "confluence": 2,
+      "r2": 0.0,
+      "n_pivots": 0,
+      "max_pullback": 0,
+      "compression_bars": 2,
+      "range_contraction": 0.104277129727818,
+      "trigger_vol_mult": 2.281269902328476
+    },
+    {
+      "msg_id": 47,
+      "outcome": "HIT_side_match",
+      "off": -1,
+      "det_side": "short",
+      "his_side": "short",
+      "confluence": 2,
+      "r2": 0.0,
+      "n_pivots": 0,
+      "max_pullback": 0,
+      "compression_bars": 2,
+      "range_contraction": 0.104277129727818,
+      "trigger_vol_mult": 2.281269902328476
+    },
+    {
+      "msg_id": 48,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 49,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 50,
+      "outcome": "HIT_side_match",
+      "off": 1,
+      "det_side": "short",
+      "his_side": "short",
+      "confluence": 3,
+      "r2": 0.4360929001340245,
+      "n_pivots": 12,
+      "max_pullback": 5.99999999999991,
+      "compression_bars": 5,
+      "range_contraction": 0.17827626918536166,
+      "trigger_vol_mult": 1.9541542869017108
+    },
+    {
+      "msg_id": 52,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 54,
+      "outcome": "HIT_side_match",
+      "off": 0,
+      "det_side": "short",
+      "his_side": "short",
+      "confluence": 2,
+      "r2": 0.0,
+      "n_pivots": 0,
+      "max_pullback": 0,
+      "compression_bars": 5,
+      "range_contraction": 0.13550135501355176,
+      "trigger_vol_mult": 9.781535290020512
+    },
+    {
+      "msg_id": 66,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 69,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 70,
+      "outcome": "HIT_side_match",
+      "off": 1,
+      "det_side": "short",
+      "his_side": "short",
+      "confluence": 2,
+      "r2": 0.0,
+      "n_pivots": 0,
+      "max_pullback": 0,
+      "compression_bars": 3,
+      "range_contraction": 0.42944472745797224,
+      "trigger_vol_mult": 2.2839613660254283
+    },
+    {
+      "msg_id": 71,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 72,
+      "outcome": "HIT_side_match",
+      "off": 0,
+      "det_side": "short",
+      "his_side": "short",
+      "confluence": 2,
+      "r2": 0.0,
+      "n_pivots": 0,
+      "max_pullback": 0,
+      "compression_bars": 3,
+      "range_contraction": 0.42944472745797224,
+      "trigger_vol_mult": 2.2839613660254283
+    },
+    {
+      "msg_id": 73,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 74,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 78,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 79,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 83,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 84,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 89,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 90,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 118,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 122,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 131,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 132,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 134,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 144,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 145,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 149,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 154,
+      "outcome": "HIT_side_match",
+      "off": -1,
+      "det_side": "long",
+      "his_side": "long",
+      "confluence": 2,
+      "r2": 0.0,
+      "n_pivots": 0,
+      "max_pullback": 0,
+      "compression_bars": 2,
+      "range_contraction": 0.26339285714285654,
+      "trigger_vol_mult": 1.4641054029569973
+    },
+    {
+      "msg_id": 155,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 156,
+      "outcome": "MISS"
+    },
+    {
+      "msg_id": 158,
+      "outcome": "MISS"
+    }
+  ]
+}
