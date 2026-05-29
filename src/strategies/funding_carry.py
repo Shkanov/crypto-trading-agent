@@ -146,6 +146,51 @@ def funding_window_change(
     return sum(recent) / len(recent) - sum(prior) / len(prior)
 
 
+def price_momentum(
+    closes_8h: dict[int, float],
+    ts_ms: int,
+    lookback_hours: int,
+) -> Optional[float]:
+    """Trailing price return over ``lookback_hours`` ending at ``ts_ms``:
+    ``price(ts) / price(ts - lookback) - 1``. Uses the most recent 8h close
+    at or before each timestamp (PIT-safe). Returns ``None`` when either
+    endpoint has no close available."""
+    if not closes_8h:
+        return None
+
+    def _nearest(t: int) -> Optional[float]:
+        ks = [k for k in closes_8h if k <= t]
+        return closes_8h[max(ks)] if ks else None
+
+    now_px = _nearest(ts_ms)
+    past_px = _nearest(ts_ms - lookback_hours * 3_600_000)
+    if now_px is None or past_px is None or past_px <= 0:
+        return None
+    return now_px / past_px - 1.0
+
+
+def rank_for_carry_momentum(
+    funding_by_symbol: dict[str, float],
+    momentum_by_symbol: dict[str, float],
+    p: Optional[CarryParams] = None,
+) -> tuple[list[str], list[str]]:
+    """Card 2 — carry double-sorted by momentum *agreement*. Start from the
+    plain funding ranking (highest-funding longs, lowest-funding shorts), then
+    keep only names where momentum agrees with the carry direction: a long must
+    have positive trailing momentum, a short must have negative momentum.
+
+    Legs may shrink below ``top_n`` when momentum disagrees — that breadth loss
+    is intentional and is the binding risk the decay-defense thesis trades off
+    against cleaner names (the driver leaves the unfilled slot's capital
+    undeployed rather than concentrating). Symbols missing a momentum reading
+    are treated as disagreeing (dropped), conservatively."""
+    p = p or CarryParams()
+    longs, shorts = rank_for_carry(funding_by_symbol, p)
+    longs = [s for s in longs if momentum_by_symbol.get(s, 0.0) > 0.0]
+    shorts = [s for s in shorts if momentum_by_symbol.get(s, 0.0) < 0.0]
+    return longs, shorts
+
+
 def build_rebalance(
     funding_by_symbol: dict[str, float],
     equity_usd: float,

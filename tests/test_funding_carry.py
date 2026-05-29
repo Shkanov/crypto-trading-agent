@@ -8,8 +8,54 @@ from src.strategies.funding_carry import (
     build_rebalance,
     cycle_pnl,
     funding_window_change,
+    price_momentum,
     rank_for_carry,
+    rank_for_carry_momentum,
 )
+
+
+# ---------------------------------------------------------------------------
+# Price momentum + momentum-conditioned carry ranking (Card 2)
+
+
+def test_price_momentum_trailing_return() -> None:
+    _h = 3_600_000
+    ts = 1000 * _h
+    closes = {ts - 200 * _h: 100.0, ts - 24 * _h: 110.0, ts: 120.0}
+    # 24h lookback: 120/110 - 1
+    m = price_momentum(closes, ts, lookback_hours=24)
+    assert m is not None and math.isclose(m, 120.0 / 110.0 - 1.0)
+
+
+def test_price_momentum_pit_safe_uses_close_at_or_before() -> None:
+    _h = 3_600_000
+    ts = 1000 * _h
+    # A future close after ts must be ignored.
+    closes = {ts - 48 * _h: 100.0, ts - 24 * _h: 100.0, ts + 8 * _h: 999.0}
+    m = price_momentum(closes, ts, lookback_hours=24)
+    assert m is not None and math.isclose(m, 0.0)
+
+
+def test_price_momentum_none_when_missing_endpoint() -> None:
+    assert price_momentum({}, 1000, 24) is None
+
+
+def test_rank_for_carry_momentum_keeps_only_agreeing_names() -> None:
+    # Funding: A,B high (long candidates); D,E low (short candidates).
+    funding = {"A": 0.01, "B": 0.009, "C": 0.0, "D": -0.009, "E": -0.01}
+    # Momentum agrees for A (up) and E (down), disagrees for B (down) and D (up).
+    mom = {"A": 0.05, "B": -0.05, "C": 0.0, "D": 0.05, "E": -0.05}
+    longs, shorts = rank_for_carry_momentum(funding, mom, CarryParams(top_n=2))
+    assert longs == ["A"]          # B dropped: funding-long but momentum-down
+    assert shorts == ["E"]         # D dropped: funding-short but momentum-up
+
+
+def test_rank_for_carry_momentum_drops_missing_momentum() -> None:
+    funding = {"A": 0.01, "B": 0.009, "D": -0.009, "E": -0.01}
+    mom = {"A": 0.05}              # others missing → treated as disagreeing
+    longs, shorts = rank_for_carry_momentum(funding, mom, CarryParams(top_n=2))
+    assert longs == ["A"]
+    assert shorts == []
 
 
 # ---------------------------------------------------------------------------
