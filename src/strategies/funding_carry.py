@@ -169,6 +169,27 @@ def price_momentum(
     return now_px / past_px - 1.0
 
 
+def trailing_quote_volume(
+    volume_8h: dict[int, float],
+    ts_ms: int,
+    window_hours: int = 24,
+) -> Optional[float]:
+    """Sum of quote volume over the trailing window ``(ts-w, ts]``, from 8h
+    kline quote-volume keyed by close_time. PIT-safe (only bars at or before
+    ``ts_ms``). Returns ``None`` when no bars fall in the window (driver treats
+    the symbol as not-yet-eligible that rebalance).
+
+    Used to build a **point-in-time** volume universe: rank candidates by their
+    volume *as of each rebalance* rather than applying today's volume leaders
+    retroactively across the whole backtest (the selection look-ahead the
+    health-check surfaced)."""
+    if not volume_8h:
+        return None
+    lo = ts_ms - window_hours * 3_600_000
+    tot = sum(v for t, v in volume_8h.items() if lo < t <= ts_ms)
+    return tot if tot > 0 else None
+
+
 def rank_for_carry_momentum(
     funding_by_symbol: dict[str, float],
     momentum_by_symbol: dict[str, float],

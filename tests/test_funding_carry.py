@@ -11,7 +11,29 @@ from src.strategies.funding_carry import (
     price_momentum,
     rank_for_carry,
     rank_for_carry_momentum,
+    trailing_quote_volume,
 )
+
+
+def test_trailing_quote_volume_sums_window_pit_safe() -> None:
+    _h = 3_600_000
+    ts = 1000 * _h
+    vol = {
+        ts - 30 * _h: 5.0,   # outside 24h window
+        ts - 16 * _h: 10.0,  # inside
+        ts - 8 * _h: 20.0,   # inside
+        ts + 8 * _h: 999.0,  # future — must be excluded
+    }
+    v = trailing_quote_volume(vol, ts, window_hours=24)
+    assert v is not None and math.isclose(v, 30.0)
+
+
+def test_trailing_quote_volume_none_when_empty_window() -> None:
+    _h = 3_600_000
+    ts = 1000 * _h
+    vol = {ts - 200 * _h: 7.0}  # only outside the window
+    assert trailing_quote_volume(vol, ts, window_hours=24) is None
+    assert trailing_quote_volume({}, ts, window_hours=24) is None
 
 
 # ---------------------------------------------------------------------------
