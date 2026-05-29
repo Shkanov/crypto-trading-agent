@@ -7,8 +7,59 @@ from src.strategies.funding_carry import (
     CarryParams,
     build_rebalance,
     cycle_pnl,
+    funding_window_change,
     rank_for_carry,
 )
+
+
+# ---------------------------------------------------------------------------
+# Δfunding signal (Card 1)
+
+_H = 3_600_000  # 1h in ms
+
+
+def _events(start_ms: int, n: int, step_h: int, rate: float):
+    """n funding events at `rate`, every `step_h` hours from start_ms."""
+    return [(start_ms + i * step_h * _H, rate) for i in range(n)]
+
+
+def test_funding_window_change_positive_when_rising() -> None:
+    ts = 100 * 24 * _H
+    w = 7 * 24  # 1-week windows
+    # prior window [ts-2w, ts-w): low funding; recent [ts-w, ts): high funding.
+    prior = _events(ts - 2 * w * _H, 21, 8, 0.0001)    # 8h cycles, 21/week
+    recent = _events(ts - w * _H, 21, 8, 0.0010)
+    d = funding_window_change(prior + recent, ts, window_hours=w)
+    assert d is not None and d > 0
+    assert math.isclose(d, 0.0010 - 0.0001, abs_tol=1e-9)
+
+
+def test_funding_window_change_negative_when_falling() -> None:
+    ts = 100 * 24 * _H
+    w = 7 * 24
+    prior = _events(ts - 2 * w * _H, 21, 8, 0.0010)
+    recent = _events(ts - w * _H, 21, 8, 0.0001)
+    d = funding_window_change(prior + recent, ts, window_hours=w)
+    assert d is not None and d < 0
+
+
+def test_funding_window_change_none_without_two_windows() -> None:
+    ts = 100 * 24 * _H
+    w = 7 * 24
+    # Only recent window populated → prior empty → None.
+    recent = _events(ts - w * _H, 21, 8, 0.0005)
+    assert funding_window_change(recent, ts, window_hours=w) is None
+
+
+def test_funding_window_change_is_pit_safe() -> None:
+    # Events at/after ts must be ignored (look-ahead guard).
+    ts = 100 * 24 * _H
+    w = 7 * 24
+    prior = _events(ts - 2 * w * _H, 21, 8, 0.0002)
+    recent = _events(ts - w * _H, 21, 8, 0.0002)
+    future = _events(ts, 5, 8, 0.5)  # huge future spike — must NOT leak in
+    d = funding_window_change(prior + recent + future, ts, window_hours=w)
+    assert d is not None and math.isclose(d, 0.0, abs_tol=1e-9)
 
 
 # ---------------------------------------------------------------------------

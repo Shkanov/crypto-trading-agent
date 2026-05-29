@@ -118,6 +118,34 @@ def rank_for_carry(
     return longs, shorts
 
 
+def funding_window_change(
+    funding_events: list[tuple[int, float]],
+    ts_ms: int,
+    window_hours: int = 7 * 24,
+) -> Optional[float]:
+    """Δfunding signal (Card 1): mean funding over the trailing window
+    ``[ts-w, ts)`` minus mean funding over the prior window ``[ts-2w, ts-w)``.
+
+    Positive ⇒ funding has been *rising* into ``ts_ms``. Rationale: funding
+    levels are ~0.97-0.99 autocorrelated, so the level is near a unit root and
+    carries little new information; the first difference (the repricing
+    surprise) is near-orthogonal to the level and harder to arbitrage away than
+    the now-compressed static carry yield.
+
+    PIT-safe: uses only funding events strictly before ``ts_ms``. Returns
+    ``None`` when either window is empty (driver drops the symbol that cycle),
+    so early rebalances require ~2 windows of prior funding history.
+    """
+    w_ms = window_hours * 3_600_000
+    recent_lo = ts_ms - w_ms
+    prior_lo = ts_ms - 2 * w_ms
+    recent = [r for (t, r) in funding_events if recent_lo <= t < ts_ms]
+    prior = [r for (t, r) in funding_events if prior_lo <= t < recent_lo]
+    if not recent or not prior:
+        return None
+    return sum(recent) / len(recent) - sum(prior) / len(prior)
+
+
 def build_rebalance(
     funding_by_symbol: dict[str, float],
     equity_usd: float,

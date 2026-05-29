@@ -40,7 +40,7 @@ import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 import numpy as np
 from dotenv import load_dotenv
@@ -191,6 +191,7 @@ def simulate_carry(
     start_equity: float,
     costs: Costs,
     pit_log: Optional[dict[str, SymbolListing]] = None,
+    signal_fn: Optional[Callable[[list[tuple[int, float]], int], Optional[float]]] = None,
 ) -> list[WeeklyResult]:
     """Walk weekly rebalances over [start_ms, end_ms].
 
@@ -209,15 +210,19 @@ def simulate_carry(
     results: list[WeeklyResult] = []
     equity = start_equity
     ts = start_ms
+    # The per-symbol ranking signal. Default = current funding rate (validated
+    # carry). Card 1 (Δfunding) passes a window-change fn; build_rebalance /
+    # rank_for_carry are signal-agnostic (they rank whatever scalar they get).
+    signal_fn = signal_fn or _funding_rate_at
 
     while ts + rebalance_step <= end_ms:
         next_ts = ts + rebalance_step
 
-        # Build funding snapshot at `ts` from each symbol's history.
+        # Build ranking-signal snapshot at `ts` from each symbol's history.
         snapshot: dict[str, float] = {}
         pit_drops = 0
         for sym, hist in histories.items():
-            r = _funding_rate_at(hist.funding, ts)
+            r = signal_fn(hist.funding, ts)
             if r is None:
                 continue
             if pit_log is not None and not is_active_at(pit_log, sym, ts):
