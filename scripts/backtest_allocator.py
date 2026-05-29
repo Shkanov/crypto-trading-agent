@@ -129,12 +129,16 @@ def simulate_allocator_walk(
     rebalance_days: int,
     lookback_days: int,
     turnover_threshold: float,
+    min_active_days: int = 0,
+    max_weight: float = 1.0,
 ) -> tuple[np.ndarray, list[dict], dict[str, float]]:
     """Day-by-day walk: rebalance at every `rebalance_days` boundary using the
     trailing `lookback_days` window, compute daily portfolio return as
     Σ w_i * r_i. Returns (portfolio_returns_pct, rebalance_log, final_weights).
 
-    First period uses equal-weight while history accumulates."""
+    `min_active_days` / `max_weight` mirror the live evidence floor + weight cap
+    so the backtest reflects the deployed allocator. First period uses
+    equal-weight while history accumulates."""
     syms = list(returns_matrix.keys())
     n_days = len(next(iter(returns_matrix.values())))
     weights = {s: 1.0 / len(syms) for s in syms}
@@ -150,6 +154,8 @@ def simulate_allocator_walk(
                 window, method=method, fallback=fallback,
                 turnover_threshold=turnover_threshold,
                 prev_weights=weights,
+                min_active_days=min_active_days,
+                max_weight=max_weight,
             )
             weights = dict(result.weights)
             rebalance_log.append({
@@ -220,6 +226,11 @@ async def amain() -> None:
     ap.add_argument("--rebalance-days", type=int, default=30)
     ap.add_argument("--turnover-threshold", type=float, default=0.5)
     ap.add_argument("--reference-equity", type=float, default=10_000.0)
+    ap.add_argument("--min-active-days", type=int, default=30,
+                     help="Evidence floor: zero sleeves below this many active "
+                          "days in the lookback window (0 disables).")
+    ap.add_argument("--max-weight", type=float, default=0.35,
+                     help="Cap on any single sleeve's weight (1.0 disables).")
     ap.add_argument("--out-dir", default="data/research/strategy_tuning")
     args = ap.parse_args()
 
@@ -300,6 +311,8 @@ async def amain() -> None:
             rebalance_days=args.rebalance_days,
             lookback_days=args.lookback_days,
             turnover_threshold=args.turnover_threshold,
+            min_active_days=args.min_active_days,
+            max_weight=args.max_weight,
         )
         metrics = portfolio_metrics(portfolio_returns)
         # Average L1 turnover across rebalances (excludes any fallback)
@@ -350,6 +363,8 @@ async def amain() -> None:
             "rebalance_days": args.rebalance_days,
             "turnover_threshold": args.turnover_threshold,
             "reference_equity_usd": args.reference_equity,
+            "min_active_days": args.min_active_days,
+            "max_weight": args.max_weight,
         },
         "n_days": len(day_grid),
         "first_day_ms": day_grid[0],

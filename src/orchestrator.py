@@ -1178,6 +1178,8 @@ class Orchestrator:
             fallback=self.s.allocator_fallback,
             turnover_threshold=self.s.allocator_hrp_turnover_threshold,
             prev_weights=self.allocator_weights or None,
+            min_active_days=self.s.allocator_min_active_days,
+            max_weight=self.s.allocator_max_weight,
         )
         self.allocator_prev_weights = dict(self.allocator_weights)
         self.allocator_weights = dict(result.weights)
