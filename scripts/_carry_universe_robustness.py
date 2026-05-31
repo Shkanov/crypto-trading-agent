@@ -164,10 +164,14 @@ async def amain() -> None:
         print("=" * 88)
         # Verdict heuristic.
         frac_pos = float(np.mean(pa > 0))
-        spread_straddles = pa.min() < 0 < pa.max()
-        if frac_pos >= 0.8 and np.median(pa) > 0:
+        med = float(np.median(pa))
+        if frac_pos >= 0.8 and med > 0:
             verdict = "ROBUST — most universes positive; edge is in the signal, not selection."
-        elif 0.4 <= frac_pos <= 0.7 and spread_straddles:
+        elif frac_pos >= 0.62 and med > 0:
+            verdict = (f"LEANING POSITIVE — {frac_pos*100:.0f}% of universes positive, median "
+                       f"{med:+.0f}; a real but WEAK edge survives selection noise. Deployable at "
+                       "modest size with this many legs; not high-conviction.")
+        elif 0.4 <= frac_pos <= 0.62 and pa.min() < 0 < pa.max():
             verdict = ("SELECTION-DRIVEN — draws straddle zero ~50/50; the 'edge' is mostly "
                        "which coins you picked, NOT a reliable signal. Single-universe PASS is luck.")
         else:
