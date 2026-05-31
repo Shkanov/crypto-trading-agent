@@ -96,6 +96,21 @@ the momentum indicator crosses zero.
 **Does it work?** No — falsified on every coin we tested. It flips so often that
 trading fees alone bury it (lost on all 6 tests). *(Code: `scripts/backtest_macd_cross.py`)*
 
+## 9. OI-Persistence Reversal ❌ (doesn't work)
+**The bet:** Idea borrowed from a skilled manual trader: when a coin drops
+sharply but "open interest" (the total money still betting on it) *doesn't* fall,
+nobody was forced out — so the drop should bounce back. Buy the dip.
+
+**How it works:** After a sharp fall, check whether open interest held steady. If
+it did, go long and bet on a rebound.
+
+**Does it work?** No — and it's actually *backwards*. Drops where open interest
+held kept drifting **down**, not up (buying them lost badly, ~10% win rate). The
+likely reason: if price falls but the bets don't close out, it usually means new
+sellers are piling in — that's a sign of *more* downside, not a bounce. The
+trader's one winning example didn't generalise. *(Code: `scripts/backtest_oi_persistence.py`;
+30-day test, small sample — directional, not the final word.)*
+
 ---
 
 ## The one-line takeaway
@@ -108,3 +123,8 @@ two things (**Pairs Trading**, for as long as the relationship lasts).
 A recurring lesson: an edge that worked last year can quietly **decay** (Pairs
 broke in April 2026), so strategies need ongoing health checks, not a one-time
 backtest.
+
+A second recurring lesson: copying a **skilled manual trader's** individual rules
+(breakouts, cascades, OI-persistence) keeps failing — his real edge is in *which*
+coins he picks and *when*, which a fixed rule can't capture. A single good example
+is not a strategy.
