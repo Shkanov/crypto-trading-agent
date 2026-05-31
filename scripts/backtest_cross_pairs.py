@@ -1,0 +1,302 @@
+"""Native crypto-cross vs synthetic 2-leg execution — head-to-head.
+
+Question (user, 2026-05-31): for a crypto-vs-crypto relative-value trade, is it
+better to trade the NATIVE cross instrument (e.g. ETHBTC spot, one leg, one fee,
+thin book) or the SYNTHETIC 2-leg spread (ETHUSDT + BTCUSDT, dollar-neutral,
+deep books but double the fees)?
+
+We hold the SIGNAL identical so the only thing that varies is execution cost.
+Signal = β=1 ratio reversion (the structural form the native cross forces):
+
+    ratio_t   = ETHUSDT_close / BTCUSDT_close        (≈ ETHBTC, the cross rate)
+    z_t       = (log ratio_t − rolling_mean) / rolling_std    (causal, closed bars)
+    entry     |z| >= z_entry   (short ratio if z>0 "ETH rich", long if z<0)
+    exit      |z| <= z_exit
+    stop      |z| >= z_stop
+    one position at a time.
+
+Execution A (native ETHBTC): trade the cross as ONE instrument with `notional`
+USD at risk. PnL = notional · (ratio %move), sign by side. Cost = 2 fills ·
+(spot taker + ETHBTC half-spread + impact).
+
+Execution B (synthetic): long-leg + short-leg, `notional` USD each, dollar-
+neutral. PnL = notional · (ret_long − ret_short). Cost = 4 fills · (spot taker +
+per-leg half-spread + impact).
+
+Half-spreads are calibrated LIVE from bookTicker at startup (falls back to the
+2026-05-31 snapshot if the call fails). Fees: spot taker 10bp (matches the
+validated `backtest_pairs` sim). A `--perp-synthetic` line is printed as a bonus
+because USDT perps (5bp taker, shortable) change the verdict — ETHBTC has no perp.
+
+Caveat printed at runtime: BOTH spot variants require margin to short; the
+native cross can only be shorted via cross-margin borrow (interest not modeled),
+the synthetic via perp/margin. This compares execution COST, not borrow access.
+
+Usage:
+  BINANCE_TESTNET=false .venv/bin/python -m scripts.backtest_cross_pairs \\
+      --base ETH --quote BTC --bars 8760
+"""
+from __future__ import annotations
+
+import argparse
+import asyncio
+import math
+from dataclasses import dataclass
+from typing import Optional
+
+import numpy as np
+from dotenv import load_dotenv
+
+from src.services.backtest import BacktestStats, _stats_from_trades, SimTrade
+from src.services.costs import (
+    Costs,
+    IMPACT_K_MAJOR,
+    impact_k_for_symbol,
+    taker_fee_usd,
+)
+from src.strategies.pairs_cointegration import PairsParams
+from src.tools.binance_client import BinanceClient
+
+# 2026-05-31 bookTicker snapshot (half-spread bps) — fallback only.
+FALLBACK_HS = {"ETHBTC": 1.83, "ETHUSDT": 0.02, "BTCUSDT": 0.00,
+               "SOLETH": 1.23, "SOLUSDT": 0.61, "SOLBTC": 1.5}
+
+
+@dataclass
+class Aligned:
+    ts: list[int]
+    base_usdt: list[float]   # e.g. ETHUSDT close
+    quote_usdt: list[float]  # e.g. BTCUSDT close
+    cross: list[float]       # native cross close (ETHBTC)
+    qv_base: list[float]     # quote-vol USD for base leg
+    qv_quote: list[float]
+    qv_cross_usd: list[float]
+
+
+async def _fetch_closes(b: BinanceClient, sym: str, tf: str, bars: int):
+    raw = await b.fetch_klines_paginated(sym, tf, total=bars, market="spot")
+    return {int(r[6]): (float(r[4]), float(r[7])) for r in raw}  # close_time -> (close, quoteVol)
+
+
+async def fetch_aligned(b: BinanceClient, base: str, quote: str, tf: str,
+                        bars: int) -> Aligned:
+    base_sym, quote_sym, cross_sym = f"{base}USDT", f"{quote}USDT", f"{base}{quote}"
+    db = await _fetch_closes(b, base_sym, tf, bars)
+    dq = await _fetch_closes(b, quote_sym, tf, bars)
+    dc = await _fetch_closes(b, cross_sym, tf, bars)
+    common = sorted(set(db) & set(dq) & set(dc))
+    quote_px_usd = [dq[t][0] for t in common]  # BTCUSDT price, to dollarize cross vol
+    return Aligned(
+        ts=common,
+        base_usdt=[db[t][0] for t in common],
+        quote_usdt=[dq[t][0] for t in common],
+        cross=[dc[t][0] for t in common],
+        qv_base=[db[t][1] for t in common],
+        qv_quote=[dq[t][1] for t in common],
+        # cross quoteVol is in `quote` units (BTC); ×BTCUSD → USD
+        qv_cross_usd=[dc[t][1] * qp for t, qp in zip(common, quote_px_usd)],
+    )
+
+
+async def calibrate_half_spreads(b: BinanceClient, syms: list[str]) -> dict[str, float]:
+    out: dict[str, float] = {}
+    for s in syms:
+        try:
+            bt = await b.client.get_orderbook_ticker(symbol=s)
+            bid, ask = float(bt["bidPrice"]), float(bt["askPrice"])
+            mid = (bid + ask) / 2
+            out[s] = (ask - bid) / 2 / mid * 1e4 if mid > 0 else FALLBACK_HS.get(s, 3.0)
+        except Exception:
+            out[s] = FALLBACK_HS.get(s, 3.0)
+    return out
+
+
+def zscore_signals(a: Aligned, p: PairsParams) -> list[Optional[int]]:
+    """Causal rolling z-score of log(ratio). Returns per-bar target state:
+    +1 = long ratio, -1 = short ratio, 0 = flat/no-signal. None during warmup."""
+    log_ratio = np.log(np.array(a.base_usdt) / np.array(a.quote_usdt))
+    n = len(log_ratio)
+    win = p.lookback_bars
+    states: list[Optional[int]] = [None] * n
+    for i in range(n):
+        if i < max(p.min_lookback_for_z, 1):
+            continue
+        lo = max(0, i - win)
+        hist = log_ratio[lo:i]  # strictly prior bars — no lookahead
+        if len(hist) < p.min_lookback_for_z:
+            continue
+        mu, sd = hist.mean(), hist.std(ddof=1)
+        if sd <= 0:
+            continue
+        z = (log_ratio[i] - mu) / sd
+        states[i] = z  # store raw z; entry/exit logic applied in the sim loop
+    return states  # type: ignore[return-value]
+
+
+def _adv5m(a: Aligned, qv_series, i):
+    """Turnover-based 5-min $ volume at bar i (causal). Used only for the
+    sqrt-impact SENSITIVITY line — see the impact caveat in _run."""
+    lo = max(0, i - 288)
+    sl = qv_series[lo:i] or [qv_series[i]]
+    bar_min = (a.ts[i] - a.ts[i - 1]) / 60000.0 if i > 0 else 60.0
+    return float(np.mean(sl)) * (5.0 / bar_min) if bar_min > 0 else 0.0
+
+
+def _run(a: Aligned, zser, p: PairsParams, mode: str, notional: float,
+         costs: Costs, hs: dict[str, float], base: str, quote: str,
+         synth_venue: str = "spot") -> tuple[BacktestStats, dict]:
+    """Decompose every trade into raw_gross (no costs), spread cost, fee cost,
+    and a separately-tracked turnover-impact estimate.
+
+    The HEADLINE PnL uses raw_gross − spread − fee (the honest cost for a small
+    retail ticket: cross the quoted spread + pay commission). The Almgren
+    sqrt-impact term is reported separately because for a tight-spread but
+    low-turnover cross (ETHBTC: 1.83bp spread, ~$11M/day) it explodes on a
+    $1000 ticket — low turnover ≠ thin top-of-book for an MM-quoted cross."""
+    base_sym, quote_sym, cross_sym = f"{base}USDT", f"{quote}USDT", f"{base}{quote}"
+    ik_base = impact_k_for_symbol(base_sym)
+    ik_quote = impact_k_for_symbol(quote_sym)
+    ik_cross = IMPACT_K_MAJOR  # ETH/BTC are both majors; tight 1.83bp spread
+
+    trades: list[SimTrade] = []
+    pos: Optional[int] = None
+    entry_i, entry_ratio = 0, 0.0
+    fee_tot = spread_tot = impact_tot = raw_gross_tot = 0.0
+    span_days = (a.ts[-1] - a.ts[0]) / 1000 / 86400
+    venue = "spot" if mode == "native" else synth_venue
+    spot_fee = taker_fee_usd(notional, venue, costs)
+
+    def ratio_at(i):
+        return a.base_usdt[i] / a.quote_usdt[i]
+
+    def _leg_costs(side, px_entry, px_exit, hs_bps, ik, qv):
+        """Return (raw_gross, spread_cost, impact_cost) for one leg, sized
+        `notional`. raw_gross uses unslipped prices."""
+        rg = notional * (px_exit - px_entry) / px_entry
+        if side == "short":
+            rg = -rg
+        spread_cost = notional * (hs_bps / 1e4) * 2          # cross spread on 2 fills
+        adv = _adv5m(a, qv, entry_i)
+        imp_bps = ik * math.sqrt(notional / adv) * 1e4 if adv > 0 else 0.0
+        impact_cost = notional * (imp_bps / 1e4) * 2
+        return rg, spread_cost, impact_cost
+
+    def close_position(i, reason):
+        nonlocal pos, fee_tot, spread_tot, impact_tot, raw_gross_tot
+        if mode == "native":
+            side = "long" if pos == 1 else "short"
+            rg, sc, ic = _leg_costs(side, entry_ratio, ratio_at(i),
+                                    hs[cross_sym], ik_cross, a.qv_cross_usd)
+            fee = spot_fee * 2
+        else:
+            b_side = "long" if pos == 1 else "short"
+            q_side = "short" if pos == 1 else "long"
+            rg_b, sc_b, ic_b = _leg_costs(b_side, a.base_usdt[entry_i], a.base_usdt[i],
+                                          hs[base_sym], ik_base, a.qv_base)
+            rg_q, sc_q, ic_q = _leg_costs(q_side, a.quote_usdt[entry_i], a.quote_usdt[i],
+                                          hs[quote_sym], ik_quote, a.qv_quote)
+            rg, sc, ic = rg_b + rg_q, sc_b + sc_q, ic_b + ic_q
+            fee = spot_fee * 4
+        raw_gross_tot += rg
+        spread_tot += sc
+        impact_tot += ic
+        fee_tot += fee
+        pnl = rg - sc - fee  # headline net excludes turnover-impact
+        trades.append(SimTrade(symbol=cross_sym, strategy=f"xpair_{mode}",
+                               side="long" if pos == 1 else "short", qty=0.0,
+                               entry_price=entry_ratio, stop=0.0, tp=0.0,
+                               entry_ts_ms=a.ts[entry_i], exit_price=ratio_at(i),
+                               exit_reason=reason, exit_ts_ms=a.ts[i], pnl_usd=pnl))
+        pos = None
+
+    for i in range(len(a.ts)):
+        z = zser[i]
+        if z is None:
+            continue
+        if pos is not None:
+            if abs(z) <= p.z_exit:
+                close_position(i, "exit")
+            elif abs(z) >= p.z_stop:
+                close_position(i, "stop")
+        if pos is None and abs(z) >= p.z_entry:
+            pos = -1 if z > 0 else 1   # z>0 ETH rich → short ratio
+            entry_i, entry_ratio = i, ratio_at(i)
+    if pos is not None:
+        close_position(len(a.ts) - 1, "eod")
+
+    stats = _stats_from_trades(f"xpair_{mode}", trades, 1000.0, span_days)
+    return stats, {"fee": fee_tot, "spread": spread_tot, "impact": impact_tot,
+                   "raw_gross": raw_gross_tot}
+
+
+def _print(label: str, stats: BacktestStats, info: dict):
+    print("-" * 78)
+    print(f"  {label}")
+    print(f"    round trips:   {stats.trades}")
+    print(f"    raw gross:     ${info['raw_gross']:+.2f}   (signal PnL, no costs)")
+    print(f"    − spread:      ${info['spread']:.2f}")
+    print(f"    − fees:        ${info['fee']:.2f}")
+    print(f"    = NET PnL:     ${stats.total_pnl_usd:+.2f}   "
+          f"({stats.annualized_pct:+.1f}%/yr on $1000)")
+    print(f"    win rate:      {stats.win_rate*100:.0f}%   Sharpe {stats.sharpe:+.2f}")
+    print(f"    [turnover-impact sensitivity (NOT in net): ${info['impact']:.2f}]")
+
+
+async def amain() -> None:
+    load_dotenv("/Users/BulatShkanov/Downloads/crypto-trading-agent/.env")
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--base", default="ETH")
+    ap.add_argument("--quote", default="BTC")
+    ap.add_argument("--tf", default="1h")
+    ap.add_argument("--bars", type=int, default=8760)
+    ap.add_argument("--notional", type=float, default=1000.0)
+    ap.add_argument("--z-entry", type=float, default=2.0)
+    ap.add_argument("--z-exit", type=float, default=0.5)
+    ap.add_argument("--z-stop", type=float, default=3.5)
+    ap.add_argument("--lookback-bars", type=int, default=24 * 60)
+    args = ap.parse_args()
+
+    p = PairsParams(lookback_bars=args.lookback_bars, z_entry=args.z_entry,
+                    z_exit=args.z_exit, z_stop=args.z_stop)
+    costs = Costs()
+    base, quote = args.base, args.quote
+    syms = [f"{base}USDT", f"{quote}USDT", f"{base}{quote}"]
+
+    b = BinanceClient()
+    await b.start()
+    try:
+        hs = await calibrate_half_spreads(b, syms)
+        a = await fetch_aligned(b, base, quote, args.tf, args.bars)
+        zser = zscore_signals(a, p)
+        span = (a.ts[-1] - a.ts[0]) / 1000 / 86400
+        st_n, in_n = _run(a, zser, p, "native", args.notional, costs, hs, base, quote)
+        st_s, in_s = _run(a, zser, p, "synthetic", args.notional, costs, hs, base, quote, "spot")
+        st_p, in_p = _run(a, zser, p, "synthetic", args.notional, costs, hs, base, quote, "perp")
+
+        print("\n" + "=" * 78)
+        print(f"  CROSS-PAIR EXECUTION HEAD-TO-HEAD  ·  {base}/{quote}  ·  {args.tf}  "
+              f"·  {len(a.ts)} bars (~{span:.0f}d)")
+        print(f"  signal: β=1 ratio z-reversion (entry|z|>={p.z_entry}, exit<={p.z_exit}, "
+              f"stop>={p.z_stop})  ·  notional ${args.notional:.0f}/leg")
+        print(f"  half-spreads (bp): " + "  ".join(f"{s}={hs[s]:.2f}" for s in syms))
+        print("=" * 78)
+        _print(f"A) NATIVE {base}{quote} spot  (1 instrument, 2 fills/RT, {hs[syms[2]]:.2f}bp spread)",
+               st_n, in_n)
+        _print(f"B) SYNTHETIC {base}USDT/{quote}USDT spot  (2 legs, 4 fills/RT)",
+               st_s, in_s)
+        _print(f"C) SYNTHETIC {base}USDT/{quote}USDT PERP  (2 legs, 4 fills/RT, 5bp taker; ETHBTC has no perp)",
+               st_p, in_p)
+        print("=" * 78)
+        best = max([("native spot", st_n.total_pnl_usd),
+                    ("synthetic spot", st_s.total_pnl_usd),
+                    ("synthetic perp", st_p.total_pnl_usd)], key=lambda x: x[1])
+        print(f"  WINNER (net of costs): {best[0]}  (${best[1]:+.2f})")
+        print(f"  NOTE: shorting the ratio needs margin/perp; native cross short = "
+              f"cross-margin borrow (interest NOT modeled). Funding on perp legs NOT modeled.")
+        print("=" * 78)
+    finally:
+        await b.close()
+
+
+if __name__ == "__main__":
+    asyncio.run(amain())
