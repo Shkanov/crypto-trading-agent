@@ -72,10 +72,12 @@ class PairsSweepConfig:
     lookback_bars: int
     z_entry: float
     z_exit: float
+    persist_refits: int = 1
 
     @property
     def label(self) -> str:
-        return f"lb{self.lookback_bars}_ze{self.z_entry:.1f}_zx{self.z_exit:.1f}"
+        base = f"lb{self.lookback_bars}_ze{self.z_entry:.1f}_zx{self.z_exit:.1f}"
+        return base + (f"_pr{self.persist_refits}" if self.persist_refits > 1 else "")
 
     def to_params(self) -> PairsParams:
         # z_stop scales with z_entry so wider entries get correspondingly
@@ -88,21 +90,25 @@ class PairsSweepConfig:
             z_entry=self.z_entry,
             z_exit=self.z_exit,
             z_stop=self.z_entry + 1.5,
+            persist_refits=self.persist_refits,
         )
 
 
-def pairs_grid() -> list[PairsSweepConfig]:
-    """4×3×3 = 36 configs over (lookback, z_entry, z_exit).
+def pairs_grid(persist_values: tuple[int, ...] = (1,)) -> list[PairsSweepConfig]:
+    """(4×3×3)×|persist| configs over (lookback, z_entry, z_exit, persist).
        lookback in {360,720,1440,2160} bars = {15d, 30d, 60d, 90d} on 1h.
-       z_entry in {1.5, 2.0, 2.5}.
-       z_exit  in {0.0, 0.3, 0.5}.
+       z_entry in {1.5, 2.0, 2.5}; z_exit in {0.0, 0.3, 0.5}.
+       persist (health gate) defaults to (1,) = legacy; pass e.g. (1,2,4) to
+       put the persistence gate INTO the PBO family so selection bias on it is
+       measured rather than assumed.
     """
     return [
-        PairsSweepConfig(lookback_bars=lb, z_entry=ze, z_exit=zx)
-        for lb, ze, zx in product(
+        PairsSweepConfig(lookback_bars=lb, z_entry=ze, z_exit=zx, persist_refits=pr)
+        for lb, ze, zx, pr in product(
             [360, 720, 1440, 2160],
             [1.5, 2.0, 2.5],
             [0.0, 0.3, 0.5],
+            persist_values,
         )
     ]
 
@@ -282,9 +288,13 @@ async def amain() -> None:
     ap.add_argument("--s-subsamples", type=int, default=16,
                     help="PBO subsample count (default 16 → C(16,8)=12870)")
     ap.add_argument("--out-tag", default="")
+    ap.add_argument("--persist-grid", default="1",
+                    help="comma-separated persistence values for the health gate, "
+                         "e.g. '1,2,4'. Default '1' = legacy (no gate).")
     args = ap.parse_args()
 
-    grid = pairs_grid()
+    persist_values = tuple(int(x) for x in args.persist_grid.split(","))
+    grid = pairs_grid(persist_values)
     pairs = _parse_pairs(args.pairs)
     print(f"pairs: {len(pairs)} · sweep: {len(grid)} configs · "
           f"CPCV(N={args.n_folds}, k={args.k_test}) · PBO S={args.s_subsamples}")

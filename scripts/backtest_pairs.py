@@ -271,6 +271,7 @@ def simulate_pair(
     trades: list[PairTrade] = []
     open_trade: Optional[PairTrade] = None
     fit = None
+    recent_pass: list[bool] = []   # per-refit ADF pass/fail, for persistence gate
     next_fit_at = fit_points[0]
     fit_iter = iter(fit_points)
     _ = next(fit_iter)  # consume the first; we'll fit immediately when we hit it
@@ -282,6 +283,7 @@ def simulate_pair(
                                         log_b[i - p.lookback_bars: i], p)
             if new_fit is not None:
                 fit = new_fit
+                recent_pass.append(new_fit.is_cointegrated)
                 refit_log.append({
                     "idx": i,
                     "ts_ms": int(series.close_times[i]),
@@ -333,6 +335,13 @@ def simulate_pair(
 
         if sig.side is None:
             continue
+
+        # Health gate: only OPEN when the regime is established — last
+        # `persist_refits` refits all passed the ADF gate. (Exits unaffected.)
+        if p.persist_refits > 1:
+            if (len(recent_pass) < p.persist_refits
+                    or not all(recent_pass[-p.persist_refits:])):
+                continue
 
         # Build a new entry. Dollar-hedge: B-leg notional = L, A-leg notional = β·L.
         # β can be negative in degenerate fits — abs() it so we always hedge the

@@ -37,6 +37,11 @@ class PairsParams:
     z_exit: float = 0.5
     z_stop: float = 3.5
     min_lookback_for_z: int = 200         # need this many bars to score z
+    # Health gate: require the last `persist_refits` refits to ALL pass the ADF
+    # gate before opening a position (regime must be ESTABLISHED, not flickering
+    # on). 1 = legacy behaviour (any single passing refit can trade). Exits on a
+    # broken regime are unchanged — handled by the per-refit is_cointegrated stop.
+    persist_refits: int = 1
 
 
 @dataclass
