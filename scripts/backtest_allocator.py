@@ -131,14 +131,18 @@ def simulate_allocator_walk(
     turnover_threshold: float,
     min_active_days: int = 0,
     max_weight: float = 1.0,
+    min_sharpe: float = float("-inf"),
+    min_surviving_sleeves: int = 1,
 ) -> tuple[np.ndarray, list[dict], dict[str, float]]:
     """Day-by-day walk: rebalance at every `rebalance_days` boundary using the
     trailing `lookback_days` window, compute daily portfolio return as
     Σ w_i * r_i. Returns (portfolio_returns_pct, rebalance_log, final_weights).
 
-    `min_active_days` / `max_weight` mirror the live evidence floor + weight cap
-    so the backtest reflects the deployed allocator. First period uses
-    equal-weight while history accumulates."""
+    `min_active_days` / `max_weight` / `min_sharpe` / `min_surviving_sleeves`
+    mirror the live evidence floor + weight cap + edge gate + cash guard so the
+    backtest reflects the deployed allocator. First period uses equal-weight
+    while history accumulates. On a no-edge rebalance the book goes to cash
+    (weights all 0 ⇒ that period's portfolio return is 0)."""
     syms = list(returns_matrix.keys())
     n_days = len(next(iter(returns_matrix.values())))
     weights = {s: 1.0 / len(syms) for s in syms}
@@ -156,6 +160,8 @@ def simulate_allocator_walk(
                 prev_weights=weights,
                 min_active_days=min_active_days,
                 max_weight=max_weight,
+                min_sharpe=min_sharpe,
+                min_surviving_sleeves=min_surviving_sleeves,
             )
             weights = dict(result.weights)
             rebalance_log.append({
@@ -231,6 +237,13 @@ async def amain() -> None:
                           "days in the lookback window (0 disables).")
     ap.add_argument("--max-weight", type=float, default=0.35,
                      help="Cap on any single sleeve's weight (1.0 disables).")
+    ap.add_argument("--min-sharpe", type=float, default=float("-inf"),
+                     help="Edge gate: zero sleeves with realized window Sharpe "
+                          "below this (default -inf disables). Use 0.0 to require "
+                          "positive realized edge.")
+    ap.add_argument("--min-surviving-sleeves", type=int, default=1,
+                     help="Hold cash if fewer than this many sleeves clear the "
+                          "gates (default 1 = deploy whatever survives).")
     ap.add_argument("--out-dir", default="data/research/strategy_tuning")
     args = ap.parse_args()
 
@@ -313,6 +326,8 @@ async def amain() -> None:
             turnover_threshold=args.turnover_threshold,
             min_active_days=args.min_active_days,
             max_weight=args.max_weight,
+            min_sharpe=args.min_sharpe,
+            min_surviving_sleeves=args.min_surviving_sleeves,
         )
         metrics = portfolio_metrics(portfolio_returns)
         # Average L1 turnover across rebalances (excludes any fallback)
@@ -323,6 +338,11 @@ async def amain() -> None:
         # How many rebalances took the fallback path (HRP only)
         metrics["fallbacks"] = sum(
             1 for r in rebalance_log if r.get("method_used") != method
+        )
+        # How many rebalances held cash (edge gate / cash guard blanked the book)
+        metrics["n_cash"] = sum(
+            1 for r in rebalance_log
+            if sum(abs(v) for v in r["weights"].values()) < 1e-9
         )
         results[method] = metrics
         print(
@@ -365,6 +385,8 @@ async def amain() -> None:
             "reference_equity_usd": args.reference_equity,
             "min_active_days": args.min_active_days,
             "max_weight": args.max_weight,
+            "min_sharpe": (None if args.min_sharpe == float("-inf") else args.min_sharpe),
+            "min_surviving_sleeves": args.min_surviving_sleeves,
         },
         "n_days": len(day_grid),
         "first_day_ms": day_grid[0],

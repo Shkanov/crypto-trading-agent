@@ -266,6 +266,8 @@ class AllocationResult:
     method_used: str
     turnover: float                # L1 distance from prev_weights, 0 if no prev
     reason: str = ""               # populated when a fallback fires
+    deployable: bool = True        # False ⇒ weights sum<1 (cash); too few sleeves
+                                   # cleared the edge gate to deploy safely
 
 
 def _turnover_l1(new: dict[str, float], prev: dict[str, float]) -> float:
@@ -279,6 +281,52 @@ def _turnover_l1(new: dict[str, float], prev: dict[str, float]) -> float:
 def _active_day_count(series: np.ndarray) -> int:
     """Number of days the sleeve actually traded (non-zero return entries)."""
     return int(np.count_nonzero(np.asarray(series, dtype=float)))
+
+
+def _realized_sharpe(series: np.ndarray, periods_per_year: float = 365.0) -> float:
+    """Annualised Sharpe of a sleeve's daily return stream over the FULL window
+    (flat/no-trade days counted as 0 return — that is the sleeve's real
+    contribution on the shared book, not its per-trade quality). Zero/degenerate
+    vol ⇒ 0.0."""
+    a = np.asarray(series, dtype=float)
+    if a.size < 2:
+        return 0.0
+    sd = a.std(ddof=1)
+    if sd <= 1e-12:
+        return 0.0
+    return float(a.mean() / sd * math.sqrt(periods_per_year))
+
+
+def _apply_edge_gate(
+    weights: dict[str, float],
+    strategy_returns: dict[str, np.ndarray],
+    min_sharpe: float,
+) -> tuple[dict[str, float], list[str]]:
+    """Zero out sleeves whose realized Sharpe over the window is < `min_sharpe`,
+    and renormalize the survivors to sum 1. Unlike the evidence floor (which
+    screens on *activity*), this screens on *edge* — so an always-on but
+    no-edge sleeve (e.g. carry on a dead regime) is dropped, and a low-activity
+    but positive-edge sleeve is kept. If NO sleeve clears the gate the book is
+    blanked to all-zero (hold cash) — that is the intended outcome here, in
+    contrast to the evidence floor which never blanks. Returns
+    `(weights, gated_names)`."""
+    if min_sharpe == float("-inf") or not weights:
+        return dict(weights), []
+    gated = [
+        s for s, w in weights.items()
+        if w > 0.0 and _realized_sharpe(strategy_returns.get(s, np.empty(0))) < min_sharpe
+    ]
+    if not gated:
+        return dict(weights), []
+    kept_total = sum(w for s, w in weights.items() if s not in gated)
+    if kept_total <= 0:
+        # Nothing has edge → blank to cash (all zero).
+        return {s: 0.0 for s in weights}, gated
+    out = {
+        s: (weights[s] / kept_total if s not in gated else 0.0)
+        for s in weights
+    }
+    return out, gated
 
 
 def _apply_evidence_floor(
@@ -351,6 +399,8 @@ def allocate(
     prev_weights: Optional[dict[str, float]] = None,
     min_active_days: int = 0,
     max_weight: float = 1.0,
+    min_sharpe: float = float("-inf"),
+    min_surviving_sleeves: int = 1,
 ) -> AllocationResult:
     """Compute weights with the requested method, falling back if HRP
     turnover exceeds `turnover_threshold`, then apply two structural
@@ -359,14 +409,23 @@ def allocate(
       * **evidence floor** — sleeves with fewer than `min_active_days` active
         days in the window are zeroed and the rest renormalized, so a
         thin-track-record sleeve can't dominate the book on a lucky window;
+      * **edge gate** — sleeves whose realized Sharpe over the window is below
+        `min_sharpe` are zeroed and the rest renormalized. Unlike the evidence
+        floor (which screens on *activity*, so it hands the book to whichever
+        sleeve merely trades most often), this screens on *edge* — an always-on
+        but no-edge sleeve is dropped. If nothing clears the gate the book is
+        blanked to cash (weights all 0, `deployable=False`);
       * **weight cap** — no sleeve exceeds `max_weight` (excess redistributed
-        to the others), bounding single-sleeve drawdown contribution.
+        to the others), bounding single-sleeve drawdown contribution;
+      * **min surviving sleeves** — if fewer than `min_surviving_sleeves` sleeves
+        carry weight after the gates, blank to cash rather than concentrate the
+        whole book into one (or zero) sleeve.
 
     `method` ∈ {"equal", "inverse_vol", "hrp"}.
     `fallback` is the method used when the turnover guard fires (only
-    triggers when `method="hrp"`). The defaults `min_active_days=0` and
-    `max_weight=1.0` are no-ops, preserving the pre-constraint behaviour for
-    callers that don't opt in.
+    triggers when `method="hrp"`). The defaults `min_active_days=0`,
+    `max_weight=1.0`, `min_sharpe=-inf`, `min_surviving_sleeves=1` are no-ops,
+    preserving the pre-constraint behaviour for callers that don't opt in.
     """
     if method not in ("equal", "inverse_vol", "hrp"):
         raise ValueError(f"unknown allocation method: {method!r}")
@@ -402,9 +461,25 @@ def allocate(
             f"evidence floor (<{min_active_days} active days) zeroed "
             f"{', '.join(sorted(floored))}"
         )
+    w, gated = _apply_edge_gate(w, strategy_returns, min_sharpe)
+    if gated:
+        reasons.append(
+            f"edge gate (Sharpe<{min_sharpe:g}) zeroed {', '.join(sorted(gated))}"
+        )
     w, capped = _apply_weight_cap(w, max_weight)
     if capped:
         reasons.append(f"capped single-sleeve weight at {max_weight:.0%}")
+
+    # Min-surviving-sleeves guard: don't concentrate the whole book into one
+    # (or zero) sleeve — if too few cleared the gates, hold cash instead.
+    n_live = sum(1 for v in w.values() if v > 1e-12)
+    deployable = n_live >= min_surviving_sleeves
+    if not deployable:
+        w = {s: 0.0 for s in w}
+        reasons.append(
+            f"only {n_live} sleeve(s) cleared the gates (<{min_surviving_sleeves} "
+            f"required) → holding cash"
+        )
 
     # Report turnover against the final, constrained weights.
     turnover = _turnover_l1(w, prev_weights) if prev_weights else 0.0
@@ -413,6 +488,7 @@ def allocate(
         method_used=method_used,
         turnover=turnover,
         reason="; ".join(reasons),
+        deployable=deployable,
     )
 
 

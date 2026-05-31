@@ -173,6 +173,45 @@ def test_allocate_equal_method() -> None:
     assert all(math.isclose(v, 0.25) for v in r.weights.values())
 
 
+def test_edge_gate_zeros_negative_sharpe_sleeve() -> None:
+    """Edge gate drops a no-edge (negative-drift) sleeve even if it's always
+    active, and keeps a positive-edge one — the fix for the carry-100% bug
+    where the activity-based evidence floor handed the book to whichever sleeve
+    merely traded most often."""
+    # Nonzero variance with a clear sign: net-positive vs net-negative drift.
+    good = np.tile([0.10, 0.0], 150)   # mean +0.05, std>0 → Sharpe>0
+    bad = np.tile([-0.10, 0.0], 150)   # mean -0.05, std>0 → Sharpe<0
+    r = allocate({"good": good, "bad": bad}, method="equal", min_sharpe=0.0)
+    assert r.weights["bad"] == 0.0
+    assert math.isclose(r.weights["good"], 1.0)
+    assert r.deployable
+
+
+def test_edge_gate_all_negative_holds_cash() -> None:
+    returns = {"a": np.tile([-0.10, 0.0], 150), "b": np.tile([-0.06, 0.0], 150)}
+    r = allocate(returns, method="equal", min_sharpe=0.0)
+    assert all(v == 0.0 for v in r.weights.values())   # blanked to cash
+    assert not r.deployable
+
+
+def test_min_surviving_sleeves_guard_holds_cash() -> None:
+    """Only one sleeve clears the edge gate, but the guard requires >=2 to
+    deploy → hold cash rather than concentrate 100% into a single sleeve."""
+    returns = {"good": np.tile([0.10, 0.0], 150), "bad": np.tile([-0.10, 0.0], 150)}
+    r = allocate(returns, method="equal", min_sharpe=0.0, min_surviving_sleeves=2)
+    assert all(v == 0.0 for v in r.weights.values())
+    assert not r.deployable
+    assert "holding cash" in r.reason
+
+
+def test_gates_are_noops_by_default() -> None:
+    rng = np.random.default_rng(3)
+    returns = {f"S{i}": rng.normal(0.1, 1, 100) for i in range(3)}
+    r = allocate(returns, method="equal")          # no min_sharpe / guard
+    assert r.deployable
+    assert math.isclose(sum(r.weights.values()), 1.0)
+
+
 def test_allocate_inverse_vol_method() -> None:
     rng = np.random.default_rng(0)
     returns = {"calm": rng.normal(0, 0.5, 250), "wild": rng.normal(0, 5.0, 250)}

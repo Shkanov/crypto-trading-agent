@@ -1180,6 +1180,8 @@ class Orchestrator:
             prev_weights=self.allocator_weights or None,
             min_active_days=self.s.allocator_min_active_days,
             max_weight=self.s.allocator_max_weight,
+            min_sharpe=self.s.allocator_min_sharpe,
+            min_surviving_sleeves=self.s.allocator_min_surviving_sleeves,
         )
         self.allocator_prev_weights = dict(self.allocator_weights)
         self.allocator_weights = dict(result.weights)

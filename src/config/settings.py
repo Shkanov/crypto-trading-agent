@@ -69,6 +69,17 @@ class Settings(BaseSettings):
     # Defaults sized to the 90d lookback; 0 / 1.0 would disable each.
     allocator_min_active_days: int = 30
     allocator_max_weight: float = 0.35
+    # Edge gate + cash guard (fix for the activity-not-edge concentration bug
+    # where the evidence floor zeroed event-driven sleeves and handed ~100% to
+    # the always-on carry sleeve regardless of its edge). Sleeves with realized
+    # window Sharpe below `allocator_min_sharpe` are zeroed; if fewer than
+    # `allocator_min_surviving_sleeves` clear all gates the book holds cash
+    # (AllocationResult.deployable=False) rather than concentrate. min_sharpe=0
+    # = require non-negative realized edge; set very negative to disable.
+    # min_surviving_sleeves=1 = deploy whatever has edge (no forced
+    # diversification); raise to 2 to demand a diversified book or hold cash.
+    allocator_min_sharpe: float = 0.0
+    allocator_min_surviving_sleeves: int = 1
 
     # Approval
     auto_approve_max_notional_usd: float = 50.0
