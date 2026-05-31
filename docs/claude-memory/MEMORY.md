@@ -1,0 +1,12 @@
+- [User role](user_role.md) — quant/desk-trading focus; reasons about strategy in trader-desk terms.
+- [Trader-agent design decisions](project_trader_agent_design.md) — LLM-as-trader paradigm, live vs backtest authority, event-driven cadence, tool surface.
+- [Existing supervisor-LLM pattern](project_llm_supervisor_pattern.md) — current StrategyAgent/NewsAgent/AnomalyAgent only tune configs, never trade; trader-agent flips that.
+- [Trader-agent backtest pivot](project_trader_agent_backtest_pivot.md) — COMPLETE: CLI subprocess + stdio MCP server. Smoke green 2026-05-25 ($0.0461, 1 wake, 3 turns).
+- [LevelBreakoutStrategy validation](project_levelbreak_validation.md) — FALSIFIED 2026-05-25; flag stays off. Negative across 7 symbols + 4 walk-forward windows.
+- [Aktradescalp discretion investigation](project_aktradescalp_discretion.md) — Channel's alpha is in symbol+timing selection (~+180 bps/trade vs random), NOT in the mechanical D1-break rule (which is only ~5% of his actual calls).
+- [LevelBreakout continuation checkpoint](project_levelbreak_continuation.md) — Resting state 2026-05-25: uncommitted files, /tmp artifacts at risk, planned next directions (market-scanner / ScalpSignalAgent).
+- [Cascade strategy v2 research](project_cascade_strategy_research.md) — 2026-05-26 synthesis: why his +180bps is structural, каскад/наторговка mechanized, v1 execution rules, scanner spec, validation gates, citations.
+- [Strategy tuning sprint](project_strategy_tuning_sprint.md) — 2026-05-27: 17/17 strategy items committed; 4 strategies CPCV+PBO-validated end-to-end (carry PASS, pairs 1/2 ETH/BTC, funding 0/38, mean-rev 3/20 incl. small-cap).
+- [MACD-cross bot](project_macd_cross_bot.md) — 2026-05-31: analyzed bundled BitMEX MACD(8,28,9) zero-cross bot; FALSIFIED 0/6 net of costs; leaked live API keys in archive flagged.
+- [Cross-pair execution](project_cross_pair_execution.md) — 2026-05-31: native crypto-cross (ETHBTC) vs synthetic 2-leg; native halves fees (wins for low-turnover) but capacity-capped/spot-only/no-β. Almgren impact gotcha on low-turnover books.
+- [Carry robustness](project_carry_robustness.md) — 2026-05-31: funding-carry stress test; validated PASS is selection-luck (43% of random universes positive, pinned set now 18th pct). Don't size up as-is; test more-legs / PIT-universe fixes.
