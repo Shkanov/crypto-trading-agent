@@ -177,6 +177,29 @@ class PBOResult:
     logits: list[float] = field(default_factory=list)
     mean_logit: float = 0.0
     median_oos_rank_pct: float = 0.0   # mean OOS rank of IS-best, in [0,1]
+    n_dead_columns: int = 0            # configs dropped as non-trading (all-zero)
+
+
+def select_is_best_idx(
+    sharpes: Iterable[float],
+    trades: Optional[Iterable[int]] = None,
+    min_trades: int = 1,
+) -> int:
+    """Index of the in-sample-best config, EXCLUDING non-trading configs.
+
+    A config that never trades has a flat all-zero PnL column → Sharpe 0. In a
+    family where every genuinely-trading config has NEGATIVE Sharpe, that 0
+    would win `argmax` and be reported as "IS-best" (and games PBO). Restrict
+    the argmax to configs with >= `min_trades` trades. Falls back to the raw
+    argmax only when nothing traded (degenerate family)."""
+    sr = np.asarray(list(sharpes), dtype=float)
+    if trades is None:
+        return int(np.argmax(sr))
+    tr = list(trades)
+    elig = [i for i, t in enumerate(tr) if t >= min_trades]
+    if not elig:
+        return int(np.argmax(sr))
+    return max(elig, key=lambda i: float(sr[i]))
 
 
 def pbo(
@@ -185,6 +208,7 @@ def pbo(
     periods_per_year: float = 365.0,
     max_partitions: Optional[int] = None,
     rng_seed: Optional[int] = None,
+    active_mask: Optional[Iterable[bool]] = None,
 ) -> PBOResult:
     """Bailey-Borwein-LdP-Zhu (2017) Probability of Backtest Overfitting.
 
@@ -203,16 +227,37 @@ def pbo(
     pass `max_partitions` and `rng_seed` to subsample when N_trials is large
     or the matrix has many rows.
 
-    Returns a PBOResult; floor on n_trials is 2 (with N<2 the rank is
-    degenerate). For N<8 the rank discretisation makes the metric crude;
-    Bailey et al. recommend N ≥ 10 for stable readings.
+    NON-TRADING CONFIGS ARE DROPPED. A config that never trades is an all-zero
+    column with Sharpe 0; in a family of otherwise-losing configs that 0 wins
+    the step-1 argmax every partition and produces a spuriously LOW PBO (a dead
+    strategy "passing"). We drop all-zero columns, and additionally any column
+    masked False by `active_mask` (e.g. trades < a caller's min-trades floor).
+    If fewer than 2 trading configs survive, the family can't be validated:
+    returns pbo=1.0 (REJECT) with n_partitions=0 as the degenerate signal.
+
+    Returns a PBOResult; floor on surviving trials is 2. For N<8 the rank
+    discretisation makes the metric crude; Bailey et al. recommend N >= 10.
     """
     m = np.asarray(matrix, dtype=float)
     if m.ndim != 2:
         raise ValueError(f"matrix must be 2-D (got {m.shape})")
+    if m.shape[1] < 2:
+        raise ValueError("need at least 2 trials for PBO")
+    # Drop non-trading / inactive columns (see docstring). This is distinct
+    # from the malformed-input check above: the family was well-formed, but
+    # some configs never traded and must not be eligible as IS-best.
+    dead = np.all(m == 0.0, axis=0)
+    if active_mask is not None:
+        dead = dead | ~np.asarray(list(active_mask), dtype=bool)
+    n_dead = int(dead.sum())
+    if n_dead:
+        m = m[:, ~dead]
     t, n = m.shape
     if n < 2:
-        raise ValueError("need at least 2 trials for PBO")
+        # Fewer than 2 TRADING configs survived → cannot estimate selection
+        # bias. Treat as REJECT (pbo=1.0) with the degenerate n_partitions=0.
+        return PBOResult(pbo=1.0, n_partitions=0, n_trials=n,
+                         n_dead_columns=n_dead)
     if s < 2 or s % 2 != 0:
         raise ValueError(f"s must be an even integer >= 2 (got {s})")
     if t < s:
@@ -263,6 +308,7 @@ def pbo(
         logits=logits,
         mean_logit=float(np.mean(logits)) if logits else 0.0,
         median_oos_rank_pct=float(np.mean(ranks_pct)) if ranks_pct else 0.0,
+        n_dead_columns=n_dead,
     )
 
 

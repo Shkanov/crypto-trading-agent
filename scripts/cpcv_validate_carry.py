@@ -54,6 +54,7 @@ from src.scanners.universe_pit import SymbolListing, load_pit_log
 from src.services.cpcv import (
     cpcv_oos_sharpes,
     pbo,
+    select_is_best_idx,
     sharpe_per_column,
 )
 from src.services.costs import Costs
@@ -263,7 +264,8 @@ async def amain() -> None:
             "n_folds": args.n_folds,
             "k_test": args.k_test,
             "s_subsamples": args.s_subsamples,
-            "is_best_idx": int(np.argmax([r.in_sample_sharpe for r in results])),
+            "is_best_idx": select_is_best_idx(
+                [r.in_sample_sharpe for r in results], [r.weeks for r in results]),
             "configs": [asdict(r) for r in results],
             "pbo": {
                 "pbo": pbo_res.pbo,

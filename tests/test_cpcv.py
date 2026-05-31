@@ -13,6 +13,7 @@ from src.services.cpcv import (
     fold_membership,
     make_folds,
     pbo,
+    select_is_best_idx,
     sharpe_per_column,
     holdout_mask,
     train_mask_with_embargo,
@@ -162,6 +163,47 @@ def test_pbo_rejects_non_2d_or_too_few_trials() -> None:
         pbo(np.zeros((100,)))
     with pytest.raises(ValueError):
         pbo(np.zeros((100, 1)))
+
+
+def test_pbo_drops_dead_nontrading_columns() -> None:
+    """A non-trading config (all-zero column, Sharpe 0) must NOT be eligible as
+    IS-best in a family of otherwise-losing configs, and must be dropped from
+    PBO — otherwise a dead strategy 'passes' with a spuriously low PBO.
+    Regression for the cpcv_validate_pairs null-config bug (2026-05-31)."""
+    rng = np.random.default_rng(7)
+    n_obs = 1600
+    # 20 genuinely-losing configs (negative drift) + 1 dead all-zero column.
+    losers = rng.normal(-0.05, 1.0, size=(n_obs, 20))
+    dead = np.zeros((n_obs, 1))
+    m = np.column_stack([losers, dead])
+    res = pbo(m, s=16)
+    assert res.n_dead_columns == 1
+    assert res.n_trials == 20            # dead column excluded
+    # With the dead column gone, PBO is computed over the losing family only.
+    # (Pre-fix the all-zero column won every argmax and forced PBO ≈ 0.)
+    assert res.n_partitions == math.comb(16, 8)
+
+
+def test_select_is_best_idx_skips_nontrading() -> None:
+    # config 2 has the highest Sharpe but never traded → must be skipped.
+    sharpes = [-1.0, -0.5, 0.0, -0.8]
+    trades = [10, 4, 0, 7]
+    assert select_is_best_idx(sharpes, trades) == 1
+    # all dead → fall back to raw argmax (degenerate).
+    assert select_is_best_idx([0.0, 0.0], [0, 0]) in (0, 1)
+    # no trade info → raw argmax.
+    assert select_is_best_idx([1.0, 2.0, 0.5]) == 1
+
+
+def test_pbo_degenerate_when_all_dead() -> None:
+    """If <2 trading configs survive, PBO can't estimate selection bias →
+    returns pbo=1.0 (REJECT) with n_partitions=0 instead of a false pass."""
+    m = np.zeros((200, 5))
+    m[:, 0] = np.random.default_rng(1).normal(0, 1, 200)  # only 1 trades
+    res = pbo(m, s=8)
+    assert res.n_partitions == 0
+    assert res.pbo == 1.0
+    assert res.n_dead_columns == 4
 
 
 def test_pbo_uncorrelated_columns_near_half() -> None:

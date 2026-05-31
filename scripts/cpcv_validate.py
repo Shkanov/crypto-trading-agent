@@ -50,6 +50,7 @@ from src.services.cpcv import (
     cpcv_oos_sharpes,
     daily_bucket_pnls,
     pbo,
+    select_is_best_idx,
     sharpe_per_column,
 )
 from src.tools.binance_client import BinanceClient
@@ -252,7 +253,8 @@ async def amain() -> None:
         print(f"\nmatrix shape: {matrix.shape}  (days × configs)")
 
         # CPCV OOS distribution for the IS-best config (and others, optional).
-        is_best_idx = int(np.argmax([r.in_sample_sharpe for r in results]))
+        is_best_idx = select_is_best_idx(
+            [r.in_sample_sharpe for r in results], [r.trades for r in results])
         for idx, r in enumerate(results):
             oos = cpcv_oos_sharpes(matrix[:, idx], n_folds=args.n_folds,
                                     k=args.k_test, periods_per_year=365.0)

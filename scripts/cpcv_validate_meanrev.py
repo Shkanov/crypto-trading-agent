@@ -67,6 +67,7 @@ from src.services.cpcv import (
     cpcv_oos_sharpes,
     daily_bucket_pnls,
     pbo,
+    select_is_best_idx,
     sharpe_per_column,
 )
 from src.strategies.mean_reversion import MeanReversionConfig
@@ -221,7 +222,8 @@ async def validate_symbol(
         ))
     matrix = np.column_stack(columns)
 
-    is_best_idx = int(np.argmax([r.in_sample_sharpe for r in results]))
+    is_best_idx = select_is_best_idx(
+        [r.in_sample_sharpe for r in results], [r.trades for r in results])
     for idx, r in enumerate(results):
         oos = cpcv_oos_sharpes(matrix[:, idx], n_folds=n_folds,
                                 k=k_test, periods_per_year=365.0)

@@ -53,6 +53,7 @@ from src.services.cpcv import (
     cpcv_oos_sharpes,
     daily_bucket_pnls,
     pbo,
+    select_is_best_idx,
     sharpe_per_column,
 )
 from src.strategies.pairs_cointegration import PairsParams
@@ -135,15 +136,29 @@ class PairValidationResult:
     configs: list[ConfigResult] = field(default_factory=list)
     pbo: float = 0.0
     pbo_n_partitions: int = 0
+    pbo_n_dead: int = 0
     pbo_mean_logit: float = 0.0
     pbo_mean_oos_rank: float = 0.0
     decision: str = ""
+    decision_reason: str = ""
     is_best_label: str = ""
     is_best_idx: int = 0
 
 
-def _decision(pbo_val: float) -> str:
-    return "PASS" if pbo_val < 0.5 else "REJECT"
+def _combined_decision(pbo_val: float, oos_mean: float) -> tuple[str, str]:
+    """Conjunction gate: PBO<0.5 AND OOS-mean>0. Pure PBO passes uniformly-
+    losing families because consistent badness has no selection bias to
+    surface; we also need a positive IS-best OOS Sharpe to confirm real edge.
+    (Mirrors cpcv_validate_funding/_meanrev — pairs had regressed to PBO-only.)"""
+    pbo_ok = pbo_val < 0.5
+    oos_ok = oos_mean > 0
+    if pbo_ok and oos_ok:
+        return "PASS", ""
+    if not pbo_ok and not oos_ok:
+        return "REJECT", f"PBO {pbo_val:.3f} ≥ 0.5 AND OOS-mean {oos_mean:+.3f} ≤ 0"
+    if not pbo_ok:
+        return "REJECT", f"PBO {pbo_val:.3f} ≥ 0.5"
+    return "REJECT", f"OOS-mean {oos_mean:+.3f} ≤ 0 (no edge)"
 
 
 # ---------------------------------------------------------------------------
@@ -205,9 +220,12 @@ def validate_pair(
             r.cpcv_oos_sharpe_mean = float(np.mean(oos))
             r.cpcv_oos_sharpe_std = float(np.std(oos, ddof=1)) if len(oos) > 1 else 0.0
 
-    # PBO across the family.
+    # PBO across the family (non-trading configs auto-dropped inside pbo()).
     pbo_res = pbo(matrix, s=s_subsamples, periods_per_year=365.0)
-    is_best_idx = int(np.argmax([r.in_sample_sharpe for r in results]))
+    is_best_idx = select_is_best_idx(
+        [r.in_sample_sharpe for r in results], [r.trades for r in results])
+    decision, reason = _combined_decision(
+        pbo_res.pbo, results[is_best_idx].cpcv_oos_sharpe_mean)
 
     return PairValidationResult(
         pair=pair_label,
@@ -215,9 +233,11 @@ def validate_pair(
         configs=results,
         pbo=pbo_res.pbo,
         pbo_n_partitions=pbo_res.n_partitions,
+        pbo_n_dead=pbo_res.n_dead_columns,
         pbo_mean_logit=pbo_res.mean_logit,
         pbo_mean_oos_rank=pbo_res.median_oos_rank_pct,
-        decision=_decision(pbo_res.pbo),
+        decision=decision,
+        decision_reason=reason,
         is_best_label=results[is_best_idx].label,
         is_best_idx=is_best_idx,
     )
@@ -248,11 +268,19 @@ def print_pair_report(args, v: PairValidationResult) -> None:
               f"{best.cpcv_oos_sharpe_mean:+.3f}  "
               f"(deflation: {best.in_sample_sharpe - best.cpcv_oos_sharpe_mean:+.3f})")
     print(f"\nPBO (S={args.s_subsamples}, {v.pbo_n_partitions} partitions):")
+    if v.pbo_n_dead:
+        print(f"  dropped (non-trading):{v.pbo_n_dead}/{len(v.configs)} configs "
+              "excluded from PBO")
+    if v.pbo_n_partitions == 0:
+        print("  PBO:                  n/a — <2 trading configs survived "
+              "(degenerate family → REJECT)")
     print(f"  PBO:                  {v.pbo:.3f}")
     print(f"  mean logit:           {v.pbo_mean_logit:+.3f}")
     print(f"  mean OOS rank pct:    {v.pbo_mean_oos_rank:.3f}  "
           "(0.5 = median; higher is better)")
-    print(f"  DECISION:             {v.decision}  (gate: PBO < 0.5)")
+    gate_txt = "PBO<0.5 AND IS-best OOS-mean>0"
+    reason_txt = f"  [{v.decision_reason}]" if v.decision_reason else ""
+    print(f"  DECISION:             {v.decision}  (gate: {gate_txt}){reason_txt}")
 
 
 # ---------------------------------------------------------------------------
