@@ -54,7 +54,12 @@ from src.services.costs import (
     impact_k_for_symbol,
     taker_fee_usd,
 )
-from src.strategies.pairs_cointegration import PairsParams
+from src.strategies.pairs_cointegration import (
+    PairsParams,
+    current_residual,
+    current_zscore,
+    fit_engle_granger,
+)
 from src.tools.binance_client import BinanceClient
 
 # 2026-05-31 bookTicker snapshot (half-spread bps) — fallback only.
@@ -133,6 +138,38 @@ def zscore_signals(a: Aligned, p: PairsParams) -> list[Optional[int]]:
     return states  # type: ignore[return-value]
 
 
+def coint_signals(a: Aligned, p: PairsParams):
+    """Full Engle-Granger cointegration with weekly refit + ADF gate. Returns
+    (z_ser, beta_ser, coint_ser): per-bar z-score of the β-residual, the fitted
+    β (hedge ratio), and whether the latest refit passed ADF (p<0.05).
+
+    Fit log(base) = α + β·log(quote); z>0 ⇒ base rich ⇒ short ratio. Native
+    execution ignores β (structurally β=1); synthetic sizes the quote leg by β."""
+    log_base = np.log(np.asarray(a.base_usdt))
+    log_quote = np.log(np.asarray(a.quote_usdt))
+    n = len(log_base)
+    z_ser: list[Optional[float]] = [None] * n
+    beta_ser: list[float] = [1.0] * n
+    coint_ser: list[bool] = [False] * n
+    fit = None
+    for i in range(n):
+        if i < p.min_lookback_for_z:
+            continue
+        if fit is None or (i % p.refit_every_bars == 0):
+            lo = max(0, i - p.lookback_bars)
+            fit = fit_engle_granger(log_quote[lo:i], log_base[lo:i], p)  # a=quote, b=base
+        if fit is None:
+            continue
+        r_t = current_residual(fit, float(log_quote[i]), float(log_base[i]))
+        z = current_zscore(fit, r_t)
+        if z is None:
+            continue
+        z_ser[i] = z
+        beta_ser[i] = max(0.1, min(10.0, abs(fit.beta)))
+        coint_ser[i] = fit.is_cointegrated
+    return z_ser, beta_ser, coint_ser
+
+
 def _adv5m(a: Aligned, qv_series, i):
     """Turnover-based 5-min $ volume at bar i (causal). Used only for the
     sqrt-impact SENSITIVITY line — see the impact caveat in _run."""
@@ -144,7 +181,7 @@ def _adv5m(a: Aligned, qv_series, i):
 
 def _run(a: Aligned, zser, p: PairsParams, mode: str, notional: float,
          costs: Costs, hs: dict[str, float], base: str, quote: str,
-         synth_venue: str = "spot") -> tuple[BacktestStats, dict]:
+         synth_venue: str = "spot", beta_ser=None, coint_ser=None) -> tuple[BacktestStats, dict]:
     """Decompose every trade into raw_gross (no costs), spread cost, fee cost,
     and a separately-tracked turnover-impact estimate.
 
@@ -160,25 +197,24 @@ def _run(a: Aligned, zser, p: PairsParams, mode: str, notional: float,
 
     trades: list[SimTrade] = []
     pos: Optional[int] = None
-    entry_i, entry_ratio = 0, 0.0
+    entry_i, entry_ratio, entry_beta = 0, 0.0, 1.0
     fee_tot = spread_tot = impact_tot = raw_gross_tot = 0.0
     span_days = (a.ts[-1] - a.ts[0]) / 1000 / 86400
     venue = "spot" if mode == "native" else synth_venue
-    spot_fee = taker_fee_usd(notional, venue, costs)
 
     def ratio_at(i):
         return a.base_usdt[i] / a.quote_usdt[i]
 
-    def _leg_costs(side, px_entry, px_exit, hs_bps, ik, qv):
-        """Return (raw_gross, spread_cost, impact_cost) for one leg, sized
-        `notional`. raw_gross uses unslipped prices."""
-        rg = notional * (px_exit - px_entry) / px_entry
+    def _leg_costs(side, px_entry, px_exit, hs_bps, ik, qv, leg_notional):
+        """Return (raw_gross, spread_cost, impact_cost) for one leg sized
+        `leg_notional`. raw_gross uses unslipped prices."""
+        rg = leg_notional * (px_exit - px_entry) / px_entry
         if side == "short":
             rg = -rg
-        spread_cost = notional * (hs_bps / 1e4) * 2          # cross spread on 2 fills
+        spread_cost = leg_notional * (hs_bps / 1e4) * 2       # cross spread on 2 fills
         adv = _adv5m(a, qv, entry_i)
-        imp_bps = ik * math.sqrt(notional / adv) * 1e4 if adv > 0 else 0.0
-        impact_cost = notional * (imp_bps / 1e4) * 2
+        imp_bps = ik * math.sqrt(leg_notional / adv) * 1e4 if adv > 0 else 0.0
+        impact_cost = leg_notional * (imp_bps / 1e4) * 2
         return rg, spread_cost, impact_cost
 
     def close_position(i, reason):
@@ -186,17 +222,19 @@ def _run(a: Aligned, zser, p: PairsParams, mode: str, notional: float,
         if mode == "native":
             side = "long" if pos == 1 else "short"
             rg, sc, ic = _leg_costs(side, entry_ratio, ratio_at(i),
-                                    hs[cross_sym], ik_cross, a.qv_cross_usd)
-            fee = spot_fee * 2
+                                    hs[cross_sym], ik_cross, a.qv_cross_usd, notional)
+            fee = taker_fee_usd(notional, venue, costs) * 2
         else:
             b_side = "long" if pos == 1 else "short"
             q_side = "short" if pos == 1 else "long"
+            q_notional = notional * entry_beta   # β-hedge the quote leg (β=1 in ratio mode)
             rg_b, sc_b, ic_b = _leg_costs(b_side, a.base_usdt[entry_i], a.base_usdt[i],
-                                          hs[base_sym], ik_base, a.qv_base)
+                                          hs[base_sym], ik_base, a.qv_base, notional)
             rg_q, sc_q, ic_q = _leg_costs(q_side, a.quote_usdt[entry_i], a.quote_usdt[i],
-                                          hs[quote_sym], ik_quote, a.qv_quote)
+                                          hs[quote_sym], ik_quote, a.qv_quote, q_notional)
             rg, sc, ic = rg_b + rg_q, sc_b + sc_q, ic_b + ic_q
-            fee = spot_fee * 4
+            fee = (taker_fee_usd(notional, venue, costs) * 2
+                   + taker_fee_usd(q_notional, venue, costs) * 2)
         raw_gross_tot += rg
         spread_tot += sc
         impact_tot += ic
@@ -218,9 +256,14 @@ def _run(a: Aligned, zser, p: PairsParams, mode: str, notional: float,
                 close_position(i, "exit")
             elif abs(z) >= p.z_stop:
                 close_position(i, "stop")
-        if pos is None and abs(z) >= p.z_entry:
-            pos = -1 if z > 0 else 1   # z>0 ETH rich → short ratio
+            elif coint_ser is not None and not coint_ser[i]:
+                close_position(i, "stop")  # cointegration lost mid-hold
+        # Entry gated by ADF cointegration when in coint mode.
+        entry_ok = coint_ser is None or coint_ser[i]
+        if pos is None and entry_ok and abs(z) >= p.z_entry:
+            pos = -1 if z > 0 else 1   # z>0 base rich → short ratio
             entry_i, entry_ratio = i, ratio_at(i)
+            entry_beta = beta_ser[i] if beta_ser is not None else 1.0
     if pos is not None:
         close_position(len(a.ts) - 1, "eod")
 
@@ -254,6 +297,8 @@ async def amain() -> None:
     ap.add_argument("--z-exit", type=float, default=0.5)
     ap.add_argument("--z-stop", type=float, default=3.5)
     ap.add_argument("--lookback-bars", type=int, default=24 * 60)
+    ap.add_argument("--signal", choices=["ratio", "coint"], default="ratio",
+                    help="ratio = β=1 z-reversion; coint = full Engle-Granger β-fit + ADF gate")
     args = ap.parse_args()
 
     p = PairsParams(lookback_bars=args.lookback_bars, z_entry=args.z_entry,
@@ -267,17 +312,31 @@ async def amain() -> None:
     try:
         hs = await calibrate_half_spreads(b, syms)
         a = await fetch_aligned(b, base, quote, args.tf, args.bars)
-        zser = zscore_signals(a, p)
         span = (a.ts[-1] - a.ts[0]) / 1000 / 86400
-        st_n, in_n = _run(a, zser, p, "native", args.notional, costs, hs, base, quote)
-        st_s, in_s = _run(a, zser, p, "synthetic", args.notional, costs, hs, base, quote, "spot")
-        st_p, in_p = _run(a, zser, p, "synthetic", args.notional, costs, hs, base, quote, "perp")
+        if args.signal == "coint":
+            zser, beta_ser, coint_ser = coint_signals(a, p)
+            n_coint = sum(coint_ser)
+            betas = [beta_ser[i] for i in range(len(coint_ser)) if coint_ser[i]]
+            beta_med = float(np.median(betas)) if betas else 1.0
+            sig_desc = (f"full Engle-Granger β-fit + ADF gate (refit/{p.refit_every_bars}b, "
+                        f"lookback {p.lookback_bars}b)  ·  cointegrated {n_coint}/{len(coint_ser)} "
+                        f"bars, median β={beta_med:.2f}")
+        else:
+            zser = zscore_signals(a, p)
+            beta_ser = coint_ser = None
+            sig_desc = (f"β=1 ratio z-reversion (entry|z|>={p.z_entry}, exit<={p.z_exit}, "
+                        f"stop>={p.z_stop})")
+        st_n, in_n = _run(a, zser, p, "native", args.notional, costs, hs, base, quote,
+                          beta_ser=beta_ser, coint_ser=coint_ser)
+        st_s, in_s = _run(a, zser, p, "synthetic", args.notional, costs, hs, base, quote, "spot",
+                          beta_ser=beta_ser, coint_ser=coint_ser)
+        st_p, in_p = _run(a, zser, p, "synthetic", args.notional, costs, hs, base, quote, "perp",
+                          beta_ser=beta_ser, coint_ser=coint_ser)
 
         print("\n" + "=" * 78)
         print(f"  CROSS-PAIR EXECUTION HEAD-TO-HEAD  ·  {base}/{quote}  ·  {args.tf}  "
               f"·  {len(a.ts)} bars (~{span:.0f}d)")
-        print(f"  signal: β=1 ratio z-reversion (entry|z|>={p.z_entry}, exit<={p.z_exit}, "
-              f"stop>={p.z_stop})  ·  notional ${args.notional:.0f}/leg")
+        print(f"  signal: {sig_desc}  ·  notional ${args.notional:.0f}/leg")
         print(f"  half-spreads (bp): " + "  ".join(f"{s}={hs[s]:.2f}" for s in syms))
         print("=" * 78)
         _print(f"A) NATIVE {base}{quote} spot  (1 instrument, 2 fills/RT, {hs[syms[2]]:.2f}bp spread)",
