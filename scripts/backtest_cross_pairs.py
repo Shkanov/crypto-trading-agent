@@ -138,13 +138,24 @@ def zscore_signals(a: Aligned, p: PairsParams) -> list[Optional[int]]:
     return states  # type: ignore[return-value]
 
 
-def coint_signals(a: Aligned, p: PairsParams):
+def coint_signals(a: Aligned, p: PairsParams, gate_p: float = 0.05,
+                  beta_window: int = 0, beta_tol: float = 0.0,
+                  persist_refits: int = 1):
     """Full Engle-Granger cointegration with weekly refit + ADF gate. Returns
     (z_ser, beta_ser, coint_ser): per-bar z-score of the β-residual, the fitted
-    β (hedge ratio), and whether the latest refit passed ADF (p<0.05).
+    β (hedge ratio), and whether the latest refit passed the health gate.
 
     Fit log(base) = α + β·log(quote); z>0 ⇒ base rich ⇒ short ratio. Native
-    execution ignores β (structurally β=1); synthetic sizes the quote leg by β."""
+    execution ignores β (structurally β=1); synthetic sizes the quote leg by β.
+
+    HEALTH GATE (default off → behaves like the strategy's p<0.05 gate):
+      - `gate_p`: ADF threshold.
+      - `persist_refits` N: require the last N refits to ALL pass `gate_p`
+        before trading. Targets the ADF-timeline finding directly — stand aside
+        at a regime's flickering ONSET (wait N weeks for it to establish), and
+        exit on the FIRST failing refit at a break. N=1 = the loose default.
+      - `beta_window` > 0: also require β STABILITY — last `beta_window` refit
+        βs have relative std (std/|mean|) <= `beta_tol`."""
     log_base = np.log(np.asarray(a.base_usdt))
     log_quote = np.log(np.asarray(a.quote_usdt))
     n = len(log_base)
@@ -152,12 +163,34 @@ def coint_signals(a: Aligned, p: PairsParams):
     beta_ser: list[float] = [1.0] * n
     coint_ser: list[bool] = [False] * n
     fit = None
+    recent_betas: list[float] = []   # raw refit βs, for stability check
+    recent_pass: list[bool] = []     # per-refit gate_p pass/fail, for persistence
+
+    def _beta_stable() -> bool:
+        if beta_window <= 0:
+            return True
+        if len(recent_betas) < beta_window:
+            return False
+        w = recent_betas[-beta_window:]
+        mean = float(np.mean(w))
+        if abs(mean) < 1e-9:
+            return False
+        return float(np.std(w)) / abs(mean) <= beta_tol
+
+    def _persisted() -> bool:
+        if len(recent_pass) < persist_refits:
+            return False
+        return all(recent_pass[-persist_refits:])
+
     for i in range(n):
         if i < p.min_lookback_for_z:
             continue
         if fit is None or (i % p.refit_every_bars == 0):
             lo = max(0, i - p.lookback_bars)
             fit = fit_engle_granger(log_quote[lo:i], log_base[lo:i], p)  # a=quote, b=base
+            if fit is not None:
+                recent_betas.append(fit.beta)
+                recent_pass.append(fit.adf_p < gate_p)
         if fit is None:
             continue
         r_t = current_residual(fit, float(log_quote[i]), float(log_base[i]))
@@ -166,7 +199,7 @@ def coint_signals(a: Aligned, p: PairsParams):
             continue
         z_ser[i] = z
         beta_ser[i] = max(0.1, min(10.0, abs(fit.beta)))
-        coint_ser[i] = fit.is_cointegrated
+        coint_ser[i] = _persisted() and _beta_stable()
     return z_ser, beta_ser, coint_ser
 
 
@@ -299,6 +332,14 @@ async def amain() -> None:
     ap.add_argument("--lookback-bars", type=int, default=24 * 60)
     ap.add_argument("--signal", choices=["ratio", "coint"], default="ratio",
                     help="ratio = β=1 z-reversion; coint = full Engle-Granger β-fit + ADF gate")
+    ap.add_argument("--gate-p", type=float, default=0.05,
+                    help="ADF p-value gate (coint mode). 0.01 = strict health gate")
+    ap.add_argument("--beta-window", type=int, default=0,
+                    help="health gate: require β stability over last N refits (0=off)")
+    ap.add_argument("--beta-tol", type=float, default=0.15,
+                    help="health gate: max relative std of recent refit βs")
+    ap.add_argument("--persist-refits", type=int, default=1,
+                    help="health gate: require last N refits to all pass gate-p (1=off)")
     args = ap.parse_args()
 
     p = PairsParams(lookback_bars=args.lookback_bars, z_entry=args.z_entry,
@@ -314,13 +355,20 @@ async def amain() -> None:
         a = await fetch_aligned(b, base, quote, args.tf, args.bars)
         span = (a.ts[-1] - a.ts[0]) / 1000 / 86400
         if args.signal == "coint":
-            zser, beta_ser, coint_ser = coint_signals(a, p)
+            zser, beta_ser, coint_ser = coint_signals(
+                a, p, gate_p=args.gate_p, beta_window=args.beta_window,
+                beta_tol=args.beta_tol, persist_refits=args.persist_refits)
             n_coint = sum(coint_ser)
             betas = [beta_ser[i] for i in range(len(coint_ser)) if coint_ser[i]]
             beta_med = float(np.median(betas)) if betas else 1.0
-            sig_desc = (f"full Engle-Granger β-fit + ADF gate (refit/{p.refit_every_bars}b, "
-                        f"lookback {p.lookback_bars}b)  ·  cointegrated {n_coint}/{len(coint_ser)} "
-                        f"bars, median β={beta_med:.2f}")
+            gate_desc = f"ADF p<{args.gate_p}"
+            if args.persist_refits > 1:
+                gate_desc += f" × {args.persist_refits} consecutive refits"
+            if args.beta_window > 0:
+                gate_desc += f" + β-stable(last {args.beta_window} refits, relstd≤{args.beta_tol})"
+            sig_desc = (f"Engle-Granger β-fit, health gate [{gate_desc}] (refit/{p.refit_every_bars}b, "
+                        f"lookback {p.lookback_bars}b)  ·  tradeable {n_coint}/{len(coint_ser)} "
+                        f"bars ({n_coint/len(coint_ser)*100:.0f}%), median β={beta_med:.2f}")
         else:
             zser = zscore_signals(a, p)
             beta_ser = coint_ser = None
