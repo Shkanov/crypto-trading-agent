@@ -60,8 +60,11 @@ from src.services.costs import Costs
 from src.strategies.funding_carry import (
     CarryParams,
     CarryPosition,
+    CarryRebalance,
     build_rebalance,
     cycle_pnl,
+    price_momentum,
+    rank_for_carry_momentum,
 )
 from src.tools.binance_client import BinanceClient
 
@@ -192,6 +195,7 @@ def simulate_carry(
     costs: Costs,
     pit_log: Optional[dict[str, SymbolListing]] = None,
     signal_fn: Optional[Callable[[list[tuple[int, float]], int], Optional[float]]] = None,
+    momentum_lookback_hours: Optional[int] = None,
 ) -> list[WeeklyResult]:
     """Walk weekly rebalances over [start_ms, end_ms].
 
@@ -230,7 +234,37 @@ def simulate_carry(
                 continue
             snapshot[sym] = r
 
-        rb = build_rebalance(snapshot, equity_usd=equity, ts_ms=ts, p=p)
+        if momentum_lookback_hours is not None:
+            # Card 2: filter long/short legs to names where momentum agrees.
+            # Missing momentum readings are treated as disagreeing (conservative).
+            momentum_snap: dict[str, float] = {
+                sym: m
+                for sym, hist in histories.items()
+                if sym in snapshot
+                for m in [price_momentum(hist.closes_8h, ts, momentum_lookback_hours)]
+                if m is not None
+            }
+            n_universe = len(snapshot)
+            if n_universe < p.min_universe_size or n_universe < 2 * p.top_n:
+                ts = next_ts
+                continue
+            longs, shorts = rank_for_carry_momentum(snapshot, momentum_snap, p)
+            if not longs and not shorts:
+                ts = next_ts
+                continue
+            # Per-position notional = leg_notional / p.top_n (not / len(longs)):
+            # missing slots intentionally leave capital undeployed (breadth loss).
+            per_pos = equity * p.book_pct_per_side / p.top_n
+            rb = CarryRebalance(
+                ts_ms=ts,
+                longs=[CarryPosition(s, "long", per_pos, snapshot.get(s, 0.0))
+                       for s in longs],
+                shorts=[CarryPosition(s, "short", per_pos, snapshot.get(s, 0.0))
+                        for s in shorts],
+                universe_n=n_universe,
+            )
+        else:
+            rb = build_rebalance(snapshot, equity_usd=equity, ts_ms=ts, p=p)
         if not rb.is_active:
             # Skip this week — keep equity flat, advance cursor.
             ts = next_ts
