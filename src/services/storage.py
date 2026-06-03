@@ -158,6 +158,14 @@ class AuditRow(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
 
 
+class StrategyStateRow(Base):
+    """Generic key-value state for individual strategies (crash-recovery)."""
+    __tablename__ = "strategy_state"
+    name: Mapped[str] = mapped_column(String(64), primary_key=True)
+    payload: Mapped[dict] = mapped_column(JSON)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class Storage:
     def __init__(self, database_url: Optional[str] = None) -> None:
         url = database_url or get_settings().database_url
@@ -483,6 +491,21 @@ class Storage:
         async with self.session() as s:
             row = await s.get(CircuitStateRow, 1)
             return int(row.cooloff_until_ms) if row else 0
+
+    # ----- Generic strategy state (crash-recovery key-value) -----
+    async def save_strategy_state(self, name: str, payload: dict) -> None:
+        async with self.session() as s, s.begin():
+            row = await s.get(StrategyStateRow, name)
+            if row is None:
+                s.add(StrategyStateRow(name=name, payload=payload))
+            else:
+                row.payload = payload
+                row.updated_at = datetime.utcnow()
+
+    async def load_strategy_state(self, name: str) -> Optional[dict]:
+        async with self.session() as s:
+            row = await s.get(StrategyStateRow, name)
+            return dict(row.payload) if row else None
 
     # ----- Allocator state (sprint #17) -----
     async def save_allocator_state(

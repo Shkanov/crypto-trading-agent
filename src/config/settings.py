@@ -163,6 +163,15 @@ class Settings(BaseSettings):
     # account; otherwise live mode will refuse short-spot pairs.
     live_spot_margin_enabled: bool = False
 
+    # Δfunding cross-sectional carry (CPCV-validated, sprint #card1)
+    # Enabled by operator after reviewing cpcv_validate_dfunding results.
+    dfunding_carry_enabled: bool = False
+    dfunding_window_cycles: int = 21     # 21×8h=168h window; validated on top-30
+    dfunding_top_n: int = 3              # legs per side (w21_tn3_bk10 config)
+    dfunding_book_pct_per_side: float = 0.10   # 10% equity per leg-bundle
+    dfunding_universe_size: int = 30     # top-N perps by 24h volume
+    dfunding_rebalance_hours: int = 168  # weekly rebalance
+
     # Storage / logging
     database_url: str = "sqlite+aiosqlite:///./data/agent.db"
     log_level: str = "INFO"

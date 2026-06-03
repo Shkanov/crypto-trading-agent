@@ -100,6 +100,7 @@ from src.services.reconciliation import reconcile_on_boot
 from src.services.storage import Storage
 from src.services.user_data_stream import UserDataStream
 from src.strategies.base import Strategy
+from src.strategies.dfunding_carry import DFundingCarryParams, DFundingCarryStrategy
 from src.strategies.funding_harvest import FundingHarvestStrategy, HarvestParams
 from src.strategies.indicator_confluence import IndicatorConfluenceStrategy
 from src.strategies.level_breakout import LevelBreakoutParams, LevelBreakoutStrategy
@@ -140,6 +141,7 @@ class Orchestrator:
         self.funding_monitor: Optional[FundingMonitor] = None
         self.basis_monitor: Optional[BasisMonitor] = None
         self.funding_strategy: Optional[FundingHarvestStrategy] = None
+        self.dfunding_strategy: Optional[DFundingCarryStrategy] = None
         self.hodl = HodlBenchmark()
         self.detectors = AnomalyDetectors(cooldown_sec=300)
         self.user_data_stream: Optional[UserDataStream] = None
@@ -1749,6 +1751,21 @@ class Orchestrator:
                 symbols=self.s.symbol_list,
             )
             self.register_strategy(self.funding_strategy)
+
+        # Δfunding cross-sectional carry (CPCV-validated Card 1).
+        # Enabled via dfunding_carry_enabled = true in .env after reviewing
+        # cpcv_validate_dfunding results. Off by default — safe for paper run.
+        if self.s.dfunding_carry_enabled:
+            self.dfunding_strategy = DFundingCarryStrategy(
+                DFundingCarryParams(
+                    window_cycles=self.s.dfunding_window_cycles,
+                    top_n=self.s.dfunding_top_n,
+                    book_pct_per_side=self.s.dfunding_book_pct_per_side,
+                    universe_size=self.s.dfunding_universe_size,
+                    rebalance_hours=self.s.dfunding_rebalance_hours,
+                )
+            )
+            self.register_strategy(self.dfunding_strategy)
 
         # Level-breakout (inspired by the "пробой дневки" pattern from an
         # external scalping channel). Off by default — flip on only after
