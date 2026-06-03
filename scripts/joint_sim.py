@@ -212,6 +212,11 @@ def main() -> None:
                         help="Approve top-N candidates per hour (default 5)")
     parser.add_argument("--score-min", type=float, default=None,
                         help="Override ScannerParams.score_min")
+    parser.add_argument("--micro-gate", action="store_true",
+                        help="Enable microstructure entry gate (#14): "
+                             "wait up to 3 M15 bars for CVD flip / vol spike / wick reclaim")
+    parser.add_argument("--micro-window", type=int, default=3,
+                        help="Microstructure confirmation window in M15 bars (default 3)")
     args = parser.parse_args()
 
     print("loading 1h universe + funding + OI from cache...")
@@ -245,7 +250,13 @@ def main() -> None:
 
     # ─── Run the joint simulator per symbol ───
     print(f"\nrunning joint simulator across {len(histories_15m)} symbols...")
-    p = CascadeBacktestParams(cost_bps_override=15.0)
+    p = CascadeBacktestParams(
+        cost_bps_override=15.0,
+        use_microstructure_gate=args.micro_gate,
+        micro_window_bars=args.micro_window,
+    )
+    if args.micro_gate:
+        print(f"microstructure gate: ON  (window={args.micro_window} M15 bars)")
     all_trades: list[SimTrade] = []
     total_pnl = 0.0
     span_start_ms: Optional[int] = None

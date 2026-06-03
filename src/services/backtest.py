@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import asyncio
 import math
+import statistics
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -1669,9 +1670,51 @@ class CascadeBacktestParams:
     # 'breakout'}. If None, all modes allowed.
     allowed_modes: Optional[frozenset[str]] = None
 
+    # Microstructure entry gate (#14). When True, after a pattern is detected
+    # the simulator waits up to micro_window_bars M15 bars for at least one of:
+    #   (a) CVD flip: net taker-buy volume agrees with trade direction
+    #   (b) volume spike: bar volume > micro_vol_mult × 20-bar mean
+    #   (c) wick reclaim: price flushed through the level then closed back
+    # If none fires in the window the trade is skipped. Default off for
+    # backward-compat with existing harness runs.
+    use_microstructure_gate: bool = False
+    micro_window_bars: int = 3       # 3 × M15 = 45 min confirmation window
+    micro_vol_mult: float = 1.5      # volume spike: bar_vol > mult × 20-bar mean
+
     # Risk + cost overrides (otherwise from Settings)
     risk_per_trade_pct: Optional[float] = None
     cost_bps_override: Optional[float] = None  # one-leg slip+fee in bps; round-trip = 2×
+
+
+def _check_micro_conditions(
+    k: Kline,
+    ks: list[Kline],
+    i: int,
+    side: str,
+    level: float,
+    micro_vol_mult: float,
+) -> tuple[bool, str]:
+    """Check the three microstructure confirmation conditions for the entry gate.
+    Returns (confirmed, condition_name). Any single condition is sufficient."""
+    # (a) CVD flip: net taker-buy volume agrees with trade direction.
+    net_cvd = 2.0 * k.taker_buy_volume - k.volume
+    if (side == "long" and net_cvd > 0) or (side == "short" and net_cvd < 0):
+        return True, "cvd_flip"
+
+    # (b) Volume spike: proxy for order-book imbalance surge.
+    vol_window = [ks[j].volume for j in range(max(0, i - 20), i)]
+    if vol_window:
+        vol_mean = statistics.fmean(vol_window)
+        if vol_mean > 0 and k.volume > micro_vol_mult * vol_mean:
+            return True, "vol_spike"
+
+    # (c) Wick reclaim: liquidation flush through the level that closed back.
+    if side == "long" and k.low < level and k.close > level:
+        return True, "wick_reclaim"
+    if side == "short" and k.high > level and k.close < level:
+        return True, "wick_reclaim"
+
+    return False, ""
 
 
 def simulate_cascade_breakout(
@@ -1717,6 +1760,9 @@ def simulate_cascade_breakout(
     trades: list[SimTrade] = []
     open_trade: Optional[SimTrade] = None
     cooldown_until_ms: int = 0
+    # Pending microstructure confirmation: set when gate is enabled and a
+    # pattern is detected; cleared on entry, expiry, or when trade is open.
+    pending_setup: Optional[dict] = None
 
     for i in range(warmup_n, len(ks)):
         k = ks[i]
@@ -1789,7 +1835,56 @@ def simulate_cascade_breakout(
                     open_trade = None
 
         if open_trade is not None or k.close_time < cooldown_until_ms:
+            pending_setup = None   # can't enter; discard any pending setup
             continue
+
+        # ─── Microstructure confirmation window ───
+        if pending_setup is not None and p.use_microstructure_gate:
+            bars_since = i - pending_setup["detected_i"]
+            if bars_since <= p.micro_window_bars:
+                confirmed, condition = _check_micro_conditions(
+                    k, ks, i,
+                    pending_setup["side"],
+                    pending_setup["level"],
+                    p.micro_vol_mult,
+                )
+                if confirmed:
+                    # Enter at this confirmation bar's close.
+                    ps = pending_setup
+                    pending_setup = None
+                    entry_slip_px = k.close * (s.slippage_bps / 10_000)
+                    entry_px = (k.close + entry_slip_px if ps["side"] == "long"
+                                else k.close - entry_slip_px)
+                    risk_per_unit = abs(entry_px - ps["stop"])
+                    if risk_per_unit <= 0:
+                        continue
+                    tp1 = (entry_px + p.tp1_r_multiple * risk_per_unit
+                           if ps["side"] == "long"
+                           else entry_px - p.tp1_r_multiple * risk_per_unit)
+                    risk_usd = equity * risk_pct
+                    qty = min(risk_usd / risk_per_unit,
+                              s.max_notional_usd / entry_px)
+                    if qty <= 0:
+                        continue
+                    open_trade = SimTrade(
+                        symbol=symbol,
+                        strategy=f"cascade_{ps['mode']}_micro_{condition}",
+                        side=ps["side"], qty=qty,
+                        entry_price=entry_px, stop=ps["stop"], tp=tp1,
+                        entry_ts_ms=k.close_time,
+                    )
+                    open_trade.phase = "pre_tp1"             # type: ignore[attr-defined]
+                    open_trade.tp1_price = tp1               # type: ignore[attr-defined]
+                    open_trade.partial_pnl = 0.0             # type: ignore[attr-defined]
+                    open_trade.partial_qty = 0.0             # type: ignore[attr-defined]
+                    open_trade.bars_held = 0                 # type: ignore[attr-defined]
+                    open_trade.atr_at_entry = ps["atr"]      # type: ignore[attr-defined]
+                    open_trade.trail_extreme = None          # type: ignore[attr-defined]
+                    open_trade.entry_high = k.high           # type: ignore[attr-defined]
+                    open_trade.entry_low = k.low             # type: ignore[attr-defined]
+                    continue
+            else:
+                pending_setup = None   # window expired without confirmation
 
         # Scanner gating: if a filter set is passed, only consider bars
         # the scanner approved. This is the production setup — joint sim.
@@ -1834,6 +1929,18 @@ def simulate_cascade_breakout(
         risk_usd = equity * risk_pct
         qty = min(risk_usd / risk_per_unit, s.max_notional_usd / entry_px)
         if qty <= 0:
+            continue
+
+        if p.use_microstructure_gate and pending_setup is None:
+            # Store the setup; wait for microstructure confirmation next bars.
+            pending_setup = {
+                "detected_i": i,
+                "side": pat.side,
+                "mode": pat.mode,
+                "stop": stop,
+                "atr": atr,
+                "level": pat.natorgovka.level,
+            }
             continue
 
         open_trade = SimTrade(
