@@ -1,16 +1,16 @@
 {
-  "rank_cutoff": 5,
-  "approved_bars_total": 1324,
+  "rank_cutoff": 10,
+  "approved_bars_total": 5276,
   "joint": {
-    "trades": 15,
-    "wins": 7,
-    "losses": 8,
-    "win_rate": 0.4666666666666667,
-    "total_pnl_usd": 5.128638739470144,
-    "avg_pnl_usd": 0.34190924929800964,
-    "sharpe": 0.728116672886934,
-    "deflated_sharpe": 0.40055620392137037,
-    "max_drawdown_pct": 1.7200578332836072,
-    "annualized_pct": 2.9292176272377155
+    "trades": 64,
+    "wins": 26,
+    "losses": 38,
+    "win_rate": 0.40625,
+    "total_pnl_usd": -3.476916430381639,
+    "avg_pnl_usd": -0.05432681922471311,
+    "sharpe": -0.23668732519699362,
+    "deflated_sharpe": 0.0,
+    "max_drawdown_pct": 3.8732112071693683,
+    "annualized_pct": -1.4086154667657838
   }
 }

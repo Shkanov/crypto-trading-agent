@@ -433,49 +433,36 @@ def _stats_from_trades(strategy: str, trades: list[SimTrade],
 # ─────────────────────────────  Indicator strategy backtest  ─────────────────
 
 
-async def backtest_indicator(
-    binance: BinanceClient,
+def simulate_indicator(
     symbol: str,
-    tf: str = "5m",
-    htf: str = "1h",
-    bars: int = 5000,
-    cfg: Optional[StrategyConfig] = None,
+    ks: list[Kline],
+    htf_ks: list[Kline],
+    cfg: StrategyConfig,
     settings: Optional[Settings] = None,
     costs: Optional[Costs] = None,
     vol_cfg: Optional[VolTargetConfig] = None,
 ) -> tuple[BacktestStats, list[SimTrade]]:
+    """Pure-computation indicator backtest on pre-fetched klines.
+
+    Factored out of backtest_indicator so multi-config CPCV sweeps can share
+    a single kline fetch per symbol. backtest_indicator delegates here after
+    fetching. tf and htf are read from ks[0].timeframe / htf_ks[0].timeframe.
+    """
+    if not ks or not htf_ks:
+        return _stats_from_trades("indicator", [], (settings or get_settings()).account_equity_usd, 0.0), []
+
     s = settings or get_settings()
-    cfg = cfg or StrategyConfig(allowed_symbols=[symbol], htf_timeframe=htf)
-    ind = IndicatorEngine()
     costs = costs or Costs()
+    tf = ks[0].timeframe
+    htf = htf_ks[0].timeframe
+    ind = IndicatorEngine()
     impact_k = impact_k_for_symbol(symbol)
     half_spread = costs.half_spread_bps_default
 
-    raw = await binance.fetch_klines_paginated(symbol, tf, total=bars, market="spot")
-    ks = [Kline(
-        symbol=symbol, timeframe=tf,
-        open_time=int(r[0]), close_time=int(r[6]),
-        open=float(r[1]), high=float(r[2]), low=float(r[3]), close=float(r[4]),
-        volume=float(r[5]), quote_volume=float(r[7]), trades=int(r[8]),
-        taker_buy_volume=float(r[9]), is_closed=True,
-    ) for r in raw]
-    htf_raw = await binance.fetch_klines_paginated(symbol, htf,
-                                                    total=max(300, bars // 12),
-                                                    market="spot")
-    htf_ks = [Kline(
-        symbol=symbol, timeframe=htf,
-        open_time=int(r[0]), close_time=int(r[6]),
-        open=float(r[1]), high=float(r[2]), low=float(r[3]), close=float(r[4]),
-        volume=float(r[5]), quote_volume=float(r[7]), trades=int(r[8]),
-        taker_buy_volume=float(r[9]), is_closed=True,
-    ) for r in htf_raw]
-    # Warmup with first 200 bars; then iterate forward bar-by-bar.
     warmup_n = min(200, len(ks) // 4)
     ind.warmup(symbol, tf, ks[:warmup_n])
-    # HTF state: warm up only HTF bars that CLOSED BEFORE the first entry-TF
-    # bar of the live loop. Remaining HTF bars are fed incrementally as the
-    # entry-TF cursor advances past them. Without this the HTF gate reads
-    # end-of-history indicator values from every loop step (lookahead).
+    # HTF warmup: only bars closed before the first live entry-TF bar,
+    # preventing the HTF gate from reading end-of-history values (lookahead).
     first_live_close = ks[warmup_n].close_time if warmup_n < len(ks) else 0
     htf_warm_n = 0
     while htf_warm_n < len(htf_ks) and htf_ks[htf_warm_n].close_time < first_live_close:
@@ -488,16 +475,13 @@ async def backtest_indicator(
     equity = s.account_equity_usd
 
     for idx, k in enumerate(ks[warmup_n:], start=warmup_n):
-        # Advance HTF state through every HTF bar that has closed by now.
         while (htf_cursor < len(htf_ks)
                and htf_ks[htf_cursor].close_time <= k.close_time):
             ind.get(symbol, htf).on_closed_kline(htf_ks[htf_cursor])
             htf_cursor += 1
         adv5m = _adv_5m_usd(ks, idx)
-        # Resolve any open trade against THIS bar first (price might have hit stop/TP).
         if open_trade is not None:
             hit_stop = (k.low <= open_trade.stop) if open_trade.side == "long" else (k.high >= open_trade.stop)
-            # Chandelier exit has no fixed TP; check TP only for fixed_atr.
             hit_tp = False
             if cfg.exit_rule == "fixed_atr":
                 hit_tp = (k.high >= open_trade.tp) if open_trade.side == "long" else (k.low <= open_trade.tp)
@@ -516,16 +500,12 @@ async def backtest_indicator(
                 trades.append(open_trade)
                 open_trade = None
             elif cfg.exit_rule == "chandelier":
-                # Ratchet the trailing stop using this bar's extreme + ATR.
                 _update_chandelier_stop(
                     open_trade, k, ks, idx + 1,
                     cfg.chandelier_period, cfg.chandelier_atr_mult,
                 )
 
-        # Update indicators with this closed bar.
         snap = ind.get(symbol, tf).on_closed_kline(k)
-
-        # No new entries while a trade is open (one-at-a-time per symbol).
         if open_trade is not None:
             continue
 
@@ -533,7 +513,6 @@ async def backtest_indicator(
         sig: Optional[Signal] = generate_signal(symbol, snap, htf_snap, cfg)
         if not sig:
             continue
-        # Sizing: vol-targeted if vol_cfg supplied, else legacy risk-pct.
         if vol_cfg is not None:
             rv = _realized_vol_at(ks, idx, tf)
             notional = vol_target_notional(equity, rv, vol_cfg)
@@ -558,7 +537,6 @@ async def backtest_indicator(
             entry_ts_ms=k.close_time,
         )
 
-    # Close any dangling trade at the last bar's close (no-edge exit).
     if open_trade is not None and ks:
         last = ks[-1].close
         open_trade.exit_price = last
@@ -572,6 +550,43 @@ async def backtest_indicator(
 
     span_days = (ks[-1].close_time - ks[0].close_time) / 1000 / 86400 if ks else 0.0
     return _stats_from_trades("indicator", trades, s.account_equity_usd, span_days), trades
+
+
+async def backtest_indicator(
+    binance: BinanceClient,
+    symbol: str,
+    tf: str = "5m",
+    htf: str = "1h",
+    bars: int = 5000,
+    cfg: Optional[StrategyConfig] = None,
+    settings: Optional[Settings] = None,
+    costs: Optional[Costs] = None,
+    vol_cfg: Optional[VolTargetConfig] = None,
+) -> tuple[BacktestStats, list[SimTrade]]:
+    s = settings or get_settings()
+    cfg = cfg or StrategyConfig(allowed_symbols=[symbol], htf_timeframe=htf)
+    costs = costs or Costs()
+
+    raw = await binance.fetch_klines_paginated(symbol, tf, total=bars, market="spot")
+    ks = [Kline(
+        symbol=symbol, timeframe=tf,
+        open_time=int(r[0]), close_time=int(r[6]),
+        open=float(r[1]), high=float(r[2]), low=float(r[3]), close=float(r[4]),
+        volume=float(r[5]), quote_volume=float(r[7]), trades=int(r[8]),
+        taker_buy_volume=float(r[9]), is_closed=True,
+    ) for r in raw]
+    htf_raw = await binance.fetch_klines_paginated(symbol, htf,
+                                                    total=max(300, bars // 12),
+                                                    market="spot")
+    htf_ks = [Kline(
+        symbol=symbol, timeframe=htf,
+        open_time=int(r[0]), close_time=int(r[6]),
+        open=float(r[1]), high=float(r[2]), low=float(r[3]), close=float(r[4]),
+        volume=float(r[5]), quote_volume=float(r[7]), trades=int(r[8]),
+        taker_buy_volume=float(r[9]), is_closed=True,
+    ) for r in htf_raw]
+    return simulate_indicator(symbol, ks, htf_ks, cfg, settings=s,
+                               costs=costs, vol_cfg=vol_cfg)
 
 
 # ─────────────────────────────  Mean-reversion strategy backtest  ────────────
