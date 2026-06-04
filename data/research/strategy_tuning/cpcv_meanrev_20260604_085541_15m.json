@@ -1,0 +1,2570 @@
+{
+  "generated_at": "2026-06-04T08:55:41.440633+00:00",
+  "tf": "15m",
+  "htf": "1h",
+  "bars": 17520,
+  "n_folds": 10,
+  "k_test": 2,
+  "s_subsamples": 16,
+  "pit_min_coverage": 0.95,
+  "candidates": [
+    "API3USDT",
+    "BNBUSDT",
+    "BTCUSDT",
+    "EDENUSDT",
+    "ETHUSDT",
+    "SOLUSDT",
+    "ZECUSDT"
+  ],
+  "n_pass": 1,
+  "validations": [
+    {
+      "symbol": "API3USDT",
+      "is_best_label": "rsi25_atr2.0_strict_gate",
+      "is_best_sharpe": -2.4937491707739095,
+      "is_best_oos_mean": -2.230421977529146,
+      "pbo": 0.0,
+      "pbo_n_partitions": 12870,
+      "pbo_mean_oos_rank": 0.7528509951586876,
+      "decision": "REJECT",
+      "decision_reason": "OOS-mean -2.230 \u2264 0 (no edge)",
+      "configs": [
+        {
+          "label": "rsi25_atr1.0_baseline",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 6,
+          "total_pnl_usd": -211.38743108037247,
+          "in_sample_sharpe": -3.1934123117984226,
+          "cpcv_oos_sharpe_mean": -2.8909794034777607,
+          "cpcv_oos_sharpe_std": 1.6765549063219225
+        },
+        {
+          "label": "rsi25_atr1.0_strict_gate",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 4,
+          "total_pnl_usd": -113.80015261882971,
+          "in_sample_sharpe": -2.5059865167378494,
+          "cpcv_oos_sharpe_mean": -2.2352037095217474,
+          "cpcv_oos_sharpe_std": 1.6341035880923147
+        },
+        {
+          "label": "rsi25_atr1.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 6,
+          "total_pnl_usd": -217.22134654010125,
+          "in_sample_sharpe": -3.273286175700203,
+          "cpcv_oos_sharpe_mean": -2.9144347012631493,
+          "cpcv_oos_sharpe_std": 1.696042404603204
+        },
+        {
+          "label": "rsi25_atr1.5_baseline",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "baseline"
+          },
+          "trades": 6,
+          "total_pnl_usd": -213.5404510327358,
+          "in_sample_sharpe": -3.196373034064171,
+          "cpcv_oos_sharpe_mean": -2.8923077180366854,
+          "cpcv_oos_sharpe_std": 1.6780182212397117
+        },
+        {
+          "label": "rsi25_atr1.5_strict_gate",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 4,
+          "total_pnl_usd": -115.09532753594904,
+          "in_sample_sharpe": -2.5093136263946585,
+          "cpcv_oos_sharpe_mean": -2.234956840795058,
+          "cpcv_oos_sharpe_std": 1.6338245189197884
+        },
+        {
+          "label": "rsi25_atr1.5_triple_barrier",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 6,
+          "total_pnl_usd": -217.22134654010125,
+          "in_sample_sharpe": -3.273286175700203,
+          "cpcv_oos_sharpe_mean": -2.9144347012631493,
+          "cpcv_oos_sharpe_std": 1.696042404603204
+        },
+        {
+          "label": "rsi25_atr2.0_baseline",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 6,
+          "total_pnl_usd": -214.4634466194326,
+          "in_sample_sharpe": -3.185387357622773,
+          "cpcv_oos_sharpe_mean": -2.8882548155968593,
+          "cpcv_oos_sharpe_std": 1.6753262982461903
+        },
+        {
+          "label": "rsi25_atr2.0_strict_gate",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 4,
+          "total_pnl_usd": -115.17916919020095,
+          "in_sample_sharpe": -2.4937491707739095,
+          "cpcv_oos_sharpe_mean": -2.230421977529146,
+          "cpcv_oos_sharpe_std": 1.6287258320250757
+        },
+        {
+          "label": "rsi25_atr2.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 6,
+          "total_pnl_usd": -215.3911274936898,
+          "in_sample_sharpe": -3.2590767054408403,
+          "cpcv_oos_sharpe_mean": -2.9109555898189803,
+          "cpcv_oos_sharpe_std": 1.6928264437102079
+        },
+        {
+          "label": "rsi30_atr1.0_baseline",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 45,
+          "total_pnl_usd": -1539.9383415573059,
+          "in_sample_sharpe": -8.777589811060004,
+          "cpcv_oos_sharpe_mean": -8.904904441804998,
+          "cpcv_oos_sharpe_std": 1.1866404991187665
+        },
+        {
+          "label": "rsi30_atr1.0_strict_gate",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr1.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 35,
+          "total_pnl_usd": -1232.094028613649,
+          "in_sample_sharpe": -7.273294220101287,
+          "cpcv_oos_sharpe_mean": -7.3629865844006925,
+          "cpcv_oos_sharpe_std": 1.3358492135895492
+        },
+        {
+          "label": "rsi30_atr1.5_baseline",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "baseline"
+          },
+          "trades": 44,
+          "total_pnl_usd": -1498.6365631392048,
+          "in_sample_sharpe": -9.046618688295938,
+          "cpcv_oos_sharpe_mean": -9.112388033254991,
+          "cpcv_oos_sharpe_std": 1.3255202953526148
+        },
+        {
+          "label": "rsi30_atr1.5_strict_gate",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 20,
+          "total_pnl_usd": -743.3603412823237,
+          "in_sample_sharpe": -5.587688494922416,
+          "cpcv_oos_sharpe_mean": -5.6747475307718025,
+          "cpcv_oos_sharpe_std": 1.3087510012920025
+        },
+        {
+          "label": "rsi30_atr1.5_triple_barrier",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 35,
+          "total_pnl_usd": -1231.4248107851733,
+          "in_sample_sharpe": -7.270318068003889,
+          "cpcv_oos_sharpe_mean": -7.360213524125551,
+          "cpcv_oos_sharpe_std": 1.3348925270299834
+        },
+        {
+          "label": "rsi30_atr2.0_baseline",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 44,
+          "total_pnl_usd": -1486.6442598360172,
+          "in_sample_sharpe": -9.00172279233771,
+          "cpcv_oos_sharpe_mean": -9.067823519347513,
+          "cpcv_oos_sharpe_std": 1.333150586628659
+        },
+        {
+          "label": "rsi30_atr2.0_strict_gate",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr2.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 35,
+          "total_pnl_usd": -1211.960170399672,
+          "in_sample_sharpe": -7.197406943073732,
+          "cpcv_oos_sharpe_mean": -7.297891804585391,
+          "cpcv_oos_sharpe_std": 1.3216882860118475
+        },
+        {
+          "label": "rsi35_atr1.0_baseline",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 149,
+          "total_pnl_usd": -4788.956016712131,
+          "in_sample_sharpe": -15.017490667540814,
+          "cpcv_oos_sharpe_mean": -15.344354066308597,
+          "cpcv_oos_sharpe_std": 2.6113033802137697
+        },
+        {
+          "label": "rsi35_atr1.0_strict_gate",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 57,
+          "total_pnl_usd": -1879.888832548593,
+          "in_sample_sharpe": -8.552503010978786,
+          "cpcv_oos_sharpe_mean": -8.726287891445985,
+          "cpcv_oos_sharpe_std": 2.040442306472755
+        },
+        {
+          "label": "rsi35_atr1.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 101,
+          "total_pnl_usd": -3268.2448680511347,
+          "in_sample_sharpe": -11.868405738332378,
+          "cpcv_oos_sharpe_mean": -12.25522309788358,
+          "cpcv_oos_sharpe_std": 2.552790414196866
+        },
+        {
+          "label": "rsi35_atr1.5_baseline",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "baseline"
+          },
+          "trades": 138,
+          "total_pnl_usd": -4446.798898856123,
+          "in_sample_sharpe": -15.34810105070941,
+          "cpcv_oos_sharpe_mean": -15.776803921374754,
+          "cpcv_oos_sharpe_std": 2.9531490225055568
+        },
+        {
+          "label": "rsi35_atr1.5_strict_gate",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 53,
+          "total_pnl_usd": -1753.0062351169001,
+          "in_sample_sharpe": -8.52590036972173,
+          "cpcv_oos_sharpe_mean": -8.689574526637259,
+          "cpcv_oos_sharpe_std": 2.0578496426744413
+        },
+        {
+          "label": "rsi35_atr1.5_triple_barrier",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 101,
+          "total_pnl_usd": -3260.082452879447,
+          "in_sample_sharpe": -11.840089714273239,
+          "cpcv_oos_sharpe_mean": -12.221025642217969,
+          "cpcv_oos_sharpe_std": 2.509039516593189
+        },
+        {
+          "label": "rsi35_atr2.0_baseline",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 129,
+          "total_pnl_usd": -4112.274008240457,
+          "in_sample_sharpe": -15.36448476753399,
+          "cpcv_oos_sharpe_mean": -15.701086347525678,
+          "cpcv_oos_sharpe_std": 2.4082067803748246
+        },
+        {
+          "label": "rsi35_atr2.0_strict_gate",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 50,
+          "total_pnl_usd": -1654.0661589518897,
+          "in_sample_sharpe": -8.7022629375388,
+          "cpcv_oos_sharpe_mean": -8.740271387253037,
+          "cpcv_oos_sharpe_std": 1.889906329497438
+        },
+        {
+          "label": "rsi35_atr2.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 101,
+          "total_pnl_usd": -3220.2827308006767,
+          "in_sample_sharpe": -11.71515930981757,
+          "cpcv_oos_sharpe_mean": -12.089501062038183,
+          "cpcv_oos_sharpe_std": 2.4365100576793037
+        }
+      ]
+    },
+    {
+      "symbol": "BNBUSDT",
+      "is_best_label": "rsi25_atr2.0_strict_gate",
+      "is_best_sharpe": 0.7218812370688616,
+      "is_best_oos_mean": 1.2860268029211648,
+      "pbo": 0.0,
+      "pbo_n_partitions": 12870,
+      "pbo_mean_oos_rank": 0.8894788339232784,
+      "decision": "PASS",
+      "decision_reason": "",
+      "configs": [
+        {
+          "label": "rsi25_atr1.0_baseline",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 15,
+          "total_pnl_usd": -16.946031827188783,
+          "in_sample_sharpe": -2.8397445372447123,
+          "cpcv_oos_sharpe_mean": -2.8484218204542895,
+          "cpcv_oos_sharpe_std": 1.8763083171367725
+        },
+        {
+          "label": "rsi25_atr1.0_strict_gate",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 5,
+          "total_pnl_usd": 0.5433618889959082,
+          "in_sample_sharpe": 0.1683362139963829,
+          "cpcv_oos_sharpe_mean": 0.23163349262091226,
+          "cpcv_oos_sharpe_std": 1.917161120432447
+        },
+        {
+          "label": "rsi25_atr1.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 11,
+          "total_pnl_usd": -12.165880634546742,
+          "in_sample_sharpe": -3.599376351026825,
+          "cpcv_oos_sharpe_mean": -3.0030094735515886,
+          "cpcv_oos_sharpe_std": 2.598930598707185
+        },
+        {
+          "label": "rsi25_atr1.5_baseline",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "baseline"
+          },
+          "trades": 13,
+          "total_pnl_usd": -17.281694442061532,
+          "in_sample_sharpe": -2.8120408546106677,
+          "cpcv_oos_sharpe_mean": -2.833665226764706,
+          "cpcv_oos_sharpe_std": 1.7207903001044131
+        },
+        {
+          "label": "rsi25_atr1.5_strict_gate",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 5,
+          "total_pnl_usd": -0.3357367655837027,
+          "in_sample_sharpe": -0.09539338659237147,
+          "cpcv_oos_sharpe_mean": 0.1714838985762937,
+          "cpcv_oos_sharpe_std": 1.9013089021856735
+        },
+        {
+          "label": "rsi25_atr1.5_triple_barrier",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 11,
+          "total_pnl_usd": -12.165880634546742,
+          "in_sample_sharpe": -3.599376351026825,
+          "cpcv_oos_sharpe_mean": -3.0030094735515886,
+          "cpcv_oos_sharpe_std": 2.598930598707185
+        },
+        {
+          "label": "rsi25_atr2.0_baseline",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 13,
+          "total_pnl_usd": -5.730586487471924,
+          "in_sample_sharpe": -1.2350040322801974,
+          "cpcv_oos_sharpe_mean": -0.9854295064657095,
+          "cpcv_oos_sharpe_std": 2.185797989201729
+        },
+        {
+          "label": "rsi25_atr2.0_strict_gate",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 5,
+          "total_pnl_usd": 2.194654951345556,
+          "in_sample_sharpe": 0.7218812370688616,
+          "cpcv_oos_sharpe_mean": 1.2860268029211648,
+          "cpcv_oos_sharpe_std": 1.4298945504415441
+        },
+        {
+          "label": "rsi25_atr2.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 11,
+          "total_pnl_usd": -12.165880634546742,
+          "in_sample_sharpe": -3.599376351026825,
+          "cpcv_oos_sharpe_mean": -3.0030094735515886,
+          "cpcv_oos_sharpe_std": 2.598930598707185
+        },
+        {
+          "label": "rsi30_atr1.0_baseline",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 50,
+          "total_pnl_usd": -54.19971841390133,
+          "in_sample_sharpe": -5.664244184908387,
+          "cpcv_oos_sharpe_mean": -5.886997736202198,
+          "cpcv_oos_sharpe_std": 1.6406455576788737
+        },
+        {
+          "label": "rsi30_atr1.0_strict_gate",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 21,
+          "total_pnl_usd": -17.459393273221597,
+          "in_sample_sharpe": -3.3445078102988166,
+          "cpcv_oos_sharpe_mean": -3.827780118951891,
+          "cpcv_oos_sharpe_std": 1.5648501890899191
+        },
+        {
+          "label": "rsi30_atr1.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 39,
+          "total_pnl_usd": -44.15009859134955,
+          "in_sample_sharpe": -7.230052843958056,
+          "cpcv_oos_sharpe_mean": -7.289267733457396,
+          "cpcv_oos_sharpe_std": 1.6175379749713996
+        },
+        {
+          "label": "rsi30_atr1.5_baseline",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "baseline"
+          },
+          "trades": 46,
+          "total_pnl_usd": -55.287948074163744,
+          "in_sample_sharpe": -5.928103165102428,
+          "cpcv_oos_sharpe_mean": -6.130468873108295,
+          "cpcv_oos_sharpe_std": 1.6340827562693978
+        },
+        {
+          "label": "rsi30_atr1.5_strict_gate",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 21,
+          "total_pnl_usd": -21.230851641784557,
+          "in_sample_sharpe": -3.4989437192954775,
+          "cpcv_oos_sharpe_mean": -3.9112387992951465,
+          "cpcv_oos_sharpe_std": 1.4974526278958546
+        },
+        {
+          "label": "rsi30_atr1.5_triple_barrier",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 39,
+          "total_pnl_usd": -44.15009859134955,
+          "in_sample_sharpe": -7.230052843958056,
+          "cpcv_oos_sharpe_mean": -7.289267733457396,
+          "cpcv_oos_sharpe_std": 1.6175379749713996
+        },
+        {
+          "label": "rsi30_atr2.0_baseline",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr2.0_strict_gate",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 18,
+          "total_pnl_usd": -19.338771536926938,
+          "in_sample_sharpe": -3.4088259062022286,
+          "cpcv_oos_sharpe_mean": -3.5805470494441174,
+          "cpcv_oos_sharpe_std": 1.4658001951432416
+        },
+        {
+          "label": "rsi30_atr2.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 39,
+          "total_pnl_usd": -44.15009859134955,
+          "in_sample_sharpe": -7.230052843958056,
+          "cpcv_oos_sharpe_mean": -7.289267733457396,
+          "cpcv_oos_sharpe_std": 1.6175379749713996
+        },
+        {
+          "label": "rsi35_atr1.0_baseline",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 172,
+          "total_pnl_usd": -182.55447445149483,
+          "in_sample_sharpe": -12.80911295939372,
+          "cpcv_oos_sharpe_mean": -13.309176077122808,
+          "cpcv_oos_sharpe_std": 2.8330881960450838
+        },
+        {
+          "label": "rsi35_atr1.0_strict_gate",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 55,
+          "total_pnl_usd": -64.26672588010481,
+          "in_sample_sharpe": -7.305014012651922,
+          "cpcv_oos_sharpe_mean": -7.497483350227499,
+          "cpcv_oos_sharpe_std": 1.4784959481882516
+        },
+        {
+          "label": "rsi35_atr1.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 117,
+          "total_pnl_usd": -124.57604006315458,
+          "in_sample_sharpe": -11.657465064376781,
+          "cpcv_oos_sharpe_mean": -12.033422933868122,
+          "cpcv_oos_sharpe_std": 1.0357414645469394
+        },
+        {
+          "label": "rsi35_atr1.5_baseline",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "baseline"
+          },
+          "trades": 156,
+          "total_pnl_usd": -163.3164523381551,
+          "in_sample_sharpe": -12.081431931792709,
+          "cpcv_oos_sharpe_mean": -12.390182882467721,
+          "cpcv_oos_sharpe_std": 2.812805793893547
+        },
+        {
+          "label": "rsi35_atr1.5_strict_gate",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 51,
+          "total_pnl_usd": -61.65654634949759,
+          "in_sample_sharpe": -6.923787223828902,
+          "cpcv_oos_sharpe_mean": -7.257293066833279,
+          "cpcv_oos_sharpe_std": 1.4807446795941994
+        },
+        {
+          "label": "rsi35_atr1.5_triple_barrier",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 117,
+          "total_pnl_usd": -124.57604006315458,
+          "in_sample_sharpe": -11.657465064376781,
+          "cpcv_oos_sharpe_mean": -12.033422933868122,
+          "cpcv_oos_sharpe_std": 1.0357414645469394
+        },
+        {
+          "label": "rsi35_atr2.0_baseline",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 148,
+          "total_pnl_usd": -150.64392329023053,
+          "in_sample_sharpe": -11.144057336117012,
+          "cpcv_oos_sharpe_mean": -11.474459333542136,
+          "cpcv_oos_sharpe_std": 2.8205723502770006
+        },
+        {
+          "label": "rsi35_atr2.0_strict_gate",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 47,
+          "total_pnl_usd": -59.93019244415869,
+          "in_sample_sharpe": -6.981269638256044,
+          "cpcv_oos_sharpe_mean": -7.360841857406461,
+          "cpcv_oos_sharpe_std": 1.5619280839709282
+        },
+        {
+          "label": "rsi35_atr2.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 117,
+          "total_pnl_usd": -124.57604006315458,
+          "in_sample_sharpe": -11.657465064376781,
+          "cpcv_oos_sharpe_mean": -12.033422933868122,
+          "cpcv_oos_sharpe_std": 1.0357414645469394
+        }
+      ]
+    },
+    {
+      "symbol": "BTCUSDT",
+      "is_best_label": "rsi30_atr2.0_strict_gate",
+      "is_best_sharpe": -1.343300944077466,
+      "is_best_oos_mean": -1.3459924463813022,
+      "pbo": 0.0811965811965812,
+      "pbo_n_partitions": 12870,
+      "pbo_mean_oos_rank": 0.7635835275835275,
+      "decision": "REJECT",
+      "decision_reason": "OOS-mean -1.346 \u2264 0 (no edge)",
+      "configs": [
+        {
+          "label": "rsi25_atr1.0_baseline",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 16,
+          "total_pnl_usd": -20.04067179737324,
+          "in_sample_sharpe": -5.209959791593227,
+          "cpcv_oos_sharpe_mean": -5.129668088687026,
+          "cpcv_oos_sharpe_std": 1.938255920249612
+        },
+        {
+          "label": "rsi25_atr1.0_strict_gate",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi25_atr1.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 9,
+          "total_pnl_usd": -7.353983078666765,
+          "in_sample_sharpe": -3.201338675532999,
+          "cpcv_oos_sharpe_mean": -2.9375499482931824,
+          "cpcv_oos_sharpe_std": 2.1950152818951376
+        },
+        {
+          "label": "rsi25_atr1.5_baseline",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "baseline"
+          },
+          "trades": 16,
+          "total_pnl_usd": -14.442300814998385,
+          "in_sample_sharpe": -3.4143164397021284,
+          "cpcv_oos_sharpe_mean": -3.3969271798382015,
+          "cpcv_oos_sharpe_std": 3.2376629913236195
+        },
+        {
+          "label": "rsi25_atr1.5_strict_gate",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 2,
+          "total_pnl_usd": -2.4512867674775993,
+          "in_sample_sharpe": -1.9902031257133743,
+          "cpcv_oos_sharpe_mean": -1.2274569643719129,
+          "cpcv_oos_sharpe_std": 1.605840635071913
+        },
+        {
+          "label": "rsi25_atr1.5_triple_barrier",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 9,
+          "total_pnl_usd": -7.353983078666765,
+          "in_sample_sharpe": -3.201338675532999,
+          "cpcv_oos_sharpe_mean": -2.9375499482931824,
+          "cpcv_oos_sharpe_std": 2.1950152818951376
+        },
+        {
+          "label": "rsi25_atr2.0_baseline",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 16,
+          "total_pnl_usd": -12.877576159779073,
+          "in_sample_sharpe": -2.984367777118592,
+          "cpcv_oos_sharpe_mean": -2.9376716186792162,
+          "cpcv_oos_sharpe_std": 3.1929758371407666
+        },
+        {
+          "label": "rsi25_atr2.0_strict_gate",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi25_atr2.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 9,
+          "total_pnl_usd": -7.353983078666765,
+          "in_sample_sharpe": -3.201338675532999,
+          "cpcv_oos_sharpe_mean": -2.9375499482931824,
+          "cpcv_oos_sharpe_std": 2.1950152818951376
+        },
+        {
+          "label": "rsi30_atr1.0_baseline",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 50,
+          "total_pnl_usd": -41.532691550691936,
+          "in_sample_sharpe": -6.0414078601337335,
+          "cpcv_oos_sharpe_mean": -6.216949441819033,
+          "cpcv_oos_sharpe_std": 1.9971298839708942
+        },
+        {
+          "label": "rsi30_atr1.0_strict_gate",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 12,
+          "total_pnl_usd": -5.251739369542578,
+          "in_sample_sharpe": -1.5388502732278517,
+          "cpcv_oos_sharpe_mean": -2.179825972961886,
+          "cpcv_oos_sharpe_std": 3.1281661727243932
+        },
+        {
+          "label": "rsi30_atr1.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 29,
+          "total_pnl_usd": -18.61507346697085,
+          "in_sample_sharpe": -4.782867160544912,
+          "cpcv_oos_sharpe_mean": -5.597166329026974,
+          "cpcv_oos_sharpe_std": 1.5090199877784842
+        },
+        {
+          "label": "rsi30_atr1.5_baseline",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "baseline"
+          },
+          "trades": 50,
+          "total_pnl_usd": -38.51033732956376,
+          "in_sample_sharpe": -5.112877444844416,
+          "cpcv_oos_sharpe_mean": -5.18116715967698,
+          "cpcv_oos_sharpe_std": 2.3475384659825793
+        },
+        {
+          "label": "rsi30_atr1.5_strict_gate",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr1.5_triple_barrier",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 29,
+          "total_pnl_usd": -18.61507346697085,
+          "in_sample_sharpe": -4.782867160544912,
+          "cpcv_oos_sharpe_mean": -5.597166329026974,
+          "cpcv_oos_sharpe_std": 1.5090199877784842
+        },
+        {
+          "label": "rsi30_atr2.0_baseline",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 46,
+          "total_pnl_usd": -33.482404258248714,
+          "in_sample_sharpe": -4.322653645104783,
+          "cpcv_oos_sharpe_mean": -4.393259080156983,
+          "cpcv_oos_sharpe_std": 2.768434590684116
+        },
+        {
+          "label": "rsi30_atr2.0_strict_gate",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 12,
+          "total_pnl_usd": -5.449633872253387,
+          "in_sample_sharpe": -1.343300944077466,
+          "cpcv_oos_sharpe_mean": -1.3459924463813022,
+          "cpcv_oos_sharpe_std": 3.3453118278047937
+        },
+        {
+          "label": "rsi30_atr2.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 29,
+          "total_pnl_usd": -18.61507346697085,
+          "in_sample_sharpe": -4.782867160544912,
+          "cpcv_oos_sharpe_mean": -5.597166329026974,
+          "cpcv_oos_sharpe_std": 1.5090199877784842
+        },
+        {
+          "label": "rsi35_atr1.0_baseline",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 147,
+          "total_pnl_usd": -99.8916465326537,
+          "in_sample_sharpe": -9.827699199806759,
+          "cpcv_oos_sharpe_mean": -9.943914363241111,
+          "cpcv_oos_sharpe_std": 2.40755826129456
+        },
+        {
+          "label": "rsi35_atr1.0_strict_gate",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 42,
+          "total_pnl_usd": -31.11199023312273,
+          "in_sample_sharpe": -5.883386434882479,
+          "cpcv_oos_sharpe_mean": -6.037839625100105,
+          "cpcv_oos_sharpe_std": 1.5265178146066372
+        },
+        {
+          "label": "rsi35_atr1.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 91,
+          "total_pnl_usd": -44.01083473092191,
+          "in_sample_sharpe": -7.001568601504861,
+          "cpcv_oos_sharpe_mean": -7.737982240143299,
+          "cpcv_oos_sharpe_std": 1.5973357531569563
+        },
+        {
+          "label": "rsi35_atr1.5_baseline",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "baseline"
+          },
+          "trades": 141,
+          "total_pnl_usd": -92.2780166201623,
+          "in_sample_sharpe": -8.129025802010796,
+          "cpcv_oos_sharpe_mean": -8.278677254933472,
+          "cpcv_oos_sharpe_std": 2.4463475170395843
+        },
+        {
+          "label": "rsi35_atr1.5_strict_gate",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 41,
+          "total_pnl_usd": -27.42106557445094,
+          "in_sample_sharpe": -4.296415810889615,
+          "cpcv_oos_sharpe_mean": -4.3159419975589595,
+          "cpcv_oos_sharpe_std": 2.29966925925618
+        },
+        {
+          "label": "rsi35_atr1.5_triple_barrier",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 91,
+          "total_pnl_usd": -44.01083473092191,
+          "in_sample_sharpe": -7.001568601504861,
+          "cpcv_oos_sharpe_mean": -7.737982240143299,
+          "cpcv_oos_sharpe_std": 1.5973357531569563
+        },
+        {
+          "label": "rsi35_atr2.0_baseline",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 130,
+          "total_pnl_usd": -85.35553674715511,
+          "in_sample_sharpe": -7.417716836154035,
+          "cpcv_oos_sharpe_mean": -7.746980628013994,
+          "cpcv_oos_sharpe_std": 3.090408194136048
+        },
+        {
+          "label": "rsi35_atr2.0_strict_gate",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 38,
+          "total_pnl_usd": -24.388780518060294,
+          "in_sample_sharpe": -3.814473120671489,
+          "cpcv_oos_sharpe_mean": -3.930412518906609,
+          "cpcv_oos_sharpe_std": 2.1656120205543306
+        },
+        {
+          "label": "rsi35_atr2.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 91,
+          "total_pnl_usd": -44.01083473092191,
+          "in_sample_sharpe": -7.001568601504861,
+          "cpcv_oos_sharpe_mean": -7.737982240143299,
+          "cpcv_oos_sharpe_std": 1.5973357531569563
+        }
+      ]
+    },
+    {
+      "symbol": "EDENUSDT",
+      "is_best_label": "rsi25_atr1.5_strict_gate",
+      "is_best_sharpe": -2.103762898151193,
+      "is_best_oos_mean": -1.730135965627901,
+      "pbo": 0.0,
+      "pbo_n_partitions": 12870,
+      "pbo_mean_oos_rank": 0.9068104118104117,
+      "decision": "REJECT",
+      "decision_reason": "OOS-mean -1.730 \u2264 0 (no edge)",
+      "configs": [
+        {
+          "label": "rsi25_atr1.0_baseline",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 11,
+          "total_pnl_usd": -348.2048744347927,
+          "in_sample_sharpe": -3.9658961522288156,
+          "cpcv_oos_sharpe_mean": -3.652715232378666,
+          "cpcv_oos_sharpe_std": 2.236406741192095
+        },
+        {
+          "label": "rsi25_atr1.0_strict_gate",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi25_atr1.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi25_atr1.5_baseline",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "baseline"
+          },
+          "trades": 10,
+          "total_pnl_usd": -306.351996531381,
+          "in_sample_sharpe": -4.137602126424862,
+          "cpcv_oos_sharpe_mean": -3.712119413058621,
+          "cpcv_oos_sharpe_std": 2.313321670360412
+        },
+        {
+          "label": "rsi25_atr1.5_strict_gate",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 3,
+          "total_pnl_usd": -85.08570583521133,
+          "in_sample_sharpe": -2.103762898151193,
+          "cpcv_oos_sharpe_mean": -1.730135965627901,
+          "cpcv_oos_sharpe_std": 1.6510184616597021
+        },
+        {
+          "label": "rsi25_atr1.5_triple_barrier",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 7,
+          "total_pnl_usd": -195.90141951947018,
+          "in_sample_sharpe": -2.468740837845165,
+          "cpcv_oos_sharpe_mean": -1.951812081565761,
+          "cpcv_oos_sharpe_std": 1.8889430948480797
+        },
+        {
+          "label": "rsi25_atr2.0_baseline",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 10,
+          "total_pnl_usd": -274.6092173296423,
+          "in_sample_sharpe": -4.068898640028844,
+          "cpcv_oos_sharpe_mean": -3.694846163054769,
+          "cpcv_oos_sharpe_std": 2.2967409967063723
+        },
+        {
+          "label": "rsi25_atr2.0_strict_gate",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi25_atr2.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 7,
+          "total_pnl_usd": -159.0131892842662,
+          "in_sample_sharpe": -2.5309977206511007,
+          "cpcv_oos_sharpe_mean": -1.9929504409650176,
+          "cpcv_oos_sharpe_std": 1.946960518370197
+        },
+        {
+          "label": "rsi30_atr1.0_baseline",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 50,
+          "total_pnl_usd": -1664.3264609891464,
+          "in_sample_sharpe": -8.49994909905153,
+          "cpcv_oos_sharpe_mean": -8.773722348947205,
+          "cpcv_oos_sharpe_std": 1.667271682900139
+        },
+        {
+          "label": "rsi30_atr1.0_strict_gate",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 13,
+          "total_pnl_usd": -398.6199445018588,
+          "in_sample_sharpe": -4.517122803962002,
+          "cpcv_oos_sharpe_mean": -4.144259111997466,
+          "cpcv_oos_sharpe_std": 2.1454759403081813
+        },
+        {
+          "label": "rsi30_atr1.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 35,
+          "total_pnl_usd": -1092.124030748929,
+          "in_sample_sharpe": -6.926443556862457,
+          "cpcv_oos_sharpe_mean": -7.157190446880582,
+          "cpcv_oos_sharpe_std": 1.8516510679424034
+        },
+        {
+          "label": "rsi30_atr1.5_baseline",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "baseline"
+          },
+          "trades": 48,
+          "total_pnl_usd": -1588.7451101705235,
+          "in_sample_sharpe": -8.614786905493535,
+          "cpcv_oos_sharpe_mean": -8.801540225169637,
+          "cpcv_oos_sharpe_std": 1.6940353389846872
+        },
+        {
+          "label": "rsi30_atr1.5_strict_gate",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 12,
+          "total_pnl_usd": -347.9096539718342,
+          "in_sample_sharpe": -4.553571849560522,
+          "cpcv_oos_sharpe_mean": -4.182310368750671,
+          "cpcv_oos_sharpe_std": 2.1726763624965937
+        },
+        {
+          "label": "rsi30_atr1.5_triple_barrier",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr2.0_baseline",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr2.0_strict_gate",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 12,
+          "total_pnl_usd": -306.8012031230737,
+          "in_sample_sharpe": -4.504588356756124,
+          "cpcv_oos_sharpe_mean": -4.156937821511513,
+          "cpcv_oos_sharpe_std": 2.1404229244066526
+        },
+        {
+          "label": "rsi30_atr2.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 35,
+          "total_pnl_usd": -967.1689469965035,
+          "in_sample_sharpe": -6.964839570133571,
+          "cpcv_oos_sharpe_mean": -7.043043873695568,
+          "cpcv_oos_sharpe_std": 1.8605964850548593
+        },
+        {
+          "label": "rsi35_atr1.0_baseline",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 161,
+          "total_pnl_usd": -5554.021514488365,
+          "in_sample_sharpe": -13.14769282510243,
+          "cpcv_oos_sharpe_mean": -14.073295369330337,
+          "cpcv_oos_sharpe_std": 3.3082456186911267
+        },
+        {
+          "label": "rsi35_atr1.0_strict_gate",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi35_atr1.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 111,
+          "total_pnl_usd": -3835.845455087359,
+          "in_sample_sharpe": -10.68242952561356,
+          "cpcv_oos_sharpe_mean": -11.222695798255785,
+          "cpcv_oos_sharpe_std": 2.7885561493056876
+        },
+        {
+          "label": "rsi35_atr1.5_baseline",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "baseline"
+          },
+          "trades": 147,
+          "total_pnl_usd": -4987.645198130186,
+          "in_sample_sharpe": -13.698336510123724,
+          "cpcv_oos_sharpe_mean": -14.271568383097428,
+          "cpcv_oos_sharpe_std": 3.1388186101466062
+        },
+        {
+          "label": "rsi35_atr1.5_strict_gate",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 44,
+          "total_pnl_usd": -1530.724369400534,
+          "in_sample_sharpe": -7.342832264510087,
+          "cpcv_oos_sharpe_mean": -7.400207189984865,
+          "cpcv_oos_sharpe_std": 1.4558898462952332
+        },
+        {
+          "label": "rsi35_atr1.5_triple_barrier",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 111,
+          "total_pnl_usd": -3777.9193291271054,
+          "in_sample_sharpe": -10.607946733295655,
+          "cpcv_oos_sharpe_mean": -11.156988444337369,
+          "cpcv_oos_sharpe_std": 2.83451248971797
+        },
+        {
+          "label": "rsi35_atr2.0_baseline",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 140,
+          "total_pnl_usd": -4493.1707291835555,
+          "in_sample_sharpe": -13.621397980502133,
+          "cpcv_oos_sharpe_mean": -14.216207951407323,
+          "cpcv_oos_sharpe_std": 3.3981172254911503
+        },
+        {
+          "label": "rsi35_atr2.0_strict_gate",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi35_atr2.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        }
+      ]
+    },
+    {
+      "symbol": "ETHUSDT",
+      "is_best_label": "rsi25_atr1.5_triple_barrier",
+      "is_best_sharpe": -1.498910177308839,
+      "is_best_oos_mean": -1.1228243327157144,
+      "pbo": 0.016938616938616938,
+      "pbo_n_partitions": 12870,
+      "pbo_mean_oos_rank": 0.6722822631913542,
+      "decision": "REJECT",
+      "decision_reason": "OOS-mean -1.123 \u2264 0 (no edge)",
+      "configs": [
+        {
+          "label": "rsi25_atr1.0_baseline",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi25_atr1.0_strict_gate",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi25_atr1.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi25_atr1.5_baseline",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "baseline"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi25_atr1.5_strict_gate",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi25_atr1.5_triple_barrier",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 5,
+          "total_pnl_usd": -1.5301652224618048,
+          "in_sample_sharpe": -1.498910177308839,
+          "cpcv_oos_sharpe_mean": -1.1228243327157144,
+          "cpcv_oos_sharpe_std": 2.3234341098723057
+        },
+        {
+          "label": "rsi25_atr2.0_baseline",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 9,
+          "total_pnl_usd": -8.764766410951086,
+          "in_sample_sharpe": -1.9671926187773243,
+          "cpcv_oos_sharpe_mean": -1.6971932112938413,
+          "cpcv_oos_sharpe_std": 2.298822334564334
+        },
+        {
+          "label": "rsi25_atr2.0_strict_gate",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi25_atr2.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 5,
+          "total_pnl_usd": -1.5301652224618048,
+          "in_sample_sharpe": -1.498910177308839,
+          "cpcv_oos_sharpe_mean": -1.1228243327157144,
+          "cpcv_oos_sharpe_std": 2.3234341098723057
+        },
+        {
+          "label": "rsi30_atr1.0_baseline",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 39,
+          "total_pnl_usd": -45.24832863387519,
+          "in_sample_sharpe": -6.934706694585293,
+          "cpcv_oos_sharpe_mean": -6.916279785668071,
+          "cpcv_oos_sharpe_std": 0.6567259675212174
+        },
+        {
+          "label": "rsi30_atr1.0_strict_gate",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr1.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr1.5_baseline",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "baseline"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr1.5_strict_gate",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr1.5_triple_barrier",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr2.0_baseline",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 36,
+          "total_pnl_usd": -45.29639812881375,
+          "in_sample_sharpe": -5.837481989886285,
+          "cpcv_oos_sharpe_mean": -5.830414013123202,
+          "cpcv_oos_sharpe_std": 1.7589887809855975
+        },
+        {
+          "label": "rsi30_atr2.0_strict_gate",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr2.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi35_atr1.0_baseline",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi35_atr1.0_strict_gate",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi35_atr1.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 91,
+          "total_pnl_usd": -49.198877960079045,
+          "in_sample_sharpe": -7.717018903607567,
+          "cpcv_oos_sharpe_mean": -7.687070858566349,
+          "cpcv_oos_sharpe_std": 1.9525829947457123
+        },
+        {
+          "label": "rsi35_atr1.5_baseline",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "baseline"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi35_atr1.5_strict_gate",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 35,
+          "total_pnl_usd": -26.242757157578996,
+          "in_sample_sharpe": -3.9013108099227627,
+          "cpcv_oos_sharpe_mean": -3.9735466917695303,
+          "cpcv_oos_sharpe_std": 3.1387478789678656
+        },
+        {
+          "label": "rsi35_atr1.5_triple_barrier",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 91,
+          "total_pnl_usd": -49.198877960079045,
+          "in_sample_sharpe": -7.717018903607567,
+          "cpcv_oos_sharpe_mean": -7.687070858566349,
+          "cpcv_oos_sharpe_std": 1.9525829947457123
+        },
+        {
+          "label": "rsi35_atr2.0_baseline",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi35_atr2.0_strict_gate",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 34,
+          "total_pnl_usd": -24.336652283450793,
+          "in_sample_sharpe": -3.2707555786065288,
+          "cpcv_oos_sharpe_mean": -3.24917310843714,
+          "cpcv_oos_sharpe_std": 3.5065750850684494
+        },
+        {
+          "label": "rsi35_atr2.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 91,
+          "total_pnl_usd": -49.198877960079045,
+          "in_sample_sharpe": -7.717018903607567,
+          "cpcv_oos_sharpe_mean": -7.687070858566349,
+          "cpcv_oos_sharpe_std": 1.9525829947457123
+        }
+      ]
+    },
+    {
+      "symbol": "SOLUSDT",
+      "is_best_label": "rsi30_atr2.0_strict_gate",
+      "is_best_sharpe": -2.805460124600169,
+      "is_best_oos_mean": -2.8853639428783127,
+      "pbo": 0.5832944832944833,
+      "pbo_n_partitions": 12870,
+      "pbo_mean_oos_rank": 0.5148251748251748,
+      "decision": "REJECT",
+      "decision_reason": "PBO \u2265 0.5 AND OOS-mean \u2264 0",
+      "configs": [
+        {
+          "label": "rsi25_atr1.0_baseline",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi25_atr1.0_strict_gate",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 4,
+          "total_pnl_usd": -6.8892904173750455,
+          "in_sample_sharpe": -2.835133620213247,
+          "cpcv_oos_sharpe_mean": -2.04352887487707,
+          "cpcv_oos_sharpe_std": 2.0302000057866323
+        },
+        {
+          "label": "rsi25_atr1.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi25_atr1.5_baseline",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "baseline"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi25_atr1.5_strict_gate",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 4,
+          "total_pnl_usd": -8.624482868239149,
+          "in_sample_sharpe": -2.8272122041728434,
+          "cpcv_oos_sharpe_mean": -2.042141238378041,
+          "cpcv_oos_sharpe_std": 2.0281436706771423
+        },
+        {
+          "label": "rsi25_atr1.5_triple_barrier",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi25_atr2.0_baseline",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi25_atr2.0_strict_gate",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi25_atr2.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 10,
+          "total_pnl_usd": -9.922857118487727,
+          "in_sample_sharpe": -3.364454191694978,
+          "cpcv_oos_sharpe_mean": -2.7747262020527432,
+          "cpcv_oos_sharpe_std": 2.4323537512346487
+        },
+        {
+          "label": "rsi30_atr1.0_baseline",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 45,
+          "total_pnl_usd": -35.68077760709411,
+          "in_sample_sharpe": -3.8352035201085983,
+          "cpcv_oos_sharpe_mean": -4.835508693474075,
+          "cpcv_oos_sharpe_std": 4.046901012192067
+        },
+        {
+          "label": "rsi30_atr1.0_strict_gate",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr1.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr1.5_baseline",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "baseline"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr1.5_strict_gate",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 15,
+          "total_pnl_usd": -24.418957134036233,
+          "in_sample_sharpe": -3.667101572580558,
+          "cpcv_oos_sharpe_mean": -3.661204894331062,
+          "cpcv_oos_sharpe_std": 2.7075259830241603
+        },
+        {
+          "label": "rsi30_atr1.5_triple_barrier",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr2.0_baseline",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr2.0_strict_gate",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 15,
+          "total_pnl_usd": -21.31501984488461,
+          "in_sample_sharpe": -2.805460124600169,
+          "cpcv_oos_sharpe_mean": -2.8853639428783127,
+          "cpcv_oos_sharpe_std": 2.128767797441083
+        },
+        {
+          "label": "rsi30_atr2.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi35_atr1.0_baseline",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi35_atr1.0_strict_gate",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi35_atr1.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi35_atr1.5_baseline",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "baseline"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi35_atr1.5_strict_gate",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 41,
+          "total_pnl_usd": -50.10022382911347,
+          "in_sample_sharpe": -5.362991134889246,
+          "cpcv_oos_sharpe_mean": -5.3958877671547265,
+          "cpcv_oos_sharpe_std": 1.7205597469436518
+        },
+        {
+          "label": "rsi35_atr1.5_triple_barrier",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 102,
+          "total_pnl_usd": -77.32882726199132,
+          "in_sample_sharpe": -8.538646581973346,
+          "cpcv_oos_sharpe_mean": -8.728912360757377,
+          "cpcv_oos_sharpe_std": 1.3854386747600855
+        },
+        {
+          "label": "rsi35_atr2.0_baseline",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 137,
+          "total_pnl_usd": -124.985512803318,
+          "in_sample_sharpe": -7.183571490226048,
+          "cpcv_oos_sharpe_mean": -7.424784280260338,
+          "cpcv_oos_sharpe_std": 3.376485673173196
+        },
+        {
+          "label": "rsi35_atr2.0_strict_gate",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi35_atr2.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        }
+      ]
+    },
+    {
+      "symbol": "ZECUSDT",
+      "is_best_label": "rsi25_atr1.0_strict_gate",
+      "is_best_sharpe": -0.3987695663927469,
+      "is_best_oos_mean": -0.04122298224258805,
+      "pbo": 0.09634809634809635,
+      "pbo_n_partitions": 12870,
+      "pbo_mean_oos_rank": 0.7244211344211343,
+      "decision": "REJECT",
+      "decision_reason": "OOS-mean -0.041 \u2264 0 (no edge)",
+      "configs": [
+        {
+          "label": "rsi25_atr1.0_baseline",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi25_atr1.0_strict_gate",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 2,
+          "total_pnl_usd": -1.900922224426934,
+          "in_sample_sharpe": -0.3987695663927469,
+          "cpcv_oos_sharpe_mean": -0.04122298224258805,
+          "cpcv_oos_sharpe_std": 1.886788036201146
+        },
+        {
+          "label": "rsi25_atr1.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi25_atr1.5_baseline",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "baseline"
+          },
+          "trades": 7,
+          "total_pnl_usd": -17.407878533341595,
+          "in_sample_sharpe": -1.7426200249047759,
+          "cpcv_oos_sharpe_mean": -1.7806437791783658,
+          "cpcv_oos_sharpe_std": 1.5380186086320116
+        },
+        {
+          "label": "rsi25_atr1.5_strict_gate",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi25_atr1.5_triple_barrier",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 4,
+          "total_pnl_usd": -11.674797084966135,
+          "in_sample_sharpe": -2.245181565786233,
+          "cpcv_oos_sharpe_mean": -2.183454625636089,
+          "cpcv_oos_sharpe_std": 1.5805550896548788
+        },
+        {
+          "label": "rsi25_atr2.0_baseline",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi25_atr2.0_strict_gate",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 2,
+          "total_pnl_usd": -3.890347328769525,
+          "in_sample_sharpe": -0.7830368080088838,
+          "cpcv_oos_sharpe_mean": -0.05963343545656497,
+          "cpcv_oos_sharpe_std": 1.8989187907873701
+        },
+        {
+          "label": "rsi25_atr2.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 25.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr1.0_baseline",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr1.0_strict_gate",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr1.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr1.5_baseline",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "baseline"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr1.5_strict_gate",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi30_atr1.5_triple_barrier",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 32,
+          "total_pnl_usd": -102.85748234191526,
+          "in_sample_sharpe": -6.420825596808942,
+          "cpcv_oos_sharpe_mean": -6.594582210145816,
+          "cpcv_oos_sharpe_std": 1.3200383505847504
+        },
+        {
+          "label": "rsi30_atr2.0_baseline",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 43,
+          "total_pnl_usd": -124.69178650527017,
+          "in_sample_sharpe": -5.68798760875868,
+          "cpcv_oos_sharpe_mean": -5.6074415294316475,
+          "cpcv_oos_sharpe_std": 1.6714751877362757
+        },
+        {
+          "label": "rsi30_atr2.0_strict_gate",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 15,
+          "total_pnl_usd": -52.17565928195812,
+          "in_sample_sharpe": -3.52036090698467,
+          "cpcv_oos_sharpe_mean": -2.9818615569847067,
+          "cpcv_oos_sharpe_std": 2.714602829588886
+        },
+        {
+          "label": "rsi30_atr2.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 30.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 32,
+          "total_pnl_usd": -93.33863364757269,
+          "in_sample_sharpe": -6.2163762909089115,
+          "cpcv_oos_sharpe_mean": -6.492074505401033,
+          "cpcv_oos_sharpe_std": 1.3389919198177425
+        },
+        {
+          "label": "rsi35_atr1.0_baseline",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi35_atr1.0_strict_gate",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi35_atr1.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi35_atr1.5_baseline",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "baseline"
+          },
+          "trades": 140,
+          "total_pnl_usd": -505.5228519754627,
+          "in_sample_sharpe": -12.227741891985566,
+          "cpcv_oos_sharpe_mean": -12.245791925717153,
+          "cpcv_oos_sharpe_std": 2.3010619692196213
+        },
+        {
+          "label": "rsi35_atr1.5_strict_gate",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi35_atr1.5_triple_barrier",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 1.5,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi35_atr2.0_baseline",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "baseline"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi35_atr2.0_strict_gate",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "strict_gate"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        },
+        {
+          "label": "rsi35_atr2.0_triple_barrier",
+          "config": {
+            "rsi_oversold": 35.0,
+            "atr_stop_mult": 2.0,
+            "operating_mode": "triple_barrier"
+          },
+          "trades": 0,
+          "total_pnl_usd": 0.0,
+          "in_sample_sharpe": 0.0,
+          "cpcv_oos_sharpe_mean": 0.0,
+          "cpcv_oos_sharpe_std": 0.0
+        }
+      ]
+    }
+  ]
+}
