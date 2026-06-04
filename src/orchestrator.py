@@ -1604,7 +1604,7 @@ class Orchestrator:
         # which becomes the HARD upper bound the ramp respects).
         self.notional_ramp = NotionalRamp(
             storage=self.storage,
-            starting_notional_usd=min(25.0, self.s.max_notional_usd),
+            starting_notional_usd=min(self.s.notional_ramp_start_usd, self.s.max_notional_usd),
             max_notional_usd_ceiling=self.s.max_notional_usd,
         )
         try:

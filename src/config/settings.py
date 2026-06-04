@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     account_equity_usd: float = 1_000.0
     risk_per_trade_pct: float = 0.5
     max_notional_usd: float = 200.0
+    # Notional ramp (R10) starting point. Fresh boots start max_notional here
+    # and grow it on weekly profit. Capped at min(this, max_notional_usd).
+    notional_ramp_start_usd: float = 25.0
     max_daily_loss_pct: float = 3.0
     max_concurrent_positions: int = 3
     max_leverage: int = 3
