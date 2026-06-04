@@ -1434,6 +1434,11 @@ class Orchestrator:
                         if ba:
                             asyncio.create_task(self._handle_anomaly(ba))
 
+    # StrategyContext protocol shim — strategies access settings via ctx.settings
+    @property
+    def settings(self) -> Settings:
+        return self.s
+
     # ---------- strategy lifecycle ----------
     def register_strategy(self, strat: Strategy) -> None:
         self.strategies.append(strat)
