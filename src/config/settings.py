@@ -101,6 +101,10 @@ class Settings(BaseSettings):
 
     # Correlation cap as a fraction of equity (BTC-beta-weighted total exposure)
     max_correlated_exposure_pct: float = 40.0
+    # Indicator-confluence (intraday) strategy. Confirmed dead in validation
+    # (intraday 5m/15m/1h REJECT). Default True for back-compat; set
+    # INDICATOR_CONFLUENCE_ENABLED=false to keep it from trading live.
+    indicator_confluence_enabled: bool = True
 
     # LLM behavior: advisory-only by default. Set to true ONLY after 90 days
     # of paper trading shows the LLM proposals would have beaten a frozen

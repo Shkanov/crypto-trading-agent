@@ -19,6 +19,7 @@ from typing import Awaitable, Callable, Optional
 import structlog
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.constants import ParseMode
+from telegram.helpers import escape_markdown
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -57,7 +58,7 @@ def _format_proposal(p: Proposal) -> str:
         f"Entry: `{sig.entry:.4f}`  Stop: `{sig.stop:.4f}`  TP: `{sig.take_profit:.4f}`\n"
         f"Qty: `{p.qty:.6f}`  Notional: `${p.notional_usd:.2f}`  R:R: `{sig.rr:.2f}`\n"
         f"Edge: `{sig.edge_bps:+.0f}bps`  Conf: `{sig.confidence:.0%}`\n"
-        f"_{sig.rationale}_\n"
+        f"_{escape_markdown(str(sig.rationale or ''), version=1)}_\n"
         f"_expires in {(p.expires_at_ms - int(time.time()*1000))//1000}s_"
     )
 
@@ -240,7 +241,7 @@ class TelegramBot:
             f"*CLOSE {side.upper()} {symbol}* `{close_id[:8]}`\n"
             f"Qty: `{qty:.6f}`  Entry: `{entry:.4f}`  Now: `{current_px:.4f}`  "
             f"Unrealized: `{pnl_pct:+.2f}%`\n"
-            f"_{rationale}_\n"
+            f"_{escape_markdown(str(rationale or ''), version=1)}_\n"
             f"_expires in {expires_in_sec}s_"
         )
         kb = InlineKeyboardMarkup([[

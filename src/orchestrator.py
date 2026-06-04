@@ -23,6 +23,7 @@ from collections import deque
 from typing import Optional
 
 import structlog
+from telegram.helpers import escape_markdown
 
 from src.agents.anomaly_agent import build_anomaly_agent, investigate
 from src.services.anomaly_detectors import AnomalyDetectors
@@ -352,7 +353,9 @@ class Orchestrator:
             p.reason = result.error or ""
             log.warning("executor.failed", proposal_id=p.id, err=result.error)
             if self.telegram:
-                await self.telegram.send_critical(f"FAILED `{p.id[:8]}`: {result.error}")
+                await self.telegram.send_critical(
+                    f"FAILED `{p.id[:8]}`: "
+                    f"{escape_markdown(str(result.error or ''), version=1)}")
         await self.storage.save_proposal(p)
         self.pending.pop(p.id, None)
 
@@ -555,7 +558,8 @@ class Orchestrator:
             log.exception("close.approve.force_close_failed", close_id=close_id)
             if self.telegram:
                 await self.telegram.send_critical(
-                    f"Close `{close_id[:8]}` execution FAILED: {e}"
+                    f"Close `{close_id[:8]}` execution FAILED: "
+                    f"{escape_markdown(str(e), version=1)}"
                 )
             return
         await self.storage.audit("trader_close_approved",
@@ -1272,7 +1276,7 @@ class Orchestrator:
             if self.telegram:
                 await self.telegram.send_critical(
                     f"*RISK CIRCUIT* `{','.join(sorted(cur_trig))}` — "
-                    f"{state.reason}"
+                    f"{escape_markdown(str(state.reason or ''), version=1)}"
                 )
         elif prev_trig and not cur_trig:
             await self.storage.audit("risk_circuit_cleared", {"prev": list(prev_trig)})
@@ -1741,7 +1745,8 @@ class Orchestrator:
 
         # Register built-in strategies. Indicator-confluence runs as a
         # learning lab; funding-harvest runs as the actual edge-bearing one.
-        self.register_strategy(IndicatorConfluenceStrategy(self.cfg, sentiments=self.sentiments))
+        if self.s.indicator_confluence_enabled:
+            self.register_strategy(IndicatorConfluenceStrategy(self.cfg, sentiments=self.sentiments))
         if self.funding_monitor and self.basis_monitor and self.s.funding_harvest_enabled:
             self.funding_strategy = FundingHarvestStrategy(
                 funding=self.funding_monitor, basis=self.basis_monitor,
