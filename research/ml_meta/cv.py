@@ -37,7 +37,9 @@ def event_grid_positions(times: pd.Series | pd.DatetimeIndex,
     indexer and fails loudly on any miss — a silent nearest-match would smear
     fold boundaries and reintroduce leakage.
     """
-    idx = pd.DatetimeIndex(pd.Series(times).values) if not isinstance(times, pd.DatetimeIndex) else times
+    # pd.DatetimeIndex(series) preserves tz; .values would strip it and break a
+    # tz-aware grid match.
+    idx = times if isinstance(times, pd.DatetimeIndex) else pd.DatetimeIndex(times)
     pos = grid.get_indexer(idx)
     if (pos < 0).any():
         raise ValueError("every event timestamp must lie exactly on `grid`")

@@ -139,12 +139,12 @@ def average_uniqueness(bar_index: pd.DatetimeIndex,
     """
     if len(t0) != len(t1):
         raise ValueError("t0 and t1 must be the same length")
-    pos = pd.Series(np.arange(len(bar_index)), index=bar_index)
-    starts = pos.reindex(pd.Index(t0.values)).values
-    ends = pos.reindex(pd.Index(t1.values)).values
-    if np.isnan(starts).any() or np.isnan(ends).any():
+    # get_indexer on DatetimeIndex preserves tz; .values would strip it and
+    # silently mismatch a tz-aware grid.
+    starts = bar_index.get_indexer(pd.DatetimeIndex(t0))
+    ends = bar_index.get_indexer(pd.DatetimeIndex(t1))
+    if (starts < 0).any() or (ends < 0).any():
         raise ValueError("every t0/t1 must lie on bar_index")
-    starts = starts.astype(int); ends = ends.astype(int)
 
     # concurrency over the grid via a +1/-1 difference array
     conc = np.zeros(len(bar_index) + 1)
