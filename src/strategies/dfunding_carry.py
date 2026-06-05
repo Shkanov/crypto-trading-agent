@@ -142,13 +142,30 @@ class DFundingCarryStrategy(Strategy):
         await b.respect_ban()
         async with b.rest_limiter:
             tickers = await b.client.futures_ticker()
-        rows = [
-            r for r in tickers
-            if r["symbol"].endswith("USDT")
-            and r["symbol"] not in MAJORS
-            and not any(tok in r["symbol"][:-4] for tok in STABLE_TOKENS)
-            and not any(r["symbol"].endswith(suf) for suf in LEVERAGED_SUFFIXES)
-        ]
+        # Only genuinely tradeable USDT crypto perps: intersect with the loaded
+        # perp filters (excludes Binance TRADIFI_PERPETUAL tokenized-equity perps
+        # like MRVLUSDT/SOXLUSDT/XAUUSDT, which are not in perp_filters and fail
+        # quantize), and drop names whose min-notional exceeds our per-leg size
+        # (e.g. BCHUSDT minNotional=20 vs a ~$13 leg).
+        per_leg = (self.ctx.equity_available_usd(self.name)
+                   * self.p.book_pct_per_side / max(1, self.p.top_n))
+        rows = []
+        for r in tickers:
+            sym = r["symbol"]
+            if not sym.endswith("USDT"):
+                continue
+            if sym in MAJORS:
+                continue
+            if any(tok in sym[:-4] for tok in STABLE_TOKENS):
+                continue
+            if any(sym.endswith(suf) for suf in LEVERAGED_SUFFIXES):
+                continue
+            filt = b.perp_filters.get(sym)
+            if filt is None:
+                continue
+            if per_leg > 0 and float(filt.min_notional) > per_leg:
+                continue
+            rows.append(r)
         rows.sort(key=lambda r: float(r["quoteVolume"]), reverse=True)
         return [r["symbol"] for r in rows[: self.p.universe_size]]
 

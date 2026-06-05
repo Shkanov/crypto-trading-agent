@@ -95,7 +95,11 @@ class Executor:
                 return ExecutionResult(ok=True, fill_price=price, fill_qty=float(qty_q),
                                        entry_order=entry)
 
-            # Perps: leverage/isolated already set at startup via ensure_perp_setup.
+            # Perps: ensure leverage/isolated for THIS symbol before ordering.
+            # dfunding trades a dynamic universe, so startup setup for the static
+            # symbol_list is not enough — without an explicit low leverage the
+            # micro-alts reject the order with -2027 (max position at leverage).
+            await self.binance.ensure_perp_setup(sym, getattr(p, "leverage", 1) or 1)
             entry = await self.binance.place_perp_market(sym, side, qty_q, coid)
 
             stop_q, _ = self.binance.quantize(sym, 0.0, p.signal.stop, p.market)
