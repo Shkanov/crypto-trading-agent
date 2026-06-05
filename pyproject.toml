@@ -35,6 +35,13 @@ dev = [
     "ipykernel>=6.29",
 ]
 talib = ["TA-Lib>=0.4.32"]  # optional; requires C dependency
+# Offline ML research only (research/ml_meta/*). NOT installed in the live
+# trading runtime — keep the bot's footprint lean.
+research = [
+    "lightgbm>=4.3",
+    "scikit-learn>=1.4",
+    "pyarrow>=16.0",
+]
 
 [build-system]
 requires = ["setuptools>=68"]
