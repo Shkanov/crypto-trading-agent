@@ -21,3 +21,6 @@ dist/
 
 # Claude Code personal (per-user) settings — not committed
 .claude/settings.local.json
+
+# ML research parquet cache (regenerable from public data)
+research/ml_meta/_cache/
