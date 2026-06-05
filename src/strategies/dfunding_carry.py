@@ -139,6 +139,7 @@ class DFundingCarryStrategy(Strategy):
     async def _build_universe(self) -> list[str]:
         b = self.ctx.binance
         assert b.client is not None
+        await b.respect_ban()
         async with b.rest_limiter:
             tickers = await b.client.futures_ticker()
         rows = [
@@ -159,6 +160,7 @@ class DFundingCarryStrategy(Strategy):
         out: list[tuple[int, float]] = []
         cursor = start_ms
         while cursor < end_ms:
+            await b.respect_ban()
             async with b.rest_limiter:
                 try:
                     page = await b.client.futures_funding_rate(

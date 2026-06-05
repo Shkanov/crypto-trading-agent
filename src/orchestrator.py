@@ -69,6 +69,7 @@ from src.services.correlation import CorrelationMatrix
 from src.services.funding_income import FundingIncomePoller
 from src.services.funding_monitor import FundingMonitor
 from src.services.hodl_benchmark import HodlBenchmark
+from src.services import kline_cache
 from src.services.metrics import (
     basis_g,
     circuit_cooloff_active_g,
@@ -778,13 +779,22 @@ class Orchestrator:
     # ---------- background loops ----------
     async def _warmup(self) -> None:
         # Pull recent history per (symbol, timeframe) to seed indicators.
+        # Reuse a fresh on-disk cache when present so a rapid restart doesn't
+        # re-burst the REST API (a -1003 ban contributor). TTL kept short; the
+        # live WS stream takes over for anything newer than the cache.
+        cache_hits = 0
         for sym in self.s.symbol_list:
             for tf in self.s.timeframe_list:
-                try:
-                    raw = await self.binance.fetch_klines(sym, tf, limit=500, market="spot")
-                except Exception as e:
-                    log.warning("warmup.fetch_failed", sym=sym, tf=tf, err=str(e))
-                    continue
+                raw = kline_cache.load("spot", sym, tf, ttl_s=self.s.warmup_cache_ttl_s)
+                if raw is not None:
+                    cache_hits += 1
+                else:
+                    try:
+                        raw = await self.binance.fetch_klines(sym, tf, limit=500, market="spot")
+                    except Exception as e:
+                        log.warning("warmup.fetch_failed", sym=sym, tf=tf, err=str(e))
+                        continue
+                    kline_cache.save("spot", sym, tf, raw)
                 klines = [Kline(
                     symbol=sym, timeframe=tf,
                     open_time=int(r[0]), close_time=int(r[6]),
@@ -794,7 +804,8 @@ class Orchestrator:
                     is_closed=True,
                 ) for r in raw]
                 self.indicators.warmup(sym, tf, klines)
-        log.info("warmup.done")
+        log.info("warmup.done", cache_hits=cache_hits,
+                 total=len(self.s.symbol_list) * len(self.s.timeframe_list))
 
     async def _market_loop(self) -> None:
         # Subscribe to all (symbol, timeframe) kline streams. python-binance
@@ -854,6 +865,43 @@ class Orchestrator:
             raise
         except Exception:
             log.exception("market_loop.error", tf=tf)
+
+    async def _reconcile_retry_loop(self) -> None:
+        """Background recovery for a TRANSIENT boot-reconciliation failure
+        (exchange unreachable / -1003 ban). Re-reconciles with backoff until
+        the exchange is reachable, then either lifts the trading pause (clean)
+        or escalates to the 24h operator halt (a real mismatch surfaced)."""
+        backoff_s = 60.0
+        while True:
+            await asyncio.sleep(backoff_s)
+            backoff_s = min(backoff_s * 1.5, 600.0)
+            try:
+                recon = await reconcile_on_boot(self.binance, self.storage,
+                                                live=not self.paper)
+            except Exception:
+                log.exception("reconcile_retry.error")
+                continue
+            if recon.transient:
+                continue  # still can't reach the exchange — keep waiting
+            if recon.ok:
+                self.halted_until_ms = 0  # lift the boot pause
+                log.info("reconcile_retry.recovered", matched=len(recon.matched))
+                if self.telegram:
+                    await self.telegram.send_info(
+                        "✅ Exchange reachable again — boot reconciliation passed, "
+                        "trading resumed."
+                    )
+            else:
+                self.halted_until_ms = now_ms() + 24 * 3600_000
+                log.critical("reconcile_retry.mismatch", notes=recon.notes,
+                             ghost=len(recon.local_only),
+                             orphan=len(recon.exchange_only))
+                if self.telegram:
+                    await self.telegram.send_critical(
+                        f"RECONCILIATION MISMATCH after recovery — halted 24h.\n"
+                        f"```\n{format_recon_report(recon)}\n```"
+                    )
+            return
 
     async def _rewarm_timeframe(self, tf: str) -> None:
         """After a WS reconnect, refetch recent history and rebuild indicator state.
@@ -1591,7 +1639,7 @@ class Orchestrator:
         )
         self.funding_monitor = FundingMonitor(
             symbols=self.s.symbol_list, poll_interval_s=60,
-            testnet=self.s.binance_testnet,
+            testnet=self.s.binance_testnet, binance=self.binance,
         )
         self.basis_monitor = BasisMonitor(
             funding=self.funding_monitor, indicators=self.indicators,
@@ -1709,12 +1757,30 @@ class Orchestrator:
         # Reconcile state against exchange before the hot loop starts. In
         # paper mode this is a no-op. In live mode, mismatch halts trading.
         recon = await reconcile_on_boot(self.binance, self.storage, live=not self.paper)
-        if not recon.ok:
+        if not recon.ok and recon.transient:
+            # Couldn't reach the exchange to compare state (network / -1003
+            # rate-limit ban) — NOT a position mismatch. Do not slam the 24h
+            # operator halt. Pause trading only until the outage clears, then
+            # re-reconcile in the background. Subsystems below still start
+            # (halted_until_ms gates propose()), so /status keeps working.
+            wait_ms = max(self.binance._banned_until_ms - now_ms(), 60_000) + 5_000
+            self.halted_until_ms = now_ms() + min(wait_ms, 6 * 3600_000)
+            log.warning("startup.reconciliation_transient",
+                        notes=recon.notes, retry_in_s=wait_ms // 1000)
+            if self.telegram:
+                await self.telegram.send_critical(
+                    "Boot reconciliation deferred — exchange unreachable "
+                    f"(likely rate-limit). Re-checking in ~{wait_ms // 60000} min. "
+                    "Trading paused until then — this is NOT a 24h halt."
+                )
+            asyncio.create_task(self._reconcile_retry_loop())
+        elif not recon.ok:
             log.critical("startup.reconciliation_failed",
                          notes=recon.notes,
                          ghost=len(recon.local_only),
                          orphan=len(recon.exchange_only))
-            # Halt trading until operator resolves. Hot loop still warms +
+            # Confirmed local-vs-exchange mismatch (ghost/orphan/qty/direction)
+            # — dangerous. Halt until operator resolves. Hot loop still warms +
             # streams (so /status works) but propose() is gated by halted_until_ms.
             self.halted_until_ms = now_ms() + 24 * 3600_000
             if self.telegram:

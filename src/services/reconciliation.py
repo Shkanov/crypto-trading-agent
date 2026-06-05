@@ -12,6 +12,7 @@ live with state drift is the fast way to lose money on phantom positions.
 """
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -31,6 +32,11 @@ class ReconciliationReport:
     local_only: list[Trade] = field(default_factory=list)
     exchange_only: list[dict] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    # True when we could NOT reach the exchange to compare state at all
+    # (network error / -1003 rate-limit ban) — as opposed to a confirmed
+    # local-vs-exchange mismatch. Transient failures must NOT trigger the
+    # 24h operator halt; the caller retries until the exchange is reachable.
+    transient: bool = False
 
 
 async def _reconcile_margin(binance: BinanceClient, storage: Storage,
@@ -102,11 +108,25 @@ async def reconcile_on_boot(binance: BinanceClient, storage: Storage,
         report.notes.append("no local open trades; clean start")
         # Still check exchange to detect orphan positions.
 
-    try:
-        positions = await binance.futures_positions()
-    except Exception as e:
+    # Fetch exchange positions with a few bounded retries. A failure here means
+    # we couldn't *see* the exchange (network / -1003 ban), which is a TRANSIENT
+    # condition — flag it as such so the caller retries instead of slamming a
+    # 24h halt. (binance.futures_positions already waits out a recorded ban via
+    # respect_ban; the short backoff covers brief blips before one is recorded.)
+    positions = None
+    last_err: Optional[Exception] = None
+    for attempt in range(3):
+        try:
+            positions = await binance.futures_positions()
+            break
+        except Exception as e:  # noqa: BLE001
+            last_err = e
+            if attempt < 2:
+                await asyncio.sleep(2.0 * (attempt + 1))
+    if positions is None:
         report.ok = False
-        report.notes.append(f"could not fetch futures positions: {e}")
+        report.transient = True
+        report.notes.append(f"could not fetch futures positions: {last_err}")
         return report
 
     # Keep only nonzero positions

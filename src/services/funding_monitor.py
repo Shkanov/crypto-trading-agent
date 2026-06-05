@@ -66,10 +66,15 @@ class FundingMonitor:
     """Polls funding for a fixed set of perp symbols. Run as a long-lived task."""
 
     def __init__(self, symbols: list[str], poll_interval_s: int = 60,
-                 testnet: bool = False) -> None:
+                 testnet: bool = False, binance: Optional["object"] = None) -> None:
         self.symbols = symbols
         self.poll_interval_s = poll_interval_s
         self.testnet = testnet
+        # When a BinanceClient is supplied we drive live updates from the
+        # `@markPrice` WS stream (zero REST weight) instead of polling
+        # /premiumIndex every poll_interval_s. REST is still used for the
+        # one-off historical seed. Falls back to REST polling if absent.
+        self.binance = binance
         self.state: dict[str, FundingState] = {s: FundingState(symbol=s) for s in symbols}
         self._client: Optional[httpx.AsyncClient] = None
         self._task: Optional[asyncio.Task] = None
@@ -109,7 +114,15 @@ class FundingMonitor:
                     if h.mark_price <= 0:
                         h.mark_price = st.last.mark_price
                         h.index_price = st.last.index_price
-        self._task = asyncio.create_task(self._poll_loop())
+        # Live updates: WS mark-price stream when a client is available (no REST
+        # weight), else fall back to the legacy 60s REST poll loop.
+        if self.binance is not None and getattr(self.binance, "client", None) is not None:
+            self._task = asyncio.create_task(self._ws_loop())
+            log.info("funding.live_source", source="ws_markPrice", symbols=len(self.symbols))
+        else:
+            self._task = asyncio.create_task(self._poll_loop())
+            log.info("funding.live_source", source="rest_poll",
+                     interval_s=self.poll_interval_s)
 
     async def stop(self) -> None:
         self._stop.set()
@@ -164,6 +177,35 @@ class FundingMonitor:
             # Only append on funding-time crossings to avoid duplicate history.
             if not st.history or st.history[-1].next_funding_ms != p.next_funding_ms:
                 st.history.append(p)
+
+    async def _ws_loop(self) -> None:
+        """Consume the `@markPrice` WS stream and update funding state. The
+        stream auto-reconnects internally; this guard only catches the
+        unexpected. markPriceUpdate fields: s, p (mark), i (index), r (rate),
+        T (next funding), E (event time)."""
+        try:
+            async for d in self.binance.stream_mark_price(self.symbols):
+                sym = d.get("s")
+                st = self.state.get(sym)
+                if not st:
+                    continue
+                p = FundingPoint(
+                    symbol=sym,
+                    rate=float(d.get("r") or 0.0),
+                    mark_price=float(d.get("p") or 0.0),
+                    index_price=float(d.get("i") or 0.0),
+                    next_funding_ms=int(d.get("T") or 0),
+                    ts_ms=int(d.get("E") or 0),
+                )
+                st.last = p
+                # Append to history only on funding-time crossings (avoids
+                # flooding the 200-deep deque with 1/s ticks).
+                if not st.history or st.history[-1].next_funding_ms != p.next_funding_ms:
+                    st.history.append(p)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception("funding.ws_loop.error")
 
     async def _poll_loop(self) -> None:
         while not self._stop.is_set():

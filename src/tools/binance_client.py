@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import math
+import re
 import time
 from dataclasses import dataclass
 from decimal import ROUND_DOWN, Decimal
@@ -61,6 +62,11 @@ class BinanceClient:
         # Conservative limits — refined from response headers at runtime.
         self.rest_limiter = AsyncLimiter(max_rate=1200, time_period=60)  # weight
         self.order_limiter = AsyncLimiter(max_rate=50, time_period=10)
+        # When Binance returns -1003 ("banned until <ms>"), we record the
+        # epoch-ms expiry here so subsequent REST calls WAIT for it to lift
+        # instead of hammering the endpoint (which extends the ban). Shared
+        # across all callers of this client.
+        self._banned_until_ms: int = 0
 
     async def start(self) -> None:
         self.client = await AsyncClient.create(self._key, self._secret, testnet=self.testnet)
@@ -83,6 +89,47 @@ class BinanceClient:
     async def close(self) -> None:
         if self.client:
             await self.client.close_connection()
+
+    # ----- Rate-limit / IP-ban handling -----
+    def _note_ban(self, exc: Exception) -> None:
+        """Parse a -1003 'banned until <ms>' message and record the expiry."""
+        m = re.search(r"banned until (\d+)", str(exc))
+        if m:
+            self._banned_until_ms = int(m.group(1))
+            log.critical("binance.ip_banned", until_ms=self._banned_until_ms,
+                         wait_s=max(0, (self._banned_until_ms - int(time.time() * 1000)) // 1000))
+
+    async def respect_ban(self) -> None:
+        """Block until any recorded -1003 ban has lifted. Sleeps in <=120s
+        chunks so cancellation stays responsive. Public so strategies that
+        call the raw client (e.g. dfunding universe build) can gate on it."""
+        while True:
+            wait_ms = self._banned_until_ms - int(time.time() * 1000)
+            if wait_ms <= 0:
+                return
+            log.warning("binance.rate_ban_wait", wait_s=wait_ms // 1000)
+            await asyncio.sleep(min(wait_ms / 1000.0 + 1.0, 120.0))
+
+    async def _guarded(self, coro_factory, label: str):
+        """Run a REST coroutine under the weight limiter, respecting any active
+        IP ban and capturing a fresh -1003 ban (then re-raising so the caller's
+        own error path runs). One transient retry with backoff on other errors."""
+        backoff = 1.0
+        for attempt in range(3):
+            await self.respect_ban()
+            try:
+                async with self.rest_limiter:
+                    return await coro_factory()
+            except BinanceAPIException as e:
+                if e.code == -1003:
+                    self._note_ban(e)
+                raise
+            except Exception:  # noqa: BLE001
+                if attempt == 2:
+                    raise
+                log.warning("binance.rest_retry", label=label, backoff_s=backoff)
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, 15.0)
 
     # ----- Filters / quantization -----
     async def _load_filters(self) -> None:
@@ -210,22 +257,68 @@ class BinanceClient:
                 await asyncio.sleep(backoff_s)
                 backoff_s = min(backoff_s * 2, 30.0)
 
-    async def stream_futures_user(self) -> AsyncIterator[dict]:
+    async def stream_mark_price(self, symbols: list[str]
+                                ) -> AsyncIterator[dict]:
+        """Futures mark-price stream (`<sym>@markPrice@1s`). Each push carries
+        mark price AND the current funding rate + next funding time, so this
+        replaces 24/7 REST polling of /premiumIndex (a -1003 ban contributor —
+        Binance explicitly recommends the websocket here). Yields raw
+        `markPriceUpdate` payloads (keys: s, p, i, r, T). Auto-reconnects
+        forever with backoff; cancel the task to stop."""
         assert self.client is not None
-        bm = BinanceSocketManager(self.client)
-        async with bm.futures_user_socket() as stream:
-            while True:
-                msg = await stream.recv()
-                yield msg
+        backoff_s = 1.0
+        while True:
+            try:
+                bm = BinanceSocketManager(self.client)
+                streams = [f"{s.lower()}@markPrice@1s" for s in symbols]
+                socket = bm.futures_multiplex_socket(streams)
+                async with socket as stream:
+                    backoff_s = 1.0
+                    while True:
+                        msg = await stream.recv()
+                        data = (msg or {}).get("data") or {}
+                        if data.get("e") == "markPriceUpdate":
+                            yield data
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                log.warning("ws.markPrice.disconnect", err=str(e), backoff_s=backoff_s)
+                await asyncio.sleep(backoff_s)
+                backoff_s = min(backoff_s * 2, 30.0)
+
+    async def stream_futures_user(self) -> AsyncIterator[dict]:
+        """Futures user-data stream (positions/orders/fills/balance). Now
+        auto-reconnects with backoff — previously a single connection that, on
+        'Session is closed', died silently and stopped delivering account
+        events. Cancel the task to stop."""
+        assert self.client is not None
+        backoff_s = 1.0
+        while True:
+            try:
+                bm = BinanceSocketManager(self.client)
+                async with bm.futures_user_socket() as stream:
+                    backoff_s = 1.0  # reset on successful (re)connect
+                    while True:
+                        msg = await stream.recv()
+                        yield msg
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                log.warning("ws.futures_user.disconnect", err=str(e), backoff_s=backoff_s)
+                await asyncio.sleep(backoff_s)
+                backoff_s = min(backoff_s * 2, 30.0)
 
     # ----- REST: market data warmup -----
     async def fetch_klines(self, symbol: str, interval: str, limit: int = 500,
                            market: str = "spot") -> list[list]:
         assert self.client is not None
-        async with self.rest_limiter:
-            if market == "spot":
-                return await self.client.get_klines(symbol=symbol, interval=interval, limit=limit)
-            return await self.client.futures_klines(symbol=symbol, interval=interval, limit=limit)
+        if market == "spot":
+            return await self._guarded(
+                lambda: self.client.get_klines(symbol=symbol, interval=interval, limit=limit),
+                f"klines:{symbol}:{interval}")
+        return await self._guarded(
+            lambda: self.client.futures_klines(symbol=symbol, interval=interval, limit=limit),
+            f"fklines:{symbol}:{interval}")
 
     async def fetch_klines_paginated(self, symbol: str, interval: str,
                                       total: int, market: str = "spot") -> list[list]:
@@ -299,8 +392,9 @@ class BinanceClient:
 
     async def futures_positions(self) -> list[dict]:
         assert self.client is not None
-        async with self.rest_limiter:
-            return await self.client.futures_position_information()
+        return await self._guarded(
+            lambda: self.client.futures_position_information(),
+            "futures_positions")
 
     async def futures_account(self) -> dict:
         assert self.client is not None

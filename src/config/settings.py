@@ -191,6 +191,12 @@ class Settings(BaseSettings):
     # Clock skew tolerance — halt on drift > N ms.
     max_clock_skew_ms: int = 1500
 
+    # Warmup kline cache TTL (seconds). On boot, per-(symbol,timeframe) klines
+    # are reused from disk if cached more recently than this, so a rapid restart
+    # issues zero warmup REST calls (a -1003 ban contributor). The live WS
+    # stream covers anything newer. 0 disables the cache (always fetch fresh).
+    warmup_cache_ttl_s: int = 600
+
     # LLM cadences (seconds)
     strategy_agent_interval_sec: int = 600
     news_agent_interval_sec: int = 120
