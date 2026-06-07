@@ -49,13 +49,17 @@ def _exposure_per_coin(positions: list[Position], symbol: str) -> float:
 
 def _btc_beta_equiv(positions: list[Position],
                     betas: Optional[dict[str, float]] = None) -> float:
-    """BTC-beta-weighted total exposure. Uses live `betas` if provided
-    (from CorrelationMatrix); falls back to a 0.85 default per symbol if
-    no estimate is available. J1 wires the live matrix."""
+    """NET BTC-beta-weighted exposure: longs add, shorts subtract. A
+    market-neutral long/short book (e.g. cross-sectional carry) nets toward
+    zero; a directional book accumulates. Caller compares abs() to the cap.
+    Uses live `betas` if provided (from CorrelationMatrix); falls back to a
+    0.85 default per symbol if no estimate is available. J1 wires the live
+    matrix."""
     total = 0.0
     for p in positions:
         beta = (betas or {}).get(p.symbol, 0.85)
-        total += p.qty * p.entry * beta
+        sign = 1.0 if p.side == "long" else -1.0 if p.side == "short" else 0.0
+        total += sign * p.qty * p.entry * beta
     return total
 
 
@@ -121,15 +125,17 @@ class RiskGate:
         if existing_exposure + notional > per_coin_cap:
             return RiskDecision(ok=False, reason="per-coin exposure cap")
 
-        # Correlation: BTC-beta-equivalent total exposure cap, as % of equity.
+        # Correlation: NET BTC-beta-equivalent exposure cap, as % of equity.
+        # Signed so a long/short book nets out; compare magnitude to the cap.
         sym_beta = (acct.btc_betas or {}).get(signal.symbol, 0.85)
+        leg_sign = 1.0 if signal.side == "long" else -1.0 if signal.side == "short" else 0.0
         beta_equiv = _btc_beta_equiv(acct.open_positions, acct.btc_betas) \
-            + notional * sym_beta
+            + leg_sign * notional * sym_beta
         beta_cap = acct.equity_usd * (s.max_correlated_exposure_pct / 100.0)
-        if beta_equiv > beta_cap:
+        if abs(beta_equiv) > beta_cap:
             return RiskDecision(
                 ok=False,
-                reason=f"correlation: BTC-beta exposure ${beta_equiv:.0f} > cap ${beta_cap:.0f}",
+                reason=f"correlation: net BTC-beta exposure ${beta_equiv:.0f} > cap ${beta_cap:.0f}",
             )
 
         # Cost-of-edge filter
