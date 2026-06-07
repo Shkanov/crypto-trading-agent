@@ -125,3 +125,74 @@ def build_panel(symbols: list[str], interval: str, start_ms: int, end_ms: int,
         except Exception as e:  # noqa: BLE001
             print(f"  {sym}: FETCH FAILED — {e}")
     return panel
+
+
+# ---------------------------------------------------------------------------
+# Funding-rate history (8h cadence) — the Δfunding primary's raw signal source.
+
+def fetch_funding(symbol: str, start_ms: int, end_ms: int) -> list[tuple[int, float]]:
+    """Paginated public-futures funding history over [start_ms, end_ms].
+
+    Returns a time-sorted list of (fundingTime_ms, fundingRate) — the exact
+    shape `funding_carry.funding_window_change` consumes. Read-only, ban-aware.
+    """
+    state: dict = {}
+    out: list[tuple[int, float]] = []
+    cursor = start_ms
+    with httpx.Client(base_url=FAPI, timeout=20.0) as client:
+        while cursor < end_ms:
+            rows = _get(client, "/fapi/v1/fundingRate", {
+                "symbol": symbol, "startTime": cursor,
+                "endTime": end_ms, "limit": 1000,
+            }, state)
+            if not rows:
+                break
+            for r in rows:
+                out.append((int(r["fundingTime"]), float(r["fundingRate"])))
+            last_t = int(rows[-1]["fundingTime"])
+            if len(rows) < 1000 or last_t <= cursor:
+                break
+            cursor = last_t + 1
+    out.sort(key=lambda x: x[0])
+    return out
+
+
+def load_or_fetch_funding(symbol: str, start_ms: int, end_ms: int,
+                          *, force: bool = False) -> list[tuple[int, float]]:
+    """Cached funding history → list[(fundingTime_ms, rate)]. Parquet cache at
+    research/ml_meta/_cache/{symbol}_funding.parquet."""
+    CACHE.mkdir(parents=True, exist_ok=True)
+    p = CACHE / f"{symbol}_funding.parquet"
+    lo = pd.to_datetime(start_ms, unit="ms", utc=True)
+    if p.exists() and not force:
+        df = pd.read_parquet(p)
+        if not df.empty and int(df["fundingTime"].iloc[0]) <= start_ms:
+            sub = df[(df["fundingTime"] >= start_ms) & (df["fundingTime"] <= end_ms)]
+            return list(zip(sub["fundingTime"].astype("int64"),
+                            sub["fundingRate"].astype(float)))
+    events = fetch_funding(symbol, start_ms, end_ms)
+    if events:
+        pd.DataFrame(events, columns=["fundingTime", "fundingRate"]).to_parquet(p)
+    _ = lo  # silence unused in the (rare) empty path
+    return events
+
+
+def build_funding_panel(symbols: list[str], start_ms: int, end_ms: int,
+                        *, force: bool = False) -> dict[str, list[tuple[int, float]]]:
+    """Per-symbol funding history, cached. Returns {symbol: [(t_ms, rate), ...]}.
+    Symbols that fail to fetch are logged and skipped."""
+    panel: dict[str, list[tuple[int, float]]] = {}
+    for sym in symbols:
+        try:
+            ev = load_or_fetch_funding(sym, start_ms, end_ms, force=force)
+            if not ev:
+                print(f"  {sym}: no funding — skipped")
+                continue
+            panel[sym] = ev
+            n = len(ev)
+            print(f"  {sym}: {n} funding pts  "
+                  f"[{pd.to_datetime(ev[0][0], unit='ms', utc=True)} .. "
+                  f"{pd.to_datetime(ev[-1][0], unit='ms', utc=True)}]")
+        except Exception as e:  # noqa: BLE001
+            print(f"  {sym}: FUNDING FETCH FAILED — {e}")
+    return panel

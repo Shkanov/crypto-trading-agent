@@ -47,9 +47,12 @@ class FoldResult:
 def evaluate_cpcv(ds: pd.DataFrame, splits: list[PurgedSplit],
                   *, params: dict | None = None,
                   threshold: float = 0.5,
+                  feature_cols: list[str] | None = None,
                   min_train: int = 50, min_test: int = 8) -> list[FoldResult]:
-    """Run the meta-model through every purged split and compare to raw."""
-    X = ds[FEATURE_COLS]
+    """Run the meta-model through every purged split and compare to raw.
+    `feature_cols` defaults to the mean-rev FEATURE_COLS; pass the funding
+    primary's column list for Phase 2."""
+    X = ds[feature_cols or FEATURE_COLS]
     y = ds["y"]
     w = ds["w"]
     r = ds["ret_net"].values

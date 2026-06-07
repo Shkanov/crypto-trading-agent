@@ -1,0 +1,243 @@
+{
+  "generated_at": "2026-06-02T16:59:00.436457+00:00",
+  "days": 29,
+  "universe": [
+    "HYPEUSDT",
+    "ZECUSDT",
+    "LABUSDT",
+    "WLDUSDT",
+    "XAUUSDT",
+    "CLUSDT",
+    "MUUSDT",
+    "XAGUSDT",
+    "NEARUSDT",
+    "DOGEUSDT",
+    "MRVLUSDT",
+    "HUSDT",
+    "XLMUSDT",
+    "SNDKUSDT",
+    "EDGEUSDT",
+    "SUIUSDT",
+    "TONUSDT",
+    "SKYAIUSDT",
+    "1000PEPEUSDT",
+    "BZUSDT",
+    "ADAUSDT",
+    "HOMEUSDT",
+    "NVDAUSDT",
+    "INTCUSDT",
+    "PORTALUSDT",
+    "ENAUSDT",
+    "TAOUSDT",
+    "ESPORTSUSDT",
+    "INJUSDT",
+    "ONDOUSDT",
+    "LINKUSDT",
+    "EPICUSDT",
+    "AVAXUSDT",
+    "SOXLUSDT",
+    "FILUSDT",
+    "FETUSDT",
+    "ALLOUSDT",
+    "CRCLUSDT",
+    "PIEVERSEUSDT",
+    "JTOUSDT",
+    "PUMPUSDT",
+    "ASTERUSDT",
+    "ICPUSDT",
+    "LTCUSDT",
+    "EWYUSDT",
+    "BCHUSDT",
+    "DOTUSDT",
+    "RENDERUSDT",
+    "\u5e01\u5b89\u4eba\u751fUSDT",
+    "USUSDT"
+  ],
+  "n_aligned": 50,
+  "strict": {
+    "events_total": 0,
+    "shorts": 0,
+    "longs": 0,
+    "filter": {
+      "funding_pctile": 95.0,
+      "oi_z_threshold": 2.0
+    },
+    "fwd_1d": {
+      "all": {
+        "n": 0,
+        "mean_bps": 0.0,
+        "median_bps": 0.0,
+        "win_rate": 0.0,
+        "std_bps": 0.0
+      },
+      "half0": {
+        "n": 0,
+        "mean_bps": 0.0,
+        "median_bps": 0.0,
+        "win_rate": 0.0,
+        "std_bps": 0.0
+      },
+      "half1": {
+        "n": 0,
+        "mean_bps": 0.0,
+        "median_bps": 0.0,
+        "win_rate": 0.0,
+        "std_bps": 0.0
+      },
+      "shorts": {
+        "n": 0,
+        "mean_bps": 0.0,
+        "median_bps": 0.0,
+        "win_rate": 0.0,
+        "std_bps": 0.0
+      },
+      "longs": {
+        "n": 0,
+        "mean_bps": 0.0,
+        "median_bps": 0.0,
+        "win_rate": 0.0,
+        "std_bps": 0.0
+      },
+      "baseline_bps": 0.0,
+      "lift_bps": 0.0
+    },
+    "fwd_3d": {
+      "all": {
+        "n": 0,
+        "mean_bps": 0.0,
+        "median_bps": 0.0,
+        "win_rate": 0.0,
+        "std_bps": 0.0
+      },
+      "half0": {
+        "n": 0,
+        "mean_bps": 0.0,
+        "median_bps": 0.0,
+        "win_rate": 0.0,
+        "std_bps": 0.0
+      },
+      "half1": {
+        "n": 0,
+        "mean_bps": 0.0,
+        "median_bps": 0.0,
+        "win_rate": 0.0,
+        "std_bps": 0.0
+      },
+      "shorts": {
+        "n": 0,
+        "mean_bps": 0.0,
+        "median_bps": 0.0,
+        "win_rate": 0.0,
+        "std_bps": 0.0
+      },
+      "longs": {
+        "n": 0,
+        "mean_bps": 0.0,
+        "median_bps": 0.0,
+        "win_rate": 0.0,
+        "std_bps": 0.0
+      },
+      "baseline_bps": 0.0,
+      "lift_bps": 0.0
+    },
+    "gate": {
+      "lift_1d_ge_100bps": false,
+      "positive_both_halves": false
+    },
+    "verdict": "NO EVENTS \u2014 filter too strict"
+  },
+  "relaxed": {
+    "events_total": 0,
+    "shorts": 0,
+    "longs": 0,
+    "filter": {
+      "funding_pctile": 90.0,
+      "oi_z_threshold": 1.5
+    },
+    "fwd_1d": {
+      "all": {
+        "n": 0,
+        "mean_bps": 0.0,
+        "median_bps": 0.0,
+        "win_rate": 0.0,
+        "std_bps": 0.0
+      },
+      "half0": {
+        "n": 0,
+        "mean_bps": 0.0,
+        "median_bps": 0.0,
+        "win_rate": 0.0,
+        "std_bps": 0.0
+      },
+      "half1": {
+        "n": 0,
+        "mean_bps": 0.0,
+        "median_bps": 0.0,
+        "win_rate": 0.0,
+        "std_bps": 0.0
+      },
+      "shorts": {
+        "n": 0,
+        "mean_bps": 0.0,
+        "median_bps": 0.0,
+        "win_rate": 0.0,
+        "std_bps": 0.0
+      },
+      "longs": {
+        "n": 0,
+        "mean_bps": 0.0,
+        "median_bps": 0.0,
+        "win_rate": 0.0,
+        "std_bps": 0.0
+      },
+      "baseline_bps": 0.0,
+      "lift_bps": 0.0
+    },
+    "fwd_3d": {
+      "all": {
+        "n": 0,
+        "mean_bps": 0.0,
+        "median_bps": 0.0,
+        "win_rate": 0.0,
+        "std_bps": 0.0
+      },
+      "half0": {
+        "n": 0,
+        "mean_bps": 0.0,
+        "median_bps": 0.0,
+        "win_rate": 0.0,
+        "std_bps": 0.0
+      },
+      "half1": {
+        "n": 0,
+        "mean_bps": 0.0,
+        "median_bps": 0.0,
+        "win_rate": 0.0,
+        "std_bps": 0.0
+      },
+      "shorts": {
+        "n": 0,
+        "mean_bps": 0.0,
+        "median_bps": 0.0,
+        "win_rate": 0.0,
+        "std_bps": 0.0
+      },
+      "longs": {
+        "n": 0,
+        "mean_bps": 0.0,
+        "median_bps": 0.0,
+        "win_rate": 0.0,
+        "std_bps": 0.0
+      },
+      "baseline_bps": 0.0,
+      "lift_bps": 0.0
+    },
+    "gate": {
+      "lift_1d_ge_100bps": false,
+      "positive_both_halves": false
+    },
+    "verdict": "NO EVENTS \u2014 filter too strict"
+  },
+  "events_strict": [],
+  "events_relaxed": []
+}
