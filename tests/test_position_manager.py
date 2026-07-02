@@ -136,3 +136,93 @@ async def test_daily_pnl_and_consecutive_losses_track_closed_trades():
 
         cl2 = await st.consecutive_losses()
         assert cl2 == 0
+
+
+# ── Live-close path (Bug 2 fix): force_close must place a real exchange order
+#    and must NOT phantom-close (DB-close a still-open position) on failure. ──
+
+def _mk_storage(td):
+    url = f"sqlite+aiosqlite:///{os.path.join(td, 'agent.db')}"
+    return Storage(database_url=url)
+
+
+@pytest.mark.asyncio
+async def test_live_force_close_uses_real_fill_and_closes():
+    with tempfile.TemporaryDirectory() as td:
+        st = _mk_storage(td)
+        await st.init()
+        closed: list[Trade] = []
+
+        async def on_close(t: Trade) -> None:
+            closed.append(t)
+
+        calls: list[str] = []
+
+        async def close_exec(t: Trade):
+            calls.append(t.id)
+            return 95.0                       # real exchange fill price
+
+        pm = PositionManager(storage=st, on_close=on_close, paper=False,
+                             close_executor=close_exec)
+        trade = Trade(proposal_id="p", symbol="HOMEUSDT", market="perps",
+                      side="short", qty=100.0, entry_price=100.0)
+        await pm.register(trade)
+
+        res = await pm.force_close(trade.id, 99.0, "dfunding_rebalance")
+        assert res is not None
+        assert calls == [trade.id]                    # exchange order placed
+        assert trade.id not in pm.open                # removed from open set
+        assert res.exit_price == pytest.approx(95.0)  # used REAL fill, not 99.0
+        assert (await st.list_open_trades()) == []    # DB agrees: flat
+
+
+@pytest.mark.asyncio
+async def test_live_force_close_failure_keeps_position_open_no_phantom():
+    with tempfile.TemporaryDirectory() as td:
+        st = _mk_storage(td)
+        await st.init()
+
+        async def on_close(t: Trade) -> None:
+            pass
+
+        async def close_exec_fail(t: Trade):
+            return None                       # exchange close failed
+
+        pm = PositionManager(storage=st, on_close=on_close, paper=False,
+                             close_executor=close_exec_fail)
+        trade = Trade(proposal_id="p", symbol="HOMEUSDT", market="perps",
+                      side="short", qty=100.0, entry_price=100.0)
+        await pm.register(trade)
+
+        res = await pm.force_close(trade.id, 99.0, "dfunding_rebalance")
+        assert res is None                            # not closed
+        assert trade.id in pm.open                    # STILL tracked open
+        still_open = await st.list_open_trades()      # DB still shows it OPEN
+        assert any(t.id == trade.id for t in still_open)
+
+
+@pytest.mark.asyncio
+async def test_paper_force_close_ignores_close_executor():
+    with tempfile.TemporaryDirectory() as td:
+        st = _mk_storage(td)
+        await st.init()
+
+        async def on_close(t: Trade) -> None:
+            pass
+
+        called = []
+
+        async def close_exec(t: Trade):
+            called.append(t.id)
+            return 1.0
+
+        # Paper mode: close_executor must NOT be invoked (no real exchange).
+        pm = PositionManager(storage=st, on_close=on_close, paper=True,
+                             close_executor=close_exec)
+        trade = Trade(proposal_id="p", symbol="HOMEUSDT", market="perps",
+                      side="long", qty=1.0, entry_price=100.0)
+        await pm.register(trade)
+        res = await pm.force_close(trade.id, 101.0, "manual")
+        assert res is not None
+        assert called == []                           # executor untouched
+        assert res.exit_price == pytest.approx(101.0)

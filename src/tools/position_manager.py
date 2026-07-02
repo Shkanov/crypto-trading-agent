@@ -64,11 +64,17 @@ class PositionManager:
         on_close: Callable[[Trade], Awaitable[None]],
         paper: bool = True,
         settings: Optional[Settings] = None,
+        close_executor: Optional[Callable[[Trade], Awaitable[Optional[float]]]] = None,
     ) -> None:
         self.storage = storage
         self.on_close = on_close
         self.paper = paper
         self.s = settings or get_settings()
+        # LIVE only: places the real reduceOnly exchange order to close a
+        # position and returns the fill price (None on failure). Without it,
+        # force_close would only update the DB and leave the position open on
+        # the exchange — the phantom-close desync. Paper mode leaves this None.
+        self.close_executor = close_executor
         # In-memory mirror of OPEN trades, keyed by trade_id. Rebuilt from
         # storage on rehydrate() so a process restart preserves positions.
         self.open: dict[str, Trade] = {}
@@ -125,9 +131,26 @@ class PositionManager:
             await self._finalize(trade, exit_px, reason)
 
     async def force_close(self, trade_id: str, exit_price: float, reason: str = "manual") -> Optional[Trade]:
+        """Actively close a position. In LIVE mode this places the real
+        reduceOnly exchange order FIRST via `close_executor`; the DB row is
+        marked closed ONLY on a confirmed fill, so a failed exchange close can
+        never leave a phantom-closed (DB-closed / exchange-open) position.
+        Paper mode records the simulated close directly."""
         t = self.open.get(trade_id)
         if not t:
             return None
+        if not self.paper and self.close_executor is not None:
+            try:
+                fill = await self.close_executor(t)
+            except Exception as e:  # noqa: BLE001
+                log.error("position_manager.live_close_raised",
+                          trade_id=trade_id, symbol=t.symbol, err=str(e))
+                return None
+            if fill is None or fill <= 0:
+                log.error("position_manager.live_close_failed",
+                          trade_id=trade_id, symbol=t.symbol, reason=reason)
+                return None   # keep it OPEN in self.open — no phantom close
+            exit_price = fill
         return await self._finalize(t, exit_price, reason)
 
     async def force_close_all(self, last_prices: dict[str, float], reason: str = "flatten"
@@ -135,7 +158,9 @@ class PositionManager:
         results: list[Trade] = []
         for tid, t in list(self.open.items()):
             px = last_prices.get(t.symbol, t.entry_price)
-            closed = await self._finalize(t, px, reason)
+            # Route through force_close so LIVE mode places real orders and a
+            # failed leg is left OPEN rather than phantom-closed.
+            closed = await self.force_close(tid, px, reason)
             if closed:
                 results.append(closed)
         return results

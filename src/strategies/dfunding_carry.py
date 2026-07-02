@@ -63,6 +63,8 @@ class DFundingCarryParams:
     universe_size: int = 30          # top-N perps by 24h volume
     rebalance_hours: int = 168       # 7 days between rebalances
     check_interval_s: int = 300      # how often the strategy wakes to check
+    min_leg_notional_usd: float = 5.5  # below this the exchange rejects the order
+                                       # (Binance perp MIN_NOTIONAL ~$5 + headroom)
 
     @property
     def window_hours(self) -> int:
@@ -84,6 +86,7 @@ class DFundingCarryStrategy(Strategy):
         self._task: Optional[asyncio.Task] = None
         self._stop_ev = asyncio.Event()
         self.last_rebalance_ms: int = 0
+        self._held_alerted: bool = False   # throttle the "held below min-notional" alert
 
     # ------------------------------------------------------------------ lifecycle
 
@@ -283,6 +286,34 @@ class DFundingCarryStrategy(Strategy):
         ctx = self.ctx
         t_now = now_ms()
 
+        # ── Feasibility guard (do this BEFORE the expensive signal build) ──
+        # We size each leg from our equity slice, but the orchestrator further
+        # shrinks it by the notional-ramp cap and the risk-circuit multiplier,
+        # which we can't see here. If the ACTUAL per-leg notional lands below
+        # the exchange minimum, every open will be rejected — and the old
+        # behaviour was to close the stale book first, then fail to open,
+        # stranding us FLAT and unable to re-enter. Instead: hold the current
+        # book untouched and retry next cycle (cheap — no API calls here), so a
+        # transient drawdown-halve or ramp dip can't paralyse the strategy.
+        equity = ctx.equity_available_usd(self.name)
+        nominal_per_leg = equity * self.p.book_pct_per_side / max(1, self.p.top_n)
+        eff_per_leg = (ctx.effective_notional(nominal_per_leg)
+                       if hasattr(ctx, "effective_notional") else nominal_per_leg)
+        if eff_per_leg < self.p.min_leg_notional_usd:
+            n_open = len(ctx.open_trades(self.name))
+            log.warning("dfunding.rebalance_held_below_min_notional",
+                        nominal_per_leg=round(nominal_per_leg, 2),
+                        effective_per_leg=round(eff_per_leg, 2),
+                        floor=self.p.min_leg_notional_usd, open_legs=n_open)
+            if not self._held_alerted and hasattr(ctx, "telegram") and ctx.telegram:  # type: ignore[union-attr]
+                await ctx.telegram.send_info(  # type: ignore[union-attr]
+                    f"⏸ *Δfunding rebalance HELD* — per-leg "
+                    f"${eff_per_leg:.1f} < min ${self.p.min_leg_notional_usd:.1f} "
+                    f"(ramp/circuit shrunk it). Holding current book "
+                    f"({n_open} legs); retrying when sizing recovers.")
+                self._held_alerted = True
+            return   # do NOT advance last_rebalance_ms → retry next check_interval
+
         signal = await self._compute_signal()
         if len(signal) < 2 * self.p.top_n:
             log.warning("dfunding.insufficient_signal_coverage",
@@ -346,6 +377,7 @@ class DFundingCarryStrategy(Strategy):
                 log.exception("dfunding.open_short_failed", symbol=pos.symbol)
 
         self.last_rebalance_ms = t_now
+        self._held_alerted = False   # a real rebalance ran → clear any hold state
 
         # Persist for crash-recovery.
         try:

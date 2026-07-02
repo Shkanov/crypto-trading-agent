@@ -68,6 +68,12 @@ class StrategyContext(Protocol):
     def equity_available_usd(self, strategy_name: Optional[str] = None) -> float:
         ...
 
+    def effective_notional(self, nominal_usd: float) -> float:
+        """The notional a proposal of `nominal_usd` would actually execute at
+        after the notional-ramp cap and risk-circuit size multiplier. Lets a
+        strategy avoid sizing a leg below the exchange minimum."""
+        ...
+
 
 class Strategy(ABC):
     """Base class for a strategy. Subclass and implement at minimum `start`

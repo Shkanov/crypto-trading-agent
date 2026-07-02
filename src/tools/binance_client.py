@@ -501,6 +501,14 @@ class BinanceClient:
                 workingType="MARK_PRICE",
             )
 
+    async def cancel_all_perp_orders(self, symbol: str) -> dict:
+        """Cancel every open order (resting stop/TP bracket, etc.) for a perp
+        symbol. Used when actively closing a position so a stale reduceOnly
+        bracket can't linger after we're flat."""
+        assert self.client is not None
+        async with self.order_limiter, self.rest_limiter:
+            return await self.client.futures_cancel_all_open_orders(symbol=symbol)
+
     # ----- REST: misc -----
     async def funding_rate(self, symbol: str) -> Optional[float]:
         assert self.client is not None

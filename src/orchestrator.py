@@ -1537,6 +1537,20 @@ class Orchestrator:
             share = min(share, self.notional_ramp.effective_max_notional_usd * 4)
         return share
 
+    def effective_notional(self, nominal_usd: float) -> float:
+        """The notional a proposal of `nominal_usd` would ACTUALLY execute at,
+        after the notional-ramp cap and the risk-circuit size multiplier — the
+        same two downstream shrinks applied around lines 256/276 below. A
+        strategy sizes legs from its equity slice but can't see those shrinks;
+        calling this lets it avoid sizing a leg under the exchange minimum
+        (which otherwise fails silently at the executor, stranding the book)."""
+        n = max(0.0, nominal_usd)
+        if self.notional_ramp is not None:
+            n = min(n, self.notional_ramp.effective_max_notional_usd)
+        if self.circuit_state is not None and self.circuit_state.size_multiplier < 1.0:
+            n *= max(0.0, self.circuit_state.size_multiplier)
+        return n
+
     async def close_trade(self, trade_id: str, reason: str = "manual") -> None:
         if not self.position_manager:
             return
@@ -1547,6 +1561,39 @@ class Orchestrator:
             return
         px = self.last_price.get(trade.symbol, trade.entry_price)
         await self.position_manager.force_close(trade_id, px, reason)
+
+    async def _live_close_position(self, t: Trade) -> Optional[float]:
+        """Place the real reduceOnly market order that closes `t` on Binance,
+        cancel its resting bracket, and return the fill price — or None on
+        failure (so PositionManager keeps the trade OPEN instead of phantom-
+        closing it). Wired into PositionManager.close_executor in live mode."""
+        ref_px = self.last_price.get(t.symbol, t.entry_price)
+        if t.market != "perps":
+            # Spot single-legs don't use the perp reduceOnly path; record only.
+            return ref_px
+        close_side = "SELL" if t.side == "long" else "BUY"
+        try:
+            qty_q, _ = self.binance.quantize(t.symbol, t.qty, ref_px, "perps")
+            if qty_q <= 0:
+                log.error("orch.live_close.bad_qty", symbol=t.symbol, qty=t.qty)
+                return None
+            resp = await self.binance.place_perp_market(
+                t.symbol, close_side, qty_q,
+                client_order_id(f"close_{t.id}"), reduce_only=True)
+        except Exception as e:  # noqa: BLE001
+            log.error("orch.live_close.order_failed", symbol=t.symbol, err=str(e))
+            return None
+        # Now flat on this symbol — clear any resting stop/TP bracket.
+        try:
+            await self.binance.cancel_all_perp_orders(t.symbol)
+        except Exception as e:  # noqa: BLE001
+            log.warning("orch.live_close.cancel_bracket_failed",
+                        symbol=t.symbol, err=str(e))
+        try:
+            fill = float(resp.get("avgPrice") or 0.0)
+        except (TypeError, ValueError):
+            fill = 0.0
+        return fill if fill > 0 else ref_px
 
     async def propose_pair(self, pair) -> None:
         """Open both legs of a delta-neutral pair atomically. Routes through
@@ -1633,6 +1680,9 @@ class Orchestrator:
         self.position_manager = PositionManager(
             storage=self.storage, on_close=self._on_trade_close,
             paper=self.paper, settings=self.s,
+            # LIVE: give the close path a real exchange order so a strategy
+            # rebalance / flatten actually closes on Binance (not DB-only).
+            close_executor=None if self.paper else self._live_close_position,
         )
         self.pair_executor = PairExecutor(
             self.binance, self.storage, paper=self.paper, settings=self.s,
