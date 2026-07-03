@@ -37,6 +37,11 @@ class SymbolFilters:
     min_notional: Decimal
     base_asset: str
     quote_asset: str
+    # Exchange trading status ("TRADING", "SETTLING", "PENDING_TRADING", ...).
+    # Only "TRADING" symbols accept new positions; others reject opens with
+    # -4140. Kept here (not filtered out at load) so we can still quantize /
+    # reduceOnly-close a position whose symbol later stops trading.
+    status: str = "TRADING"
 
 
 def _floor_to_step(value: float, step: Decimal) -> Decimal:
@@ -146,6 +151,7 @@ class BinanceClient:
                                      f.get("MIN_NOTIONAL", {}).get("minNotional", "0"))),
                 base_asset=s["baseAsset"],
                 quote_asset=s["quoteAsset"],
+                status=s.get("status", "TRADING"),
             )
         try:
             async with self.rest_limiter:
@@ -164,6 +170,10 @@ class BinanceClient:
                     min_notional=min_notional,
                     base_asset=s["baseAsset"],
                     quote_asset=s["quoteAsset"],
+                    # Futures exchange_info: "status" is the contract's trading
+                    # status. NFPUSDT-style settling/pending perps are PERPETUAL
+                    # but not "TRADING" and reject opens with -4140.
+                    status=s.get("status", "TRADING"),
                 )
         except BinanceAPIException as e:
             log.warning("binance.futures_info_failed", err=str(e))

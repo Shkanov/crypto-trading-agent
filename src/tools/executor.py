@@ -102,9 +102,12 @@ class Executor:
             await self.binance.ensure_perp_setup(sym, getattr(p, "leverage", 1) or 1)
             entry = await self.binance.place_perp_market(sym, side, qty_q, coid)
 
-            stop_q, _ = self.binance.quantize(sym, 0.0, p.signal.stop, p.market)
-            stop_px = Decimal(str(p.signal.stop))
-            tp_px = Decimal(str(p.signal.take_profit))
+            # Quantize the stop/TP PRICES to the symbol's tick size — the second
+            # return of quantize() is the tick-floored price. Passing the raw
+            # price rejects the bracket with -1111 (precision) on tight-tick
+            # micro-alts, leaving the position with no exchange stop/TP.
+            _, stop_px = self.binance.quantize(sym, 0.0, p.signal.stop, p.market)
+            _, tp_px = self.binance.quantize(sym, 0.0, p.signal.take_profit, p.market)
             try:
                 stop_order = await self.binance.place_perp_stop_market(
                     sym, close_side, stop_px, qty_q, f"{coid}_s",

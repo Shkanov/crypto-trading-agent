@@ -174,6 +174,12 @@ async def test_live_force_close_uses_real_fill_and_closes():
         assert trade.id not in pm.open                # removed from open set
         assert res.exit_price == pytest.approx(95.0)  # used REAL fill, not 99.0
         assert (await st.list_open_trades()) == []    # DB agrees: flat
+        # PnL correctness (item 2): short 100 units from 100.0 → fill 95.0 is a
+        # +$500 gross price gain. With the real fill recorded, that price move
+        # lands in realized_pnl (not lost to exit==entry / mislabeled to
+        # funding, which was the phantom-close symptom). Allow the exit fee.
+        assert res.realized_pnl_usd > 400.0
+        assert res.funding_accrued_usd == pytest.approx(0.0)
 
 
 @pytest.mark.asyncio

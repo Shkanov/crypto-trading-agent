@@ -166,6 +166,12 @@ class DFundingCarryStrategy(Strategy):
             filt = b.perp_filters.get(sym)
             if filt is None:
                 continue
+            # Skip contracts not open for new positions (settling / pending /
+            # delisting). They're PERPETUAL and pass every other filter but
+            # reject the OPEN order with -4140, wasting a leg (e.g. NFPUSDT
+            # 2026-07-03). reduceOnly closes on such a name still work.
+            if getattr(filt, "status", "TRADING") != "TRADING":
+                continue
             if per_leg > 0 and float(filt.min_notional) > per_leg:
                 continue
             rows.append(r)
