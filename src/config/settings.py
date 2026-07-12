@@ -170,6 +170,19 @@ class Settings(BaseSettings):
     # account; otherwise live mode will refuse short-spot pairs.
     live_spot_margin_enabled: bool = False
 
+    # Delta-neutral basis book with automatic funding-regime gate.
+    # See research/portfolio/BASIS_SPEC.md. Phase 1 = monitor mode: constantly
+    # checks funding, auto-flips the ON/OFF regime with hysteresis, alerts on
+    # transitions — NO orders (basis_execute_legs stays False until the spot+perp
+    # executor is built + testnet-validated). Safe to enable in prod as a monitor.
+    basis_enabled: bool = False
+    basis_lookback_days: int = 21          # trailing funding-signal window
+    basis_usd_yield_pct: float = 4.5       # USD/stablecoin baseline (OFF fallback)
+    basis_borrow_exec_pct: float = 2.5     # basis carrying cost (sets the hurdle)
+    basis_on_margin_pct: float = 2.0       # hysteresis band above the hurdle
+    basis_check_interval_s: int = 21600    # re-evaluate every 6h
+    basis_execute_legs: bool = False       # Phase 2 — leg execution (keep False)
+
     # Δfunding cross-sectional carry (CPCV-validated, sprint #card1)
     # Enabled by operator after reviewing cpcv_validate_dfunding results.
     dfunding_carry_enabled: bool = False

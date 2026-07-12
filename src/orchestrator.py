@@ -102,6 +102,7 @@ from src.services.reconciliation import reconcile_on_boot
 from src.services.storage import Storage
 from src.services.user_data_stream import UserDataStream
 from src.strategies.base import Strategy
+from src.strategies.basis_carry import BasisParams, BasisStrategy
 from src.strategies.dfunding_carry import DFundingCarryParams, DFundingCarryStrategy
 from src.strategies.funding_harvest import FundingHarvestStrategy, HarvestParams
 from src.strategies.indicator_confluence import IndicatorConfluenceStrategy
@@ -144,6 +145,7 @@ class Orchestrator:
         self.basis_monitor: Optional[BasisMonitor] = None
         self.funding_strategy: Optional[FundingHarvestStrategy] = None
         self.dfunding_strategy: Optional[DFundingCarryStrategy] = None
+        self.basis_strategy: Optional[BasisStrategy] = None
         self.hodl = HodlBenchmark()
         self.detectors = AnomalyDetectors(cooldown_sec=300)
         self.user_data_stream: Optional[UserDataStream] = None
@@ -1892,6 +1894,21 @@ class Orchestrator:
                 )
             )
             self.register_strategy(self.dfunding_strategy)
+
+        # Delta-neutral basis book with automatic funding-regime gate.
+        # Phase 1 (basis_execute_legs=False) = monitor mode: constantly checks
+        # funding, auto-switches the ON/OFF regime, alerts on transitions, NO
+        # orders. See research/portfolio/BASIS_SPEC.md.
+        if self.s.basis_enabled:
+            self.basis_strategy = BasisStrategy(BasisParams(
+                lookback_days=self.s.basis_lookback_days,
+                usd_yield_pct=self.s.basis_usd_yield_pct,
+                borrow_exec_pct=self.s.basis_borrow_exec_pct,
+                on_margin_pct=self.s.basis_on_margin_pct,
+                check_interval_s=self.s.basis_check_interval_s,
+                execute_legs=self.s.basis_execute_legs,
+            ))
+            self.register_strategy(self.basis_strategy)
 
         # Level-breakout (inspired by the "пробой дневки" pattern from an
         # external scalping channel). Off by default — flip on only after
