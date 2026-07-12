@@ -1659,6 +1659,8 @@ class Orchestrator:
             await self.position_manager.register(leg)
         if self.funding_strategy and pair.strategy == self.funding_strategy.name:
             await self.funding_strategy.register_active_pair(pair, result.legs)
+        if self.basis_strategy and pair.strategy == self.basis_strategy.name:
+            await self.basis_strategy.register_active_pair(pair, result.legs)
         if self.telegram:
             await self.telegram.send_info(
                 f"PAIR FILLED `{pair.id[:8]}` {pair.strategy} {pair.legs[0].symbol} "

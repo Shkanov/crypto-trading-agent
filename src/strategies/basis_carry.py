@@ -23,12 +23,13 @@ unit-tested; the class is the live wrapper.
 from __future__ import annotations
 
 import asyncio
+import uuid
 from dataclasses import dataclass, field
 from typing import Optional
 
 import structlog
 
-from src.models.types import now_ms
+from src.models.types import PairLeg, PairProposal, Trade, now_ms
 from src.strategies.base import Strategy, StrategyContext
 
 log = structlog.get_logger(__name__)
@@ -50,6 +51,13 @@ class BasisParams:
     on_margin_pct: float = 2.0            # hysteresis band above the hurdle
     check_interval_s: int = 6 * 3600      # re-evaluate every 6h (funding is slow)
     execute_legs: bool = False            # Phase 2 gate — False = monitor only
+    # Execution sizing (only used when execute_legs=True).
+    max_book_pct: float = 0.5             # cap: use ≤ this fraction of the equity
+                                          # slice for the basis (keep a buffer)
+    perp_leverage: int = 1                # 1x short perp → liquidation ~+100%
+                                          # (max safety; the whole point is no
+                                          # price-driven liquidation)
+    spot_tf: str = "5m"                   # tf for the spot mid used in sizing/close
 
     @property
     def hurdle_pct(self) -> float:
@@ -115,6 +123,9 @@ class BasisStrategy(Strategy):
         self._task: Optional[asyncio.Task] = None
         self._stop_ev = asyncio.Event()
         self.regime_on: bool = False
+        # Held basis pairs, keyed by symbol → its opened legs (spot + perp).
+        # Only populated when execute_legs=True.
+        self.active: dict[str, list[Trade]] = {}
 
     async def start(self, ctx: StrategyContext) -> None:
         self.ctx = ctx
@@ -124,6 +135,17 @@ class BasisStrategy(Strategy):
                 self.regime_on = bool(row["regime_on"])
         except Exception:
             log.warning("basis.state_load_failed_using_off")
+        # Rehydrate held basis pairs that survived a restart (execute mode).
+        if self.p.execute_legs:
+            try:
+                for t in await ctx.storage.list_open_trades():
+                    if t.strategy == self.name:
+                        self.active.setdefault(t.symbol, []).append(t)
+                if self.active:
+                    log.info("basis.rehydrated", pairs=len(self.active),
+                             symbols=sorted(self.active))
+            except Exception:
+                log.exception("basis.rehydrate_failed")
         self._stop_ev.clear()
         self._task = asyncio.create_task(self._loop())
         log.info("basis.started", basket=len(self.p.basket),
@@ -199,9 +221,101 @@ class BasisStrategy(Strategy):
 
         if self.regime_on != prev:
             await self._on_transition(basket_sig, incl)
-        # Phase 2: when execute_legs and regime_on → open/rebalance basis legs;
-        #          when execute_legs and just turned OFF → unwind to USD.
-        # Monitor mode (Phase 1) stops here: state tracked + alerted, no orders.
+
+        # Phase 2 execution (only when explicitly enabled). Monitor mode
+        # (execute_legs=False) stops above: state tracked + alerted, no orders.
+        if self.p.execute_legs:
+            try:
+                await self._reconcile_book(set(incl) if self.regime_on else set())
+            except Exception:
+                log.exception("basis.reconcile_failed")
+
+    # ─────────────────────────── execution (Phase 2) ──────────────────────
+
+    async def _reconcile_book(self, target: set[str]) -> None:
+        """Drive the held book toward `target` (the included names when ON, or
+        empty when OFF): close any held name not in target, open any target
+        name not yet held. Delta-neutral long-spot/short-perp per name."""
+        held = set(self.active)
+        to_close = held - target
+        to_open = target - held
+        for sym in sorted(to_close):
+            await self._close_name(sym, "basis_regime_off" if not target else "basis_dropped")
+        if to_open:
+            notional = self._per_name_notional(len(target))
+            if notional <= 0:
+                log.info("basis.no_equity_for_legs", target=sorted(target))
+                return
+            for sym in sorted(to_open):
+                await self._open_name(sym, notional)
+
+    def _per_name_notional(self, n_target: int) -> float:
+        """Per-name spot(=perp) leg notional. Capital per name = spot + perp
+        margin = notional*(1 + 1/leverage); cap the whole book at max_book_pct
+        of the equity slice."""
+        if n_target <= 0:
+            return 0.0
+        share = self.ctx.equity_available_usd(self.name) * self.p.max_book_pct
+        cap_per_unit = 1.0 + 1.0 / max(1, self.p.perp_leverage)
+        return (share / cap_per_unit) / n_target
+
+    def _spot_price(self, sym: str) -> Optional[float]:
+        snap = self.ctx.indicators.latest(sym, self.p.spot_tf)
+        if snap and snap.close > 0:
+            return float(snap.close)
+        px = self.ctx.last_price.get(sym)
+        return float(px) if px and px > 0 else None
+
+    async def _open_name(self, sym: str, notional: float) -> None:
+        """Open the delta-neutral basis on `sym`: BUY spot + SELL perp, equal
+        notional. Routes through ctx.propose_pair → PairExecutor (atomic)."""
+        px = self._spot_price(sym)
+        if px is None:
+            log.warning("basis.open_no_price", symbol=sym)
+            return
+        qty = notional / px
+        pair = PairProposal(
+            id=uuid.uuid4().hex[:16], strategy=self.name, direction=1,
+            legs=[
+                PairLeg(symbol=sym, market="spot", side="BUY",
+                        qty=qty, expected_price=px, leverage=1),
+                PairLeg(symbol=sym, market="perps", side="SELL",
+                        qty=qty, expected_price=px,
+                        leverage=self.p.perp_leverage),
+            ],
+            notional_usd=notional * 2,
+            rationale=f"basis harvest {sym} (regime ON)",
+            expected_yield_bps_per_8h=0.0,
+            expires_at_ms=now_ms() + self.ctx.settings.approval_timeout_sec * 1000,
+        )
+        log.info("basis.open_pair", symbol=sym, notional=round(notional, 2))
+        await self.ctx.propose_pair(pair)
+
+    async def _close_name(self, sym: str, reason: str) -> None:
+        """Close both legs of the held basis on `sym` via PairExecutor (perp
+        leg gets the perp mark; falls back to per-leg close)."""
+        legs = self.active.get(sym)
+        if not legs:
+            return
+        pe = getattr(self.ctx, "pair_executor", None)
+        px = self._spot_price(sym) or (legs[0].entry_price if legs else 0.0)
+        if pe is not None and px:
+            price_map = {(sym, "spot"): px, (sym, "perps"): px}
+            try:
+                await pe.close_pair(legs, reason=reason, price_map=price_map)
+            except Exception:
+                log.exception("basis.close_pair_failed", symbol=sym)
+        else:
+            for leg in legs:
+                await self.ctx.close_trade(leg.id, reason=reason)
+        log.info("basis.closed_pair", symbol=sym, reason=reason)
+        self.active.pop(sym, None)
+
+    async def register_active_pair(self, pair: PairProposal, legs: list[Trade]) -> None:
+        """Called by the orchestrator after propose_pair fills — track the legs."""
+        sym = pair.legs[0].symbol
+        self.active[sym] = list(legs)
+        log.info("basis.pair_registered", symbol=sym, legs=len(legs))
 
     async def _on_transition(self, sig: float, incl: list[str]) -> None:
         direction = "ON — funding pays" if self.regime_on else "OFF — hold USD"

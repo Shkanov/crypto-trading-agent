@@ -61,3 +61,90 @@ def test_included_names_drops_below_hurdle():
 def test_current_regime_off_at_todays_lean_funding():
     # ~5%/yr basket (like now) with OFF state stays OFF; must clear 9% to flip on
     assert update_regime(False, 4.9, on_pct=9, off_pct=7) is False
+
+
+# ── Execution reconcile logic (Phase 2) ──
+import pytest  # noqa: E402
+
+from src.strategies.basis_carry import BasisStrategy  # noqa: E402
+
+
+class _FakeCtx:
+    def __init__(self):
+        self.opened: list[str] = []
+        self.closed: list[tuple[str, str]] = []
+        self.pair_executor = self  # so _close_name uses close_pair path
+        self.last_price = {s: 100.0 for s in
+                           ("BTCUSDT", "ETHUSDT", "LINKUSDT", "UNIUSDT")}
+
+        class _Ind:
+            def latest(self, sym, tf):
+                return None
+        self.indicators = _Ind()
+
+        class _S:
+            approval_timeout_sec = 60
+        self.settings = _S()
+
+    def equity_available_usd(self, name=None):
+        return 1000.0
+
+    async def propose_pair(self, pair):
+        self.opened.append(pair.legs[0].symbol)
+
+    async def close_pair(self, legs, reason=None, price_map=None):
+        # mimic PairExecutor.close_pair; record the symbol closed
+        self.closed.append((legs[0].symbol, reason))
+        return legs
+
+
+def _mk(execute=True):
+    from src.strategies.basis_carry import BasisParams
+    s = BasisStrategy(BasisParams(execute_legs=execute))
+    s.ctx = _FakeCtx()
+    return s
+
+
+@pytest.mark.asyncio
+async def test_reconcile_opens_missing_target_names():
+    s = _mk()
+    await s._reconcile_book({"BTCUSDT", "ETHUSDT"})
+    assert sorted(s.ctx.opened) == ["BTCUSDT", "ETHUSDT"]
+    assert s.ctx.closed == []
+
+
+@pytest.mark.asyncio
+async def test_reconcile_closes_dropped_name():
+    s = _mk()
+    # pretend BTC + ETH are held
+    from src.models.types import Trade
+    for sym in ("BTCUSDT", "ETHUSDT"):
+        s.active[sym] = [Trade(proposal_id="p", symbol=sym, market="spot",
+                               side="long", qty=1.0, entry_price=100.0)]
+    # target drops ETH → ETH closed, BTC untouched, nothing new opened
+    await s._reconcile_book({"BTCUSDT"})
+    assert s.ctx.opened == []
+    assert s.ctx.closed == [("ETHUSDT", "basis_dropped")]
+    assert "ETHUSDT" not in s.active
+
+
+@pytest.mark.asyncio
+async def test_reconcile_off_closes_everything():
+    s = _mk()
+    from src.models.types import Trade
+    for sym in ("BTCUSDT", "ETHUSDT"):
+        s.active[sym] = [Trade(proposal_id="p", symbol=sym, market="spot",
+                               side="long", qty=1.0, entry_price=100.0)]
+    await s._reconcile_book(set())          # regime OFF → empty target
+    assert sorted(sym for sym, _ in s.ctx.closed) == ["BTCUSDT", "ETHUSDT"]
+    assert all(r == "basis_regime_off" for _, r in s.ctx.closed)
+    assert s.active == {}
+
+
+@pytest.mark.asyncio
+async def test_per_name_notional_caps_book_and_splits():
+    s = _mk()
+    # equity 1000 * max_book_pct 0.5 = 500; perp 1x → cap_per_unit 2 → 250 book;
+    # split across 2 names = 125 each.
+    assert s._per_name_notional(2) == pytest.approx(125.0)
+    assert s._per_name_notional(0) == 0.0
