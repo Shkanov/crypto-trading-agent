@@ -182,6 +182,9 @@ class Settings(BaseSettings):
     basis_on_margin_pct: float = 2.0       # hysteresis band above the hurdle
     basis_check_interval_s: int = 21600    # re-evaluate every 6h
     basis_execute_legs: bool = False       # Phase 2 — leg execution (keep False)
+    basis_notional_per_leg_usd: float = 20.0  # $ per spot(=perp) leg per name
+    basis_min_leg_notional_usd: float = 6.0   # skip legs below exchange min
+    basis_max_names: int = 7                  # cap concurrent basis pairs
 
     # Δfunding cross-sectional carry (CPCV-validated, sprint #card1)
     # Enabled by operator after reviewing cpcv_validate_dfunding results.

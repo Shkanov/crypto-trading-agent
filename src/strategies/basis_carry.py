@@ -52,8 +52,16 @@ class BasisParams:
     check_interval_s: int = 6 * 3600      # re-evaluate every 6h (funding is slow)
     execute_legs: bool = False            # Phase 2 gate — False = monitor only
     # Execution sizing (only used when execute_legs=True).
-    max_book_pct: float = 0.5             # cap: use ≤ this fraction of the equity
-                                          # slice for the basis (keep a buffer)
+    # EXPLICIT per-leg notional is the primary control — a basis book spans two
+    # wallets (spot USDT for the long legs, futures margin for the shorts), so a
+    # fixed $/leg the operator sizes to BOTH wallet balances is safer than
+    # deriving from the (single-wallet) equity concept. Set 0 to fall back to the
+    # equity-derived split.
+    notional_per_leg_usd: float = 20.0    # $ per spot(=perp) leg per included name
+    min_leg_notional_usd: float = 6.0     # skip a name if its leg would be below
+                                          # the exchange min (avoids rejects)
+    max_names: int = 7                    # cap concurrent basis pairs
+    max_book_pct: float = 0.5             # fallback cap when notional_per_leg_usd=0
     perp_leverage: int = 1                # 1x short perp → liquidation ~+100%
                                           # (max safety; the whole point is no
                                           # price-driven liquidation)
@@ -235,26 +243,37 @@ class BasisStrategy(Strategy):
     async def _reconcile_book(self, target: set[str]) -> None:
         """Drive the held book toward `target` (the included names when ON, or
         empty when OFF): close any held name not in target, open any target
-        name not yet held. Delta-neutral long-spot/short-perp per name."""
+        name not yet held. Delta-neutral long-spot/short-perp per name.
+
+        `target` is capped to `max_names` (highest-funding names win, but the
+        set is already the hurdle-clearing names; cap bounds wallet usage)."""
         held = set(self.active)
+        # Cap the target to bound how much capital the book can commit at once.
+        if len(target) > self.p.max_names:
+            target = set(sorted(target)[: self.p.max_names])
         to_close = held - target
         to_open = target - held
         for sym in sorted(to_close):
             await self._close_name(sym, "basis_regime_off" if not target else "basis_dropped")
         if to_open:
             notional = self._per_name_notional(len(target))
-            if notional <= 0:
-                log.info("basis.no_equity_for_legs", target=sorted(target))
-                return
+            if notional < self.p.min_leg_notional_usd:
+                log.warning("basis.leg_below_min_notional_held",
+                            per_leg=round(notional, 2),
+                            floor=self.p.min_leg_notional_usd, target=sorted(target))
+                return   # don't open sub-min legs (they'd reject / strand)
             for sym in sorted(to_open):
                 await self._open_name(sym, notional)
 
     def _per_name_notional(self, n_target: int) -> float:
-        """Per-name spot(=perp) leg notional. Capital per name = spot + perp
-        margin = notional*(1 + 1/leverage); cap the whole book at max_book_pct
-        of the equity slice."""
+        """Per-name spot(=perp) leg notional. Prefer the EXPLICIT
+        notional_per_leg_usd (wallet-sized by the operator); else derive from the
+        equity slice split across the target names (capital per name = spot +
+        perp margin = notional*(1 + 1/leverage))."""
         if n_target <= 0:
             return 0.0
+        if self.p.notional_per_leg_usd > 0:
+            return self.p.notional_per_leg_usd
         share = self.ctx.equity_available_usd(self.name) * self.p.max_book_pct
         cap_per_unit = 1.0 + 1.0 / max(1, self.p.perp_leverage)
         return (share / cap_per_unit) / n_target

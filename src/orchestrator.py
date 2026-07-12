@@ -1909,6 +1909,9 @@ class Orchestrator:
                 on_margin_pct=self.s.basis_on_margin_pct,
                 check_interval_s=self.s.basis_check_interval_s,
                 execute_legs=self.s.basis_execute_legs,
+                notional_per_leg_usd=self.s.basis_notional_per_leg_usd,
+                min_leg_notional_usd=self.s.basis_min_leg_notional_usd,
+                max_names=self.s.basis_max_names,
             ))
             self.register_strategy(self.basis_strategy)
 

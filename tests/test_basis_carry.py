@@ -142,9 +142,37 @@ async def test_reconcile_off_closes_everything():
 
 
 @pytest.mark.asyncio
-async def test_per_name_notional_caps_book_and_splits():
-    s = _mk()
-    # equity 1000 * max_book_pct 0.5 = 500; perp 1x → cap_per_unit 2 → 250 book;
-    # split across 2 names = 125 each.
-    assert s._per_name_notional(2) == pytest.approx(125.0)
+async def test_explicit_per_leg_notional_is_primary():
+    s = _mk()  # default notional_per_leg_usd=20
+    assert s._per_name_notional(5) == pytest.approx(20.0)   # fixed, ignores n
     assert s._per_name_notional(0) == 0.0
+
+
+@pytest.mark.asyncio
+async def test_equity_derived_notional_when_explicit_zero():
+    from src.strategies.basis_carry import BasisParams
+    s = BasisStrategy(BasisParams(execute_legs=True, notional_per_leg_usd=0.0))
+    s.ctx = _FakeCtx()
+    # equity 1000 * 0.5 / 2 / 2 names = 125
+    assert s._per_name_notional(2) == pytest.approx(125.0)
+
+
+@pytest.mark.asyncio
+async def test_reconcile_holds_when_leg_below_min_notional():
+    from src.strategies.basis_carry import BasisParams
+    # explicit $3/leg < min $6 → must NOT open (would reject/strand)
+    s = BasisStrategy(BasisParams(execute_legs=True, notional_per_leg_usd=3.0,
+                                  min_leg_notional_usd=6.0))
+    s.ctx = _FakeCtx()
+    await s._reconcile_book({"BTCUSDT", "ETHUSDT"})
+    assert s.ctx.opened == []          # held, nothing opened below min
+
+
+@pytest.mark.asyncio
+async def test_reconcile_caps_target_to_max_names():
+    from src.strategies.basis_carry import BasisParams
+    s = BasisStrategy(BasisParams(execute_legs=True, notional_per_leg_usd=20.0,
+                                  max_names=2))
+    s.ctx = _FakeCtx()
+    await s._reconcile_book({"BTCUSDT", "ETHUSDT", "LINKUSDT", "UNIUSDT"})
+    assert len(s.ctx.opened) == 2      # capped to max_names
